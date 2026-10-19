@@ -274,7 +274,17 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** `core-test MasterResumeTests` (recorded GitHub responses); manual
   - **Files:** `Sources/MasterResume/GitHubImport.swift`, `Sources/MasterResume/ImportGitHubRepoTask.swift`, `Tests/MasterResumeTests/GitHubImportTests.swift`
 
+- [ ] **T20a · Re-check spike T20's open items and report back** (S) · deps: T21, T22 · your step: one live run with your key
+  - **Why:** you asked (2026-10-19) to note these and come back to them. Doing this after T21–T22 means the real adapter, not the spike harness, gets checked.
+  - **Acceptance:**
+    - [ ] Gemini Flash (`gemini-flash-latest`) in strict schema mode: measured. Both runs so far hit a temporary 503 "high demand", so this cell of `docs/spikes/structured-output.md` is still empty. If schema mode keeps failing, the Gemini preset falls back to JSON mode.
+    - [ ] Ollama `qwen3.5:4B` with thinking on merged "Kubernetes, gRPC, French" into one requirement (a known issue in `RecordedRepliesTests`). Re-check once T28's `analyzeJob` prompt asks for one requirement per item, then remove the known-issue marker if it's fixed. Thinking stays off by default either way.
+    - [ ] Hidden thinking tokens: confirm T21's usage parsing counts them (`total − prompt`) against a fresh Gemini Flash reply.
+    - [ ] Report the results to you, and update the write-up and fixtures.
+  - **Verify:** `KAIROS_LIVE_LLM=1 GEMINI_API_KEY=… swift test --package-path Packages/KairosCore --filter LiveStructuredOutput` (you run it); `core-test LLMTests`
+
 #### Checkpoint C
+- [ ] T20a's re-check reported to you
 - [ ] Your real resume imported into a valid master resume
 - [ ] A redaction test shows no contact values in the import prompt
 - [ ] Provider test works with your key; reviewed with you
