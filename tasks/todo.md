@@ -33,7 +33,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** `core-test StoreTests`
   - **Files:** `Packages/KairosCore/Package.swift`, `Sources/Store/HLC.swift`, `Sources/Store/UUIDv7.swift`, `Tests/StoreTests/HLCTests.swift`, `Tests/StoreTests/UUIDv7Tests.swift`
 
-- [ ] **T03 · Guard scripts and formatter config** (M) · deps: T02
+- [x] **T03 · Guard scripts and formatter config** (M) · deps: T02
   - **What:** the scripts `CONSTRAINTS.md` names, so every check is runnable.
   - **Acceptance:**
     - [ ] `scripts/floor-guard.swift` is the skill's reference contract adapted to Swift (`try!`, `fatalError` stubs, empty `catch {}`, `.disabled(` traits, `XCTSkip`, removed `#expect`/`#require`, suppressions, weakened `CONSTRAINTS.md` rows). It exits 0, 1 or 2 and never prints a secret value.

@@ -62,7 +62,7 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 ### Phase 0: Foundation and risk spikes
 - [x] T01 Repository bootstrap
 - [x] T02 Package skeleton with HLC and UUIDv7
-- [ ] T03 Guard scripts and formatter config
+- [x] T03 Guard scripts and formatter config
 - [ ] T04 CI workflow
 - [ ] T05 App shell
 - [ ] T05a Design tokens, app icon, menu bar icon

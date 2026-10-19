@@ -19,7 +19,9 @@ struct UUIDv7Tests {
         var rng = SplitMix64(seed: 42)
         var ids: [String] = []
         // Several ids per millisecond, then later milliseconds.
-        for ms in [UInt64(1_760_000_000_000), 1_760_000_000_000, 1_760_000_000_000, 1_760_000_000_001, 1_760_000_000_500] {
+        for ms in [
+            UInt64(1_760_000_000_000), 1_760_000_000_000, 1_760_000_000_000, 1_760_000_000_001, 1_760_000_000_500,
+        ] {
             for _ in 0..<50 { ids.append(generator.next(now: ms, using: &rng).lowercased) }
         }
         #expect(ids == ids.sorted())
@@ -42,7 +44,9 @@ struct UUIDv7Tests {
         let strings = ids.map(\.lowercased)
         #expect(strings == strings.sorted())
         let lastMs = ids.last.map { id in
-            [id.uuid.0, id.uuid.1, id.uuid.2, id.uuid.3, id.uuid.4, id.uuid.5].reduce(UInt64(0)) { $0 << 8 | UInt64($1) }
+            [id.uuid.0, id.uuid.1, id.uuid.2, id.uuid.3, id.uuid.4, id.uuid.5].reduce(UInt64(0)) {
+                $0 << 8 | UInt64($1)
+            }
         }
         #expect((lastMs ?? 0) > 9_000)
     }

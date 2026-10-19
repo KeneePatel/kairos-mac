@@ -25,7 +25,7 @@ Read this before writing code. Do not weaken it to make a change pass. Tightenin
 | Floor guard | Exit 0 | `swift scripts/floor-guard.swift --base origin/main` | Task end, CI |
 | Dependencies | 0 resolved Swift packages; bundled binaries = `typst` only; no npm packages in `Web/` | `scripts/check-deps.sh` | Every change, CI |
 | Design tokens | No hard-coded colours: no hex literals, `Color(red:` or `NSColor(` values in `App/`, and no hex in `Web/` outside the generated tokens file | `scripts/check-design.sh` | Every change, CI |
-| Commits | Author and committer = Kenee Patel; no trailers | `scripts/check-commits.sh origin/main..HEAD` | Before push, CI |
+| Commits | Author and committer = Kenee Patel; no trailers. Pull requests from other contributors: no AI attribution (`--allow-other-authors`) | `scripts/check-commits.sh origin/main..HEAD` | Before push, CI |
 | Secrets | No findings | `gitleaks detect --redact --no-banner` | Before commit (if installed), CI |
 | Backend isolation | All tests pass on the staging project | `KAIROS_LIVE_SUPABASE=1 swift test --package-path Packages/KairosCore --filter BackendIsolation` | Before any production `supabase db push` |
 | Prompt evals | Must-have extraction ≥ 0.85 precision and ≥ 0.80 recall; first-write verifier pass rate ≥ 95% | `KAIROS_LIVE_LLM=1 swift test --package-path Packages/KairosCore --filter PromptEvals` | Any built-in prompt or default-model change |
