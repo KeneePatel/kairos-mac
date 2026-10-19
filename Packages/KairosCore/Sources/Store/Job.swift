@@ -37,9 +37,10 @@ public enum VerdictSource: String, Sendable, CaseIterable {
     case prefilter, analysis, user
 }
 
-/// `remoteCountry` means remote within `country` only, such as "Remote (US only)".
+/// `remoteCountry` means remote within `country` only, such as "Remote (US only)". `remoteAnywhere`
+/// spans countries ("Remote - North America", "Worldwide"). `remote` doesn't say where.
 public enum RemoteScope: String, Sendable, CaseIterable {
-    case unknown, onsite, hybrid
+    case unknown, onsite, hybrid, remote
     case remoteCountry = "remote_country"
     case remoteAnywhere = "remote_anywhere"
 }

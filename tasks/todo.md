@@ -141,13 +141,14 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Sources/JobSources/LeverSource.swift`, `Sources/JobSources/AshbySource.swift`, `Sources/JobSources/ATSDetector.swift`, `Tests/JobSourcesTests/LeverAshbyTests.swift`, `Tests/Fixtures/lever_ashby.json`
   - **Done 2026-10-19:** 19 JobSources tests pass. Fixtures are two files (`lever_postings.json`, `ashby_job_board.json`) because the shapes differ. Checked against live boards: Lever dates are epoch milliseconds and its requirements sit in `lists`, which are now folded into the description; Ashby unlisted jobs are skipped. `Posting` gained optional `otherLocations`, `countryHint` and `workplace` (defaults keep the SPEC §10 call valid) so T13 can use the boards' own location data; Ashby's secondary locations often add Canada.
 
-- [ ] **T13 · Normalization, geography, de-duplication** (M) · deps: T11
+- [x] **T13 · Normalization, geography, de-duplication** (M) · deps: T11
   - **Acceptance:**
-    - [ ] Canonical URLs drop tracking parameters. HTML descriptions become Markdown with a small converter (no WebKit, so it runs off the main thread).
-    - [ ] Geography parses country (CA or US), province or state, city, and remote scope ("Remote – Canada", "Remote (US only)"). Covered by a 60-string table test.
-    - [ ] De-duplication drops known ids and cross-board near-duplicates (company + title + city similarity ≥ 0.9).
+    - [x] Canonical URLs drop tracking parameters. HTML descriptions become Markdown with a small converter (no WebKit, so it runs off the main thread).
+    - [x] Geography parses country (CA or US), province or state, city, and remote scope ("Remote – Canada", "Remote (US only)"). Covered by a 60-string table test.
+    - [x] De-duplication drops known ids and cross-board near-duplicates (company + title + city similarity ≥ 0.9).
   - **Verify:** `core-test JobSourcesTests`
   - **Files:** `Sources/JobSources/Normalizer.swift`, `Sources/JobSources/Geo/Geo.swift`, `Sources/JobSources/Geo/places.json`, `Sources/JobSources/Deduplicator.swift`, `Tests/JobSourcesTests/NormalizerGeoTests.swift`
+  - **Done 2026-10-19:** 35 JobSources tests (the geography table has 74 strings, and a planted wrong row fails it). Postings outside Canada and the US come back as `.outsideCanadaAndUS` for the fetch to drop (SPEC §5.4). `RemoteScope` gained `remote` for "Remote" with no region. Near-duplicates are compared only within one company and across different sources; two URLs on one board are always two jobs.
 
 - [ ] **T14 · First vertical slice in the app** (M) · deps: T10, T12, T13, T05
   - **Acceptance:**
