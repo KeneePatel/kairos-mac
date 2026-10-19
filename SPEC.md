@@ -696,6 +696,7 @@ swift test   --package-path Packages/KairosCore
 swift test   --package-path Packages/KairosCore --enable-code-coverage
 swift format lint --strict --recursive Packages App
 swift format --in-place --recursive Packages App
+scripts/live-llm.sh [filter]              # opt-in live LLM tests; the Gemini key comes from your Keychain, never printed
 
 # App
 xcodebuild -project App/Kairos.xcodeproj -scheme Kairos -destination 'platform=macOS,arch=arm64' build

@@ -282,19 +282,20 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Sources/MasterResume/GitHubImport.swift`, `Sources/MasterResume/ImportGitHubRepoTask.swift`, `Tests/MasterResumeTests/GitHubImportTests.swift`
   - **Done 2026-10-19:** 9 tests on recorded GitHub responses (sample persona). The README excerpt and description are redacted like a resume before anything is sent (a test checks the name, email and site don't survive); dates and the repo link come from GitHub, not the model; a repo pushed in the last three months counts as current. Your own repos list first, forks and archived last. A token is optional (Keychain `github.token`); the sheet asks for one only when GitHub's 60-an-hour limit is hit. Drafts go through the same review as resume import. **Your step:** Master resume → Import → From GitHub… (needs your GitHub URL in Contact and an AI key).
 
-- [ ] **T20a · Re-check spike T20's open items and report back** (S) · deps: T21, T22 · your step: one live run with your key
+- [x] **T20a · Re-check spike T20's open items and report back** (S) · deps: T21, T22 · your step: one live run with your key
   - **Why:** you asked (2026-10-19) to note these and come back to them. Doing this after T21–T22 means the real adapter, not the spike harness, gets checked.
   - **Acceptance:**
-    - [ ] Gemini Flash (`gemini-flash-latest`) in strict schema mode: measured. Both runs so far hit a temporary 503 "high demand", so this cell of `docs/spikes/structured-output.md` is still empty. If schema mode keeps failing, the Gemini preset falls back to JSON mode.
+    - [x] Gemini Flash (`gemini-flash-latest`) in strict schema mode: measured. Both runs so far hit a temporary 503 "high demand", so this cell of `docs/spikes/structured-output.md` is still empty. If schema mode keeps failing, the Gemini preset falls back to JSON mode.
     - [x] Ollama through the real adapter and client (2026-10-19): the 501 refusal was handled and the model learned as prompt-only on its own, thinking was off by default, valid output in 8.5 s on one call. It listed the job title as a requirement again, which T28's prompt rule fixes. The thinking-mode merge re-check moved to T28, where the prompt that fixes it is written.
-    - [ ] Hidden thinking tokens: confirm T21's usage parsing counts them (`total − prompt`) against a fresh Gemini Flash reply.
-    - [ ] Report the results to you, and update the write-up and fixtures.
-  - **Verify:** `KAIROS_LIVE_LLM=1 GEMINI_API_KEY=… swift test --package-path Packages/KairosCore --filter LiveAdapter` (you run it: the real adapter and client, `LiveAdapterTests.swift`); `core-test LLMTests`
+    - [x] Hidden thinking tokens: confirm T21's usage parsing counts them (`total − prompt`) against a fresh Gemini Flash reply.
+    - [x] Report the results to you, and update the write-up and fixtures.
+  - **Done 2026-10-19** (your run): Flash in strict schema mode is valid and correct (2 calls: the client retried a failed first try); Flash-Lite in 0.85 s; hidden thinking counted (588 output tokens for about 96 shown). Results are in `docs/spikes/structured-output.md`. `scripts/live-llm.sh` now runs these tests with the key from your Keychain, so the key never has to be typed or shown.
+  - **Verify:** `scripts/live-llm.sh` or `KAIROS_LIVE_LLM=1 GEMINI_API_KEY=… swift test --package-path Packages/KairosCore --filter LiveAdapter` (you run it: the real adapter and client, `LiveAdapterTests.swift`); `core-test LLMTests`
 
 #### Checkpoint C
-- [ ] T20a's re-check reported to you
+- [x] T20a's re-check reported to you
 - [ ] Your real resume imported into a valid master resume
-- [ ] A redaction test shows no contact values in the import prompt
+- [x] A redaction test shows no contact values in the import prompt (`ImportTests.noContactDetailReachesThePrompt`, `GitHubImportTests.nothingPersonalFromTheReadmeIsSent`)
 - [ ] Provider test works with your key; reviewed with you
 
 ### Slice 3: Screening

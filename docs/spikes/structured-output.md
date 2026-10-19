@@ -21,6 +21,16 @@
 
 **Second run (same day):** the fixed picker chose Google's `gemini-flash-latest` alias. The first run had sorted names and chosen `gemini-omni-1.1-flash`, which has a free-tier quota of 0. Flash's schema mode met a temporary 503 ("high demand"), so it's the one cell left unmeasured; Flash-Lite shows the endpoint's schema mode works. Gemini lists 63 models, including `gemini-flash-latest` and `gemini-flash-lite-latest` (saved in `gemini-models.json`, ids only). Ollama's replies were identical to the first run's apart from ids: at temperature 0 the thinking-mode merge reproduces.
 
+**Re-check through the real adapter and client (T20a, same day, `LiveAdapterTests`):**
+
+| Model | Mode | Result | Calls | Output tokens | Time |
+|---|---|---|---|---|---|
+| `gemini-flash-latest` | strict `json_schema` | valid, 7 of 7 requirements, nothing extra | 2 (the first failed and the client retried) | 588 (about 96 shown + hidden thinking) | 54 s |
+| `gemini-flash-lite-latest` | strict `json_schema` | valid, 7 of 7 | 1 | 97 | 0.85 s |
+| Ollama `qwen3.5:4B` | prompt-only, learned from its 501; thinking off | valid; lists the job title as a requirement (T28's prompt fixes it) | 1 | 98 | 8.5–13 s |
+
+That fills the last cell: Gemini Flash does strict schema mode. The client counted hidden thinking as output, as designed. The run's output doesn't say why Flash's first try failed; a temporary 503 (seen in T20) and a rate limit are both handled.
+
 ## Capability flags for T21
 
 | Preset | Structured output | Notes |

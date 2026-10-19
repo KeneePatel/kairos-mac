@@ -4,7 +4,7 @@ import Testing
 @testable import LLM
 
 /// Spike T20: does each preset return valid structured output, in schema mode and in JSON mode?
-/// Opt-in and live:
+/// Easiest: `scripts/live-llm.sh` (the key comes from your Keychain). Opt-in and live:
 ///
 ///     KAIROS_LIVE_LLM=1 GEMINI_API_KEY=… swift test --package-path Packages/KairosCore --filter LiveStructuredOutput
 ///

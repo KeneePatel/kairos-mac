@@ -4,7 +4,7 @@ import Testing
 @testable import LLM
 
 /// T20a: the spike's open items, re-checked through the real adapter and client rather than the
-/// spike harness. Opt-in and live; run it in your own terminal so the key stays out of transcripts:
+/// spike harness. Opt-in and live (or `scripts/live-llm.sh`, which reads the key from your Keychain); run it in your own terminal so the key stays out of transcripts:
 ///
 ///     KAIROS_LIVE_LLM=1 GEMINI_API_KEY=… swift test --package-path Packages/KairosCore --filter LiveAdapter
 @Suite(
