@@ -1,5 +1,6 @@
 import Foundation
 import Store
+import TestSupport
 import Testing
 
 @testable import JobSources

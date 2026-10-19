@@ -130,6 +130,8 @@ public enum LLMError: Error, Equatable, Sendable {
     /// 400. Never retried.
     case badRequest(String)
     case rateLimited(retryAfterSeconds: Int?)
+    /// A 429 whose quota limit is 0: the model isn't on this key's plan, so waiting won't help (T20).
+    case modelNotOnPlan(String)
     case server(status: Int)
     case network(String)
     case timedOut
@@ -145,6 +147,11 @@ public enum LLMError: Error, Equatable, Sendable {
     case noScriptedReply(TaskID)
 }
 
+/// How hard a thinking model may think. Local models default to `.none` (decided 2026-10-19, T20).
+public enum ReasoningEffort: String, Sendable, CaseIterable {
+    case none, low, medium, high
+}
+
 /// One model call, as every adapter sees it.
 public struct ChatRequest: Sendable {
     public let task: TaskID
@@ -154,10 +161,12 @@ public struct ChatRequest: Sendable {
     public let schema: JSONSchema?
     public let temperature: Double
     public let maxOutputTokens: Int
+    /// Sent only to presets that accept `reasoning_effort`.
+    public let reasoningEffort: ReasoningEffort?
 
     public init(
         task: TaskID, model: String, messages: [ChatMessage], schema: JSONSchema?, temperature: Double,
-        maxOutputTokens: Int
+        maxOutputTokens: Int, reasoningEffort: ReasoningEffort? = nil
     ) {
         self.task = task
         self.model = model
@@ -165,6 +174,7 @@ public struct ChatRequest: Sendable {
         self.schema = schema
         self.temperature = temperature
         self.maxOutputTokens = maxOutputTokens
+        self.reasoningEffort = reasoningEffort
     }
 }
 
@@ -172,13 +182,17 @@ public struct ChatResponse: Equatable, Sendable {
     public let text: String
     public let model: String
     public let inputTokens: Int?
+    /// Includes thinking the provider didn't show (T20: Gemini Flash counts it only in the total).
     public let outputTokens: Int?
+    /// "stop", or "length" when the reply hit the output limit and is probably cut off.
+    public let finishReason: String?
 
-    public init(text: String, model: String, inputTokens: Int?, outputTokens: Int?) {
+    public init(text: String, model: String, inputTokens: Int?, outputTokens: Int?, finishReason: String? = nil) {
         self.text = text
         self.model = model
         self.inputTokens = inputTokens
         self.outputTokens = outputTokens
+        self.finishReason = finishReason
     }
 }
 

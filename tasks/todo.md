@@ -225,14 +225,15 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Tests/LLMTests/LiveStructuredOutputTests.swift`, `Tests/Fixtures/llm/*.json`, `docs/spikes/structured-output.md`
   - **Done 2026-10-19** (you ran Gemini; I ran Ollama `qwen3.5:4B`): see `docs/spikes/structured-output.md`. Gemini Flash-Lite passes in strict schema mode (half the tokens of JSON mode). Ollama refuses every `response_format` for this model with HTTP 501 but answers correctly with the schema in the prompt; with thinking on it takes about 100 s per posting. `RecordedRepliesTests` checks every saved reply offline: schema, precision and recall against hand labels, error shapes, and no keys. Second run: `gemini-flash-latest` is valid and correct in JSON mode, with 504 hidden thinking tokens counted only in `total_tokens`; its schema mode met a temporary 503, now the retryable-error fixture. You confirmed thinking off for local models.
 
-- [ ] **T21 · OpenAI-compatible adapter and presets** (M) · deps: T20
+- [x] **T21 · OpenAI-compatible adapter and presets** (M) · deps: T20
   - **Acceptance:**
-    - [ ] Presets for Gemini, Ollama local, Ollama Cloud, Groq, OpenRouter and OpenAI, each with its base URL and capability flags (from T20).
-    - [ ] Builds `chat/completions` requests (with `response_format` mode and `reasoning_effort` where supported), parses `usage`, and lists models with `GET /models`.
-    - [ ] Maps 400, 401, 403, 404, 429 (with `Retry-After`) and 5xx to typed errors.
-    - [ ] From T20: capability is per (provider, model). HTTP 501 "structured output is unavailable" (Ollama) resends once without `response_format` and remembers the model as prompt-only. Gemini errors arrive as an array (`[{"error":…}]`); both shapes parse. A 429 whose quota limit is 0 maps to "model not on your plan", not a rate limit. Model defaults use Google's `gemini-flash-latest` / `gemini-flash-lite-latest` aliases. Output tokens are `total − prompt` when that exceeds `completion_tokens` (Gemini Flash's hidden thinking).
+    - [x] Presets for Gemini, Ollama local, Ollama Cloud, Groq, OpenRouter and OpenAI, each with its base URL and capability flags (from T20).
+    - [x] Builds `chat/completions` requests (with `response_format` mode and `reasoning_effort` where supported), parses `usage`, and lists models with `GET /models`.
+    - [x] Maps 400, 401, 403, 404, 429 (with `Retry-After`) and 5xx to typed errors.
+    - [x] From T20: capability is per (provider, model). HTTP 501 "structured output is unavailable" (Ollama) resends once without `response_format` and remembers the model as prompt-only. Gemini errors arrive as an array (`[{"error":…}]`); both shapes parse. A 429 whose quota limit is 0 maps to "model not on your plan", not a rate limit. Model defaults use Google's `gemini-flash-latest` / `gemini-flash-lite-latest` aliases. Output tokens are `total − prompt` when that exceeds `completion_tokens` (Gemini Flash's hidden thinking).
   - **Verify:** `core-test LLMTests` (recorded fixtures)
   - **Files:** `Sources/LLM/OpenAICompatibleProvider.swift`, `Sources/LLM/ProviderPreset.swift`, `Tests/LLMTests/OpenAICompatibleProviderTests.swift`
+  - **Done 2026-10-19:** 22 adapter, preset and transport tests, replaying T20's real replies. A model that refuses a structured-output mode (501, or a 400 about `response_format`) drops one level and the provider remembers it in `ModelCapabilities`, shared across keys so the refusal is paid once. Base URLs must be https unless local, so a key never goes out over plain http. The scripted URLProtocol moved to a shared `TestSupport` test target. Learned capabilities live in memory for now; T23/T24 can persist them with the provider settings.
 
 - [ ] **T22 · LLM client: rate limits, retries, key rotation, repair** (M, test-first) · deps: T21
   - **Acceptance:**
