@@ -5,6 +5,7 @@ import SwiftUI
 struct MasterResumeView: View {
     @Environment(ResumeModel.self) private var model
     @State private var editing: ResumeEntry?
+    @State private var deleting: ResumeEntry?
     @State private var showsReadiness = true
 
     var body: some View {
@@ -16,9 +17,13 @@ struct MasterResumeView: View {
                 }
                 ContactSection()
                 Divider()
+                EntrySection(
+                    title: "Experience", kinds: [.experience, .project], editing: $editing, deleting: $deleting)
+                EntrySection(title: "Education", kinds: [.education], editing: $editing, deleting: $deleting)
+                Divider()
                 SkillsSection()
                 Divider()
-                AdditionalSections(editing: $editing)
+                AdditionalSections(editing: $editing, deleting: $deleting)
             }
             .padding(Spacing.space6)
             .frame(maxWidth: 920, alignment: .leading)
@@ -30,6 +35,10 @@ struct MasterResumeView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
+                    ForEach([EntryKind.experience, .project, .education], id: \.self) { kind in
+                        Button(kind.itemName) { editing = ResumeEntry(fields: kind.blank()) }
+                    }
+                    Divider()
                     ForEach(EntryKind.additional, id: \.self) { kind in
                         Button(kind.itemName) { editing = ResumeEntry(fields: kind.blank()) }
                     }
@@ -41,6 +50,16 @@ struct MasterResumeView: View {
             }
         }
         .sheet(item: $editing) { entry in EntryEditor(entry: entry) }
+        .confirmationDialog(
+            "Delete this \(deleting?.kind.itemName.lowercased() ?? "entry")?",
+            isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting
+        ) { entry in
+            Button("Delete", role: .destructive) { Task { await model.deleteEntry(entry.id) } }
+        } message: { entry in
+            Text(
+                "“\(entry.summary.title)” and its bullets leave your master resume. Resumes already built keep their copy."
+            )
+        }
         .inspector(isPresented: $showsReadiness) {
             ReadinessPanel(resume: model.resume, readiness: model.readiness)
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 360)

@@ -66,15 +66,23 @@ struct PillButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol)
-                .font(TypeStyle.body.weight(.medium))
-                .padding(.horizontal, Spacing.space3)
-                .frame(height: 28)
-                .background(Capsule().fill(Color(.controlFill)))
-                .foregroundStyle(Color(.ink))
-        }
-        .buttonStyle(.plain)
+        Button(action: action) { PillLabel(title: title, symbol: symbol) }
+            .buttonStyle(.plain)
+    }
+}
+
+/// The pill's look, for menus that should match `PillButton`.
+struct PillLabel: View {
+    let title: String
+    let symbol: String
+
+    var body: some View {
+        Label(title, systemImage: symbol)
+            .font(TypeStyle.body.weight(.medium))
+            .padding(.horizontal, Spacing.space3)
+            .frame(height: 28)
+            .background(Capsule().fill(Color(.controlFill)))
+            .foregroundStyle(Color(.ink))
     }
 }
 
@@ -85,7 +93,12 @@ struct MonthField: View {
     @Binding var value: YearMonth?
     @State private var yearText = ""
 
-    private static let months = Calendar(identifier: .gregorian).shortMonthSymbols
+    /// Gregorian month names in your language ("Mar"); a calendar without a locale says "M03".
+    private static let months: [String] = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = .current
+        return calendar.shortMonthSymbols
+    }()
 
     var body: some View {
         LabeledField(title: title, optional: optional) {

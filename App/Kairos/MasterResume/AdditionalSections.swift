@@ -84,12 +84,12 @@ extension ResumeEntry {
 
 /// Certifications, awards, volunteering, publications, languages and your own sections.
 struct AdditionalSections: View {
-    @Environment(ResumeModel.self) private var model
     @Binding var editing: ResumeEntry?
+    @Binding var deleting: ResumeEntry?
 
     var body: some View {
         ForEach(EntryKind.additional, id: \.self) { kind in
-            EntryList(kind: kind, editing: $editing)
+            EntryList(kind: kind, editing: $editing, deleting: $deleting)
         }
     }
 }
@@ -99,6 +99,7 @@ struct EntryList: View {
     @Environment(ResumeModel.self) private var model
     let kind: EntryKind
     @Binding var editing: ResumeEntry?
+    @Binding var deleting: ResumeEntry?
 
     var body: some View {
         let entries = model.resume.entries(kind)
@@ -142,170 +143,6 @@ struct EntryList: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .contextMenu {
-            Button("Edit…") { editing = entry }
-            Button("Move up") { Task { await model.move(entry, by: -1) } }.disabled(index == 0)
-            Button("Move down") { Task { await model.move(entry, by: 1) } }.disabled(index == count - 1)
-            Divider()
-            Button("Delete", role: .destructive) { Task { await model.deleteEntry(entry.id) } }
-        }
-    }
-}
-
-/// Edits one entry of any kind. T18 adds bullets and the experience, project and education fields.
-struct EntryEditor: View {
-    @Environment(ResumeModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
-    @State var entry: ResumeEntry
-    @State private var confirmingDelete = false
-
-    private var isNew: Bool { !model.resume.entries.contains { $0.id == entry.id } }
-    private let columns = [GridItem(.adaptive(minimum: 220), spacing: Spacing.space4, alignment: .top)]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.space5) {
-            Text(isNew ? "Add \(entry.kind.itemName.lowercased())" : "Edit \(entry.kind.itemName.lowercased())")
-                .font(TypeStyle.title3).foregroundStyle(Color(.ink))
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    LazyVGrid(columns: columns, alignment: .leading, spacing: 14) { fields }
-                    dates
-                }
-                .padding(2)
-            }
-            .frame(maxHeight: 460)
-            HStack(spacing: Spacing.space2) {
-                if !isNew {
-                    Button("Delete…", role: .destructive) { confirmingDelete = true }
-                }
-                Spacer()
-                Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
-                Button(isNew ? "Add" : "Save") {
-                    let entry = self.entry
-                    Task { await model.save(entry) }
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .disabled(entry.summary.title.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-            .controlSize(.large)
-        }
-        .padding(Spacing.space6)
-        .frame(width: 560)
-        .confirmationDialog("Delete this \(entry.kind.itemName.lowercased())?", isPresented: $confirmingDelete) {
-            Button("Delete", role: .destructive) {
-                let id = entry.id
-                Task { await model.deleteEntry(id) }
-                dismiss()
-            }
-        } message: {
-            Text("Resumes already built keep their copy.")
-        }
-    }
-
-    @ViewBuilder private var fields: some View {
-        switch entry.kind {
-        case .certification:
-            text("Name", certification.name, prompt: "AWS Solutions Architect")
-            text("Issuer", certification.issuer, optional: true, prompt: "Amazon Web Services")
-            text("Credential URL", optionalText(certification.credentialURL), optional: true, prompt: "https://…")
-        case .award:
-            text("Award", titled.title, prompt: "Hackathon winner")
-            text("Given by", titled.organization, optional: true, prompt: "Hack the North")
-            text("Link", optionalText(titled.url), optional: true, prompt: "https://…")
-        case .volunteering:
-            text("Role", titled.title, prompt: "Mentor")
-            text("Organization", titled.organization, optional: true, prompt: "Code Club")
-            text("Link", optionalText(titled.url), optional: true, prompt: "https://…")
-        case .publication:
-            text("Title", titled.title, prompt: "Event sourcing at scale")
-            text("Published in", titled.organization, optional: true, prompt: "InfoQ")
-            text("Link", optionalText(titled.url), optional: true, prompt: "https://…")
-        case .language:
-            text("Language", language.language, prompt: "French")
-            LabeledField(title: "Proficiency") {
-                Picker("Proficiency", selection: language.proficiency) {
-                    ForEach(EntryFields.Language.Proficiency.allCases, id: \.self) {
-                        Text($0.rawValue.capitalized).tag($0)
-                    }
-                }
-            }
-        case .custom:
-            text("Section", custom.section, prompt: "Talks")
-            text("Title", custom.title, prompt: "Postgres at scale, PGConf 2024")
-        case .experience, .project, .education:
-            EmptyView()
-        }
-    }
-
-    private func text(_ title: String, _ binding: Binding<String>, optional: Bool = false, prompt: String) -> some View
-    {
-        LabeledField(title: title, optional: optional) {
-            TextField(title, text: binding, prompt: Text(prompt))
-        }
-    }
-
-    private func optionalText(_ binding: Binding<String?>) -> Binding<String> {
-        Binding(get: { binding.wrappedValue ?? "" }, set: { binding.wrappedValue = $0.isEmpty ? nil : $0 })
-    }
-
-    // Bindings into the entry's per-kind fields. Each one only reads or writes its own kind.
-
-    private var certification: Binding<EntryFields.Certification> {
-        Binding(
-            get: { if case .certification(let value) = entry.fields { value } else { .init(name: "") } },
-            set: { entry.fields = .certification($0) })
-    }
-
-    /// Awards, volunteering and publications share one shape.
-    private var titled: Binding<EntryFields.Titled> {
-        Binding(
-            get: {
-                switch entry.fields {
-                case .award(let value), .volunteering(let value), .publication(let value): value
-                default: .init(title: "")
-                }
-            },
-            set: { value in
-                switch entry.kind {
-                case .award: entry.fields = .award(value)
-                case .volunteering: entry.fields = .volunteering(value)
-                default: entry.fields = .publication(value)
-                }
-            })
-    }
-
-    private var language: Binding<EntryFields.Language> {
-        Binding(
-            get: {
-                if case .language(let value) = entry.fields {
-                    value
-                } else {
-                    .init(language: "", proficiency: .professional)
-                }
-            },
-            set: { entry.fields = .language($0) })
-    }
-
-    private var custom: Binding<EntryFields.Custom> {
-        Binding(
-            get: { if case .custom(let value) = entry.fields { value } else { .init(section: "", title: "") } },
-            set: { entry.fields = .custom($0) })
-    }
-
-    @ViewBuilder private var dates: some View {
-        switch entry.kind {
-        case .language:
-            EmptyView()
-        case .volunteering:
-            HStack(alignment: .top, spacing: Spacing.space4) {
-                MonthField(title: "Started", value: $entry.start)
-                if !entry.isCurrent { MonthField(title: "Ended", value: $entry.end) }
-                Toggle("I still do this", isOn: $entry.isCurrent).toggleStyle(.switch).padding(.top, 22)
-            }
-        default:
-            MonthField(title: entry.kind == .certification ? "Issued" : "Date", value: $entry.start)
-        }
+        .contextMenu { EntryMenu(entry: entry, editing: $editing, deleting: $deleting) }
     }
 }

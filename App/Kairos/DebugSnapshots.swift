@@ -18,9 +18,13 @@
                 VStack(alignment: .leading, spacing: Spacing.space6) {
                     ContactSection()
                     Divider()
+                    EntrySection(
+                        title: "Experience", kinds: [.experience, .project], editing: .constant(nil),
+                        deleting: .constant(nil))
+                    Divider()
                     SkillsSection()
                     Divider()
-                    AdditionalSections(editing: .constant(nil))
+                    AdditionalSections(editing: .constant(nil), deleting: .constant(nil))
                 }
                 .padding(Spacing.space6)
                 .frame(width: 760, alignment: .leading)
@@ -32,12 +36,11 @@
             .environment(resume)
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 render(page, to: folder.appending(path: "master-resume-\(name).png"), appearance: appearance)
-                render(
-                    EntryEditor(
-                        entry: ResumeEntry(fields: .language(.init(language: "French", proficiency: .conversational)))
-                    )
-                    .environment(resume).background(Color(.surface)),
-                    to: folder.appending(path: "entry-editor-\(name).png"), appearance: appearance)
+                if let job = resume.resume.entries(.experience).first {
+                    render(
+                        EntryEditor(entry: job).environment(resume).background(Color(.surface)),
+                        to: folder.appending(path: "entry-editor-\(name).png"), appearance: appearance)
+                }
             }
             print("snapshots: \(folder.path)")
             exit(0)
@@ -72,8 +75,18 @@
                 start: YearMonth(year: 2022, month: 3), isCurrent: true,
                 bullets: [
                     ResumeBullet(
-                        text: "Built an event pipeline handling 4.2M events a day", metrics: ["4.2M events/day"])
+                        text: "Built an event pipeline handling 4.2M events a day",
+                        metrics: ["4.2M events/day", "p99 < 120 ms"], skills: ["Go", "PostgreSQL", "RabbitMQ"]),
+                    ResumeBullet(
+                        text: "Onboarded 11 carriers in 4 days instead of 3 weeks", metrics: ["11 carriers"],
+                        skills: ["gRPC"]),
+                    ResumeBullet(text: "Migrated 14 services to Kubernetes", skills: ["Kafka"]),
+                    ResumeBullet(text: "Led the five-person on-call rotation"),
                 ])
+            let project = ResumeEntry(
+                fields: .project(.init(name: "Dockyard", role: "Author", tech: ["Go"])),
+                start: YearMonth(year: 2023, month: 1), isCurrent: true,
+                bullets: [ResumeBullet(text: "Open-source CLI for cleaning up local Docker resources")])
             let skills =
                 ["Go", "Python", "PostgreSQL", "RabbitMQ", "gRPC"].map { Skill(name: $0, category: "Language") }
                 + ["Kafka", "Terraform", "Rust"].map { Skill(name: $0, level: .canDiscuss) }
@@ -84,7 +97,7 @@
                     start: YearMonth(year: 2024, month: 5)),
                 ResumeEntry(fields: .language(.init(language: "French", proficiency: .conversational))),
             ]
-            return MasterResume(header: header, entries: [job] + extras, skills: skills, version: 12)
+            return MasterResume(header: header, entries: [job, project] + extras, skills: skills, version: 12)
         }
     }
 #endif

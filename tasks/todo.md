@@ -197,13 +197,15 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Done 2026-10-19:** app builds clean; 43 MasterResume tests. Fields save on Return or when you leave them; a malformed value shows its fix below the field once you've moved on, and missing ones are listed in the readiness panel instead of shouting from an empty form. Skills reorder by drag (dropping on the other group switches Proven / Can discuss). Following the design ("Portfolio is left off until fixed"), a malformed GitHub or portfolio link no longer blocks a build; it's a warning, and the render step (T32) must leave such links off. Checked by rendering the real views offscreen in light and dark (`Kairos --render-snapshots`, debug builds only).
   - **Visual differences from `MasterResume.dc.html`:** no Experience section, bullet chips or "Numbers" count yet (T18); a field with an error keeps the system border instead of a red outline, with the message and icon under it; the subtitle shows the version number rather than "edited Oct 16"; no "Used in N resumes" counts until builds exist. Not drawn in the design and decided here: the additional sections as grouped rows with chevrons, the entry editor sheet, the skill popover, and empty-section captions ("Optional").
 
-- [ ] **T18 · Editor: experience, projects, education** (M) · deps: T17
+- [x] **T18 · Editor: experience, projects, education** (M) · deps: T17
   - **Acceptance:**
-    - [ ] Entries: add, edit, reorder, delete with confirmation, and a "current" toggle for end dates.
-    - [ ] Bullets: add, edit and reorder, with metrics and skills chips.
-    - [ ] The Build readiness banner updates live.
+    - [x] Entries: add, edit, reorder, delete with confirmation, and a "current" toggle for end dates.
+    - [x] Bullets: add, edit and reorder, with metrics and skills chips.
+    - [x] The Build readiness banner updates live.
   - **Verify:** `app-build`; manual walkthrough
   - **Files:** `App/Kairos/MasterResume/ExperienceSection.swift`, `ProjectsSection.swift`, `EducationSection.swift`, `BulletEditor.swift`
+  - **Done 2026-10-19:** app builds clean. One `EntrySection` view serves roles and projects (grouped under "Experience", as the design does) and education, so there are no separate Projects and Education files; the entry editor moved to `EntryEditor.swift`. Bullets keep their ids through every edit; blank bullets are dropped on save. Volunteering and custom entries take bullets too. Deleting asks first. Checked in light and dark with `--render-snapshots`.
+  - **Visual differences from `MasterResume.dc.html`:** no "Used in N resumes" on bullets until builds exist (T35); the readiness panel doesn't count "bullets with a number" yet. Not drawn and decided here: the entry editor sheet (fields in a grid, month and year pickers, a switch for "I work here now") and the bullet editor (each bullet in a grouped box with removable metric and skill chips, and a menu to move or remove it).
 
 - [ ] **T19 · LLM core: tasks, schema validator, fake provider** (M, test-first) · deps: T02
   - **Acceptance:**
