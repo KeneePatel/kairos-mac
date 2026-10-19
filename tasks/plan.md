@@ -60,8 +60,8 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 - [x] D02 Platform decided: SwiftUI (2026-10-18)
 
 ### Phase 0: Foundation and risk spikes
-- [ ] T01 Repository bootstrap
-- [ ] T02 Package skeleton with HLC and UUIDv7
+- [x] T01 Repository bootstrap
+- [x] T02 Package skeleton with HLC and UUIDv7
 - [ ] T03 Guard scripts and formatter config
 - [ ] T04 CI workflow
 - [ ] T05 App shell

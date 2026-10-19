@@ -15,7 +15,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
 
 ## Phase 0: Foundation and risk spikes
 
-- [ ] **T01 · Repository bootstrap** (S) · deps: none · your step: create the GitHub repo
+- [x] **T01 · Repository bootstrap** (S) · deps: none · your step: create the GitHub repo
   - **What:** turn `kairos-mac/` into a git repo with your identity and the public-repo basics.
   - **Acceptance:**
     - [ ] `git config user.name` and `user.email` are set to Kenee Patel, and the first commit has no trailers.
@@ -24,7 +24,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** `git log -1 --format='%an <%ae> | %cn <%ce> | %(trailers)'`
   - **Files:** `.gitignore`, `LICENSE`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`
 
-- [ ] **T02 · Package skeleton with HLC and UUIDv7** (M) · deps: T01
+- [x] **T02 · Package skeleton with HLC and UUIDv7** (M) · deps: T01
   - **What:** create `Packages/KairosCore` (Swift 6 language mode, macOS 26) with a `Store` target and its first real code.
   - **Acceptance:**
     - [ ] `swift build` passes with warnings as errors; the package resolves zero dependencies.
