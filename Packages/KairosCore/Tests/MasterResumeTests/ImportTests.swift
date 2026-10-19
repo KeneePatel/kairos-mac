@@ -138,6 +138,55 @@ struct ImportTests {
         #expect(fake.requests.count == 2)  // one repair, then a clear error
     }
 
+    /// Prompt v2 (2026-10-19): v1 turned "2015" into "2015-01", called a project's description its
+    /// role and left its tech empty.
+    @Test func thePromptKeepsYearsAloneAndOnlyStatedRoles() throws {
+        #expect(ImportResumeTask.promptVersion == 2)
+        let instructions = try #require(
+            PromptLibrary.instructions(for: .importResume, version: ImportResumeTask.promptVersion))
+        #expect(instructions.contains(#"write only the year, "YYYY""#) && instructions.contains("Never guess a month"))
+        #expect(instructions.contains("A description of the project is never its role"))
+        #expect(
+            instructions.contains("tech") && instructions.contains("[removed]") && instructions.contains("Never invent")
+        )
+    }
+
+    /// A resume that gives only a year: the year is kept, the month becomes January, and review asks
+    /// you to check it.
+    @Test func aYearAloneIsKeptAndMarkedForReview() async throws {
+        let yearsOnly = """
+            {"experience":[{"title":"Dev","employer":"Acme","start":"2021-03","current":true,"bullets":["Built it."]}],
+             "projects":[{"name":"Dockyard","start":"2023","current":true,"bullets":[]}],
+             "education":[{"institution":"University of Waterloo","start":"2015","end":"2019-04"}],
+             "skills":[],
+             "certifications":[{"name":"AWS SAA","date":"2024"}]}
+            """
+        let (client, fake) = importer([.reply(yearsOnly)])
+        let result = try await client.run(ImportResumeTask(), input: "resume text", options: options)
+        let draft = ImportDraft(result.output)
+        #expect(fake.requests.count == 1)  // a year alone passes the checks
+        let (job, project, school, cert) = (draft.entries[0], draft.entries[1], draft.entries[2], draft.entries[3])
+        #expect(project.start == YearMonth(year: 2023, month: 1) && project.isCurrent)
+        #expect(school.start == YearMonth(year: 2015, month: 1) && school.end == YearMonth(year: 2019, month: 4))
+        #expect(cert.start == YearMonth(year: 2024, month: 1))
+        #expect(draft.monthsToCheck == [project.id, school.id, cert.id])
+        #expect(!draft.monthsToCheck.contains(job.id))
+        #expect(ImportDraft(entries: [job]).monthsToCheck.isEmpty)
+    }
+
+    @Test(arguments: ["15", "201", "20155", "2015-1", "2015-00", "1850", "+201"])
+    func aDateIsAMonthOrAYearAlone(_ bad: String) async throws {
+        let reply =
+            #"{"experience":[],"projects":[],"education":[{"institution":"Waterloo","start":"\#(bad)"}],"skills":[]}"#
+        let (client, _) = importer([.reply(reply), .reply(reply)])
+        await #expect {
+            try await client.run(ImportResumeTask(), input: "resume text", options: options)
+        } throws: { error in
+            guard case LLMError.invalidOutput(let message) = error else { return false }
+            return message.contains("isn't a month in YYYY-MM form")
+        }
+    }
+
     @Test func readsTheTextOfAPDF() throws {
         let text = try ResumeTextExtractor.text(
             fromPDF: Self.pdf(drawing: "Backend Developer II\n\n\n\nNorthline Freight"))

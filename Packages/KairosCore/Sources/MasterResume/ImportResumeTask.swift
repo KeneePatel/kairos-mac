@@ -76,7 +76,7 @@ public struct ImportResumeTask: LLMTask {
     }
 
     public static let id = TaskID.importResume
-    public static let promptVersion = 1
+    public static let promptVersion = 2
 
     public static let outputSchema: JSONSchema = {
         let month = JSONSchema.string(maxLength: 7)
@@ -155,13 +155,13 @@ public struct ImportResumeTask: LLMTask {
         return [.system(instructions), .user("<resume>\n\(text)\n</resume>")]
     }
 
-    /// Rules the schema can't express: months are "YYYY-MM", names aren't blank, and no contact
-    /// details come back (the input had none, so any would be invented).
+    /// Rules the schema can't express: dates are "YYYY-MM" or a year alone, names aren't blank, and
+    /// no contact details come back (the input had none, so any would be invented).
     public func check(_ output: Output, for input: String) throws {
         var months = output.experience.flatMap { [$0.start, $0.end] } + output.projects.flatMap { [$0.start, $0.end] }
         months += output.education.flatMap { [$0.start, $0.end] } + (output.certifications ?? []).map(\.date)
-        for month in months.compactMap({ $0 }) where YearMonth(month) == nil {
-            throw LLMError.invalidOutput("\"\(month)\" isn't a month in YYYY-MM form")
+        for month in months.compactMap({ $0 }) where Self.date(month) == nil {
+            throw LLMError.invalidOutput("\"\(month)\" isn't a month in YYYY-MM form or a year alone")
         }
         let blanks =
             output.experience.filter { $0.title.trimmed.isEmpty || $0.employer.trimmed.isEmpty }.count
@@ -181,6 +181,18 @@ public struct ImportResumeTask: LLMTask {
     }
 }
 
+extension ImportResumeTask {
+    /// "YYYY-MM", or a year alone when the resume gives no month: that becomes January, marked as a
+    /// guess. Nil for anything else.
+    static func date(_ text: String) -> (month: YearMonth, guessed: Bool)? {
+        if let month = YearMonth(text) { return (month, false) }
+        guard text.count == 4, text.allSatisfy(\.isASCII), let year = Int(text),
+            let month = YearMonth(year: year, month: 1)
+        else { return nil }
+        return (month, true)
+    }
+}
+
 /// The reviewed form of an import: entries and skills ready to save, plus the header text.
 public struct ImportDraft: Sendable, Equatable {
     public var headline: String?
@@ -188,6 +200,8 @@ public struct ImportDraft: Sendable, Equatable {
     public var totalYears: Double?
     public var entries: [ResumeEntry]
     public var skills: [Skill]
+    /// Entries with a date the resume gave as a year alone, set to January: review asks you to check.
+    public var monthsToCheck: Set<UUID> = []
 
     /// A draft that's only entries and skills, such as projects drafted from GitHub.
     public init(entries: [ResumeEntry], skills: [Skill] = []) {
@@ -199,17 +213,29 @@ public struct ImportDraft: Sendable, Equatable {
         headline = output.headline?.trimmed.nilIfEmpty
         highlights = output.highlights?.trimmed.nilIfEmpty
         totalYears = output.totalYears
+        var guessed = false
+        func date(_ text: String?) -> YearMonth? {
+            guard let text, let parsed = ImportResumeTask.date(text) else { return nil }
+            guessed = guessed || parsed.guessed
+            return parsed.month
+        }
         func dates(_ start: String?, _ end: String?, _ current: Bool?) -> (YearMonth?, YearMonth?, Bool) {
             let isCurrent = current ?? false
-            return (start.flatMap(YearMonth.init), isCurrent ? nil : end.flatMap(YearMonth.init), isCurrent)
+            return (date(start), isCurrent ? nil : date(end), isCurrent)
         }
         func bullets(_ texts: [String]?) -> [ResumeBullet] {
             (texts ?? []).map(\.trimmed).filter { !$0.isEmpty }.map { ResumeBullet(text: $0) }
         }
         var entries: [ResumeEntry] = []
+        var monthsToCheck: Set<UUID> = []
+        func add(_ entry: ResumeEntry) {
+            if guessed { monthsToCheck.insert(entry.id) }
+            guessed = false
+            entries.append(entry)
+        }
         for job in output.experience {
             let (start, end, current) = dates(job.start, job.end, job.current)
-            entries.append(
+            add(
                 ResumeEntry(
                     fields: .experience(
                         .init(
@@ -219,7 +245,7 @@ public struct ImportDraft: Sendable, Equatable {
         }
         for project in output.projects {
             let (start, end, current) = dates(project.start, project.end, project.current)
-            entries.append(
+            add(
                 ResumeEntry(
                     fields: .project(
                         .init(
@@ -229,7 +255,7 @@ public struct ImportDraft: Sendable, Equatable {
         }
         for school in output.education {
             let (start, end, _) = dates(school.start, school.end, nil)
-            entries.append(
+            add(
                 ResumeEntry(
                     fields: .education(
                         .init(
@@ -238,23 +264,24 @@ public struct ImportDraft: Sendable, Equatable {
                             coursework: school.coursework ?? [])), start: start, end: end))
         }
         for cert in output.certifications ?? [] {
-            entries.append(
+            add(
                 ResumeEntry(
                     fields: .certification(.init(name: cert.name.trimmed, issuer: cert.issuer ?? "")),
-                    start: cert.date.flatMap(YearMonth.init)))
+                    start: date(cert.date)))
         }
         for language in output.languages ?? [] {
             let level = EntryFields.Language.Proficiency(rawValue: language.proficiency) ?? .professional
-            entries.append(
+            add(
                 ResumeEntry(fields: .language(.init(language: language.language.trimmed, proficiency: level))))
         }
         for other in output.other ?? [] {
-            entries.append(
+            add(
                 ResumeEntry(
                     fields: .custom(.init(section: other.section.trimmed, title: other.title.trimmed)),
                     bullets: bullets(other.bullets)))
         }
         self.entries = entries
+        self.monthsToCheck = monthsToCheck
         var seen: Set<String> = []
         skills = output.skills.compactMap { draft in
             let name = draft.name.trimmed

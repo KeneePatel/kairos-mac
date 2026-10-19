@@ -109,6 +109,10 @@ final class ImportSession: Identifiable {
 
     func update(_ entry: ResumeEntry) {
         guard var draft, let index = draft.entries.firstIndex(where: { $0.id == entry.id }) else { return }
+        // Changing the dates answers "check the month".
+        if draft.entries[index].start != entry.start || draft.entries[index].end != entry.end {
+            draft.monthsToCheck.remove(entry.id)
+        }
         draft.entries[index] = entry
         self.draft = draft
     }
@@ -130,6 +134,11 @@ final class ImportSession: Identifiable {
         case .timedOut:
             "The AI provider took too long. A long resume can take a while; try again, or pick a faster model for "
                 + "\"Import a resume\" in Settings."
+        case .rateLimited(let seconds?) where seconds > 120:
+            // A daily free-tier quota, not a per-minute limit: Gemini's 429 says when it resets.
+            "This model's free quota is used up for now; it resets in about "
+                + "\(Duration.seconds(seconds).formatted(.units(allowed: [.hours, .minutes], width: .wide, maximumUnitCount: 1))). "
+                + "Pick another model for \"Import a resume\" in Settings, or try later."
         case .rateLimited:
             "The AI provider asked Kairos to slow down. Try again in a minute."
         case .server(let status):
@@ -323,6 +332,15 @@ struct ImportReviewView: View {
                     Color(.ink))
                 if !summary.meta.isEmpty {
                     Text(summary.meta).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                }
+                if session.draft?.monthsToCheck.contains(entry.id) == true {
+                    Label {
+                        Text("Your resume gives only the year, so the month is set to January. Check it with Edit…")
+                            .foregroundStyle(Color(.inkSecondary))
+                    } icon: {
+                        Image(systemName: "calendar.badge.exclamationmark").foregroundStyle(Color(.maybe))
+                    }
+                    .font(TypeStyle.callout)
                 }
                 ForEach(entry.bullets.prefix(2)) { bullet in
                     Text("• " + bullet.text).font(TypeStyle.callout).foregroundStyle(Color(.ink2)).lineLimit(2)

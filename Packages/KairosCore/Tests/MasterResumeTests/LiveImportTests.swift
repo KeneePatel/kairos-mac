@@ -104,6 +104,17 @@ struct LiveImportTests {
             print(
                 "live:   \(draft.entries.count) entries \(draft.entries.map(\.kind.rawValue)) · \(draft.skills.count) skills"
             )
+            print(
+                "live:   months to check: \(draft.entries.filter { draft.monthsToCheck.contains($0.id) }.map(\.kind.rawValue))"
+            )
+            for entry in draft.entries {
+                if case .project(let project) = entry.fields {
+                    print("live:   project \(project.name): role \"\(project.role)\" · tech \(project.tech)")
+                }
+                if case .certification(let cert) = entry.fields {
+                    print("live:   certification \(cert.name): issuer \"\(cert.issuer)\"")
+                }
+            }
             for entry in draft.entries {
                 let dates =
                     "\(entry.start?.description ?? "?")–\(entry.isCurrent ? "now" : entry.end?.description ?? "?")"

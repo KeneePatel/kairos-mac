@@ -83,8 +83,8 @@
                  "experience":[{"title":"Software Developer, Backend","employer":"Harbourline Logistics","location":"Toronto, ON",
                    "start":"2022-03","current":true,"bullets":["Built an event pipeline handling 4.2M events a day",
                    "Onboarded 11 carriers in 4 days instead of 3 weeks","Migrated 14 services to Kubernetes"]}],
-                 "projects":[{"name":"Dockyard","role":"Author","start":"2023-01","current":true,"bullets":["Open-source Go CLI"]}],
-                 "education":[{"institution":"University of Waterloo","credential":"BMath","field":"Computer Science","start":"2015-09","end":"2019-04"}],
+                 "projects":[{"name":"Dockyard","role":"Author","start":"2023","current":true,"bullets":["Open-source Go CLI"]}],
+                 "education":[{"institution":"University of Waterloo","credential":"BMath","field":"Computer Science","start":"2015","end":"2019"}],
                  "skills":[{"name":"Go","level":"proven"},{"name":"PostgreSQL","level":"proven"},{"name":"Kafka","level":"can_discuss"}],
                  "languages":[{"language":"French","proficiency":"conversational"}]}
                 """
