@@ -1,0 +1,6 @@
+[
+  {"name":"old-fork","full_name":"jrivera/old-fork","description":"Someone else's project","language":"C","fork":true,"archived":false,"stargazers_count":0,"html_url":"https://github.com/jrivera/old-fork","created_at":"2019-01-02T10:00:00Z","pushed_at":"2019-02-02T10:00:00Z","topics":[]},
+  {"name":"dockyard","full_name":"jrivera/dockyard","description":"A Go CLI that cleans up local Docker resources. Questions: jordan.rivera@example.com","language":"Go","fork":false,"archived":false,"stargazers_count":42,"html_url":"https://github.com/jrivera/dockyard","created_at":"2023-01-15T10:00:00Z","pushed_at":"2025-09-30T10:00:00Z","topics":["docker","cli"]},
+  {"name":"tidewatch","full_name":"jrivera/tidewatch","description":null,"language":"Swift","fork":false,"archived":true,"stargazers_count":3,"html_url":"https://github.com/jrivera/tidewatch","created_at":"2020-05-01T10:00:00Z","pushed_at":"2021-03-01T10:00:00Z"},
+  {"name":"freightline","full_name":"jrivera/freightline","description":"Shipment tracking API sketch","language":"Go","fork":false,"archived":false,"stargazers_count":1,"html_url":"https://github.com/jrivera/freightline","created_at":"2022-04-10T10:00:00Z","pushed_at":"2022-11-20T10:00:00Z","topics":[]}
+]

@@ -189,6 +189,12 @@ public struct ImportDraft: Sendable, Equatable {
     public var entries: [ResumeEntry]
     public var skills: [Skill]
 
+    /// A draft that's only entries and skills, such as projects drafted from GitHub.
+    public init(entries: [ResumeEntry], skills: [Skill] = []) {
+        self.entries = entries
+        self.skills = skills
+    }
+
     public init(_ output: ImportResumeTask.Output) {
         headline = output.headline?.trimmed.nilIfEmpty
         highlights = output.highlights?.trimmed.nilIfEmpty

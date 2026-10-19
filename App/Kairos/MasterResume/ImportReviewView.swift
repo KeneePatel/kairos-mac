@@ -93,6 +93,15 @@ final class ImportSession: Identifiable {
         step = .source
     }
 
+    /// Goes straight to review with a draft made elsewhere (GitHub projects).
+    func review(_ draft: ImportDraft) {
+        self.draft = draft
+        keptEntries = Set(draft.entries.map(\.id))
+        keptSkills = Set(draft.skills.map(\.id))
+        keepHeader = false
+        step = .review
+    }
+
     func update(_ entry: ResumeEntry) {
         guard var draft, let index = draft.entries.firstIndex(where: { $0.id == entry.id }) else { return }
         draft.entries[index] = entry
@@ -122,6 +131,7 @@ struct ImportReviewView: View {
     @Environment(ResumeModel.self) private var resume
     @Environment(\.dismiss) private var dismiss
     @State var session: ImportSession
+    var title = "Import a resume"
     @State private var choosingPDF = false
     @State private var showsSent = false
     @State private var editing: ResumeEntry?
@@ -129,7 +139,7 @@ struct ImportReviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.space5) {
             VStack(alignment: .leading, spacing: Spacing.space1) {
-                Text("Import a resume").font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                Text(title).font(TypeStyle.title3).foregroundStyle(Color(.ink))
                 Text("Kairos drafts your master resume from it. You choose what to keep; nothing is saved before that.")
                     .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
             }

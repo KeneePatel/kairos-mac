@@ -189,7 +189,7 @@ public enum Validator {
 
     /// "github.com/x/" → "https://github.com/x". GitHub's rules: 1–39 letters, digits and single
     /// hyphens, not at either end.
-    static func gitHubProfile(_ text: String) -> String? {
+    public static func gitHubProfile(_ text: String) -> String? {
         guard let (host, path) = hostAndPath(text), host == "github.com" || host == "www.github.com", path.count == 1
         else { return nil }
         let user = path[0]

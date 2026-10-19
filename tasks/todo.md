@@ -274,12 +274,13 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Done 2026-10-19:** redaction written test-first (30 table cases and a whole resume); 13 more import tests, including the prompt-privacy test SPEC §5.5 asks for. Prompts are versioned resources (`LLM/Prompts/importResume.v1.md`, loaded by `PromptLibrary`). Your city isn't removed: it would strip every job location too. The import sheet shows exactly what gets sent, refuses to run until your name, email, phone and LinkedIn are filled in, and saves only what you tick; edits in review change the draft, not the master resume, and header text fills only empty fields. **Your step:** add your Gemini key in Settings, then Master resume → Import resume… with your real resume (Checkpoint C).
   - **Not drawn in the design and decided here:** the import sheet (choose a PDF or paste, a "What gets sent" disclosure with the redacted text, a review list with a checkbox and Edit… per entry and per skill chip).
 
-- [ ] **T26 · Import GitHub repos as projects** (S) · deps: T25
+- [x] **T26 · Import GitHub repos as projects** (S) · deps: T25
   - **Acceptance:**
-    - [ ] Lists the repos of your GitHub URL's user through the public REST API (optional token stored in the Keychain).
-    - [ ] The `importGitHubRepo` task drafts a project entry from the repo name, languages and README excerpt; you review it before it's saved.
+    - [x] Lists the repos of your GitHub URL's user through the public REST API (optional token stored in the Keychain).
+    - [x] The `importGitHubRepo` task drafts a project entry from the repo name, languages and README excerpt; you review it before it's saved.
   - **Verify:** `core-test MasterResumeTests` (recorded GitHub responses); manual
   - **Files:** `Sources/MasterResume/GitHubImport.swift`, `Sources/MasterResume/ImportGitHubRepoTask.swift`, `Tests/MasterResumeTests/GitHubImportTests.swift`
+  - **Done 2026-10-19:** 9 tests on recorded GitHub responses (sample persona). The README excerpt and description are redacted like a resume before anything is sent (a test checks the name, email and site don't survive); dates and the repo link come from GitHub, not the model; a repo pushed in the last three months counts as current. Your own repos list first, forks and archived last. A token is optional (Keychain `github.token`); the sheet asks for one only when GitHub's 60-an-hour limit is hit. Drafts go through the same review as resume import. **Your step:** Master resume → Import → From GitHub… (needs your GitHub URL in Contact and an AI key).
 
 - [ ] **T20a · Re-check spike T20's open items and report back** (S) · deps: T21, T22 · your step: one live run with your key
   - **Why:** you asked (2026-10-19) to note these and come back to them. Doing this after T21–T22 means the real adapter, not the spike harness, gets checked.

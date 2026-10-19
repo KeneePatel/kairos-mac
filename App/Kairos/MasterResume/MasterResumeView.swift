@@ -7,6 +7,7 @@ struct MasterResumeView: View {
     @Environment(AISettingsModel.self) private var ai
     @State private var editing: ResumeEntry?
     @State private var importing: ImportSession?
+    @State private var importingGitHub = false
     @State private var deleting: ResumeEntry?
     @State private var showsReadiness = true
 
@@ -36,12 +37,13 @@ struct MasterResumeView: View {
         .navigationSubtitle("Version \(model.resume.version) · the only source for every resume Kairos builds")
         .toolbar {
             ToolbarItem {
-                Button {
-                    importing = ImportSession(router: ai.router())
+                Menu {
+                    Button("From a resume…") { importing = ImportSession(router: ai.router()) }
+                    Button("From GitHub…") { importingGitHub = true }
                 } label: {
-                    Label("Import resume…", systemImage: "square.and.arrow.down").labelStyle(.titleAndIcon)
+                    Label("Import", systemImage: "square.and.arrow.down").labelStyle(.titleAndIcon)
                 }
-                .help("Draft your master resume from a resume PDF or pasted text")
+                .help("Draft entries from a resume or from your GitHub repos")
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
@@ -61,6 +63,7 @@ struct MasterResumeView: View {
         }
         .sheet(item: $editing) { entry in EntryEditor(entry: entry) }
         .sheet(item: $importing) { session in ImportReviewView(session: session) }
+        .sheet(isPresented: $importingGitHub) { GitHubImportView() }
         .confirmationDialog(
             "Delete this \(deleting?.kind.itemName.lowercased() ?? "entry")?",
             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting

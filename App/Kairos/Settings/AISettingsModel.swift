@@ -108,6 +108,25 @@ final class AISettingsModel {
         await save()
     }
 
+    // MARK: - GitHub token
+
+    /// Optional; lifts GitHub's 60-requests-an-hour limit for project import. Kept in the Keychain
+    /// next to the AI keys, since this model already owns that store.
+    static let gitHubTokenName = SecretKey("github.token")
+
+    func gitHubToken() -> String? {
+        (try? secrets.read(Self.gitHubTokenName)) ?? nil
+    }
+
+    func setGitHubToken(_ token: String) {
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            try? secrets.delete(Self.gitHubTokenName)
+        } else {
+            try? secrets.write(trimmed, for: Self.gitHubTokenName)
+        }
+    }
+
     // MARK: - Providers
 
     /// Presets not added yet.
