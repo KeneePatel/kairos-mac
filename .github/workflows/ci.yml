@@ -1,0 +1,75 @@
+name: CI
+
+# Runs every CONSTRAINTS.md check on each pull request and each push to main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    # Apple silicon with Xcode 26 by default; standard runners are free for public repos.
+    runs-on: macos-26
+    env:
+      EVENT: ${{ github.event_name }}
+      BASE_REF: ${{ github.base_ref }}
+      BEFORE: ${{ github.event.before }}
+      HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+      THIS_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # The pull request's own commits, not GitHub's merge commit, so the
+          # commit check sees the real authors.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Pick the base to compare against
+        id: base
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            echo "ref=origin/$BASE_REF" >> "$GITHUB_OUTPUT"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            echo "ref=$BEFORE" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$(git rev-list --max-parents=0 HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Format
+        run: swift format lint --strict --recursive Packages $( [ -d App ] && echo App )
+
+      - name: Build (warnings are errors)
+        run: swift build --package-path Packages/KairosCore
+
+      - name: Test with coverage
+        run: swift test --package-path Packages/KairosCore --enable-code-coverage
+
+      - name: Changed-line coverage
+        run: scripts/coverage-diff.sh "${{ steps.base.outputs.ref }}"
+
+      - name: Floor guard
+        run: swift scripts/floor-guard.swift --base "${{ steps.base.outputs.ref }}"
+
+      - name: Dependencies
+        run: scripts/check-deps.sh
+
+      - name: Commits
+        run: |
+          if [ "$EVENT" = "pull_request" ] && [ "$HEAD_REPO" != "$THIS_REPO" ]; then
+            scripts/check-commits.sh "${{ steps.base.outputs.ref }}..HEAD" --allow-other-authors
+          else
+            scripts/check-commits.sh "${{ steps.base.outputs.ref }}..HEAD"
+          fi
+
+      - name: Secrets
+        run: |
+          brew install gitleaks
+          gitleaks detect --redact --no-banner
