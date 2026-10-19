@@ -94,7 +94,7 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 - [x] T20 Spike: live structured output (Gemini, Ollama)
 - [ ] T20a Re-check T20's open items with the real adapter, and report back (after T22)
 - [x] T21 OpenAI-compatible adapter and presets
-- [ ] T22 LLM client: rate limits, retries, key rotation, repair
+- [x] T22 LLM client: rate limits, retries, key rotation, repair
 - [ ] T23 Router, budget, cache, call log
 - [ ] T24 Settings: AI providers
 - [ ] T25 Import a resume into the master resume

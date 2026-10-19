@@ -4,7 +4,7 @@ import Synchronization
 /// limiter, retries, repair, fallback, budget and cache be tested without a network (SPEC §5.5).
 public final class FakeProvider: LLMProvider {
     public enum Reply: Sendable {
-        case reply(String, inputTokens: Int? = nil, outputTokens: Int? = nil)
+        case reply(String, inputTokens: Int? = nil, outputTokens: Int? = nil, finishReason: String? = nil)
         case failure(LLMError)
     }
 
@@ -35,8 +35,10 @@ public final class FakeProvider: LLMProvider {
             throw .noScriptedReply(request.task)
         case .failure(let error)?:
             throw error
-        case .reply(let text, let inputTokens, let outputTokens)?:
-            return ChatResponse(text: text, model: request.model, inputTokens: inputTokens, outputTokens: outputTokens)
+        case .reply(let text, let inputTokens, let outputTokens, let finishReason)?:
+            return ChatResponse(
+                text: text, model: request.model, inputTokens: inputTokens, outputTokens: outputTokens,
+                finishReason: finishReason)
         }
     }
 }

@@ -235,14 +235,15 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Sources/LLM/OpenAICompatibleProvider.swift`, `Sources/LLM/ProviderPreset.swift`, `Tests/LLMTests/OpenAICompatibleProviderTests.swift`
   - **Done 2026-10-19:** 22 adapter, preset and transport tests, replaying T20's real replies. A model that refuses a structured-output mode (501, or a 400 about `response_format`) drops one level and the provider remembers it in `ModelCapabilities`, shared across keys so the refusal is paid once. Base URLs must be https unless local, so a key never goes out over plain http. The scripted URLProtocol moved to a shared `TestSupport` test target. Learned capabilities live in memory for now; T23/T24 can persist them with the provider settings.
 
-- [ ] **T22 · LLM client: rate limits, retries, key rotation, repair** (M, test-first) · deps: T21
+- [x] **T22 · LLM client: rate limits, retries, key rotation, repair** (M, test-first) · deps: T21
   - **Acceptance:**
-    - [ ] Token-bucket limiter (requests per minute) and a concurrency cap per provider. Retries: 3 with backoff and jitter for network errors and 5xx. 429 rotates keys and honors `Retry-After`. 4xx are never retried.
-    - [ ] The output pipeline decodes (stripping code fences), validates against the schema, runs the task's check, and makes one repair call that includes the error.
-    - [ ] Cancellation stops in-flight requests. All timing is tested with a fake clock.
-    - [ ] From T20: 501 is never retried; no wait exceeds 60 s (a free-tier 429 asked for 14 hours); local providers get a longer timeout (180 s) and run with thinking off by default (`reasoning_effort: none`; your decision, 2026-10-19). 503 "high demand" is retried with backoff.
+    - [x] Token-bucket limiter (requests per minute) and a concurrency cap per provider. Retries: 3 with backoff and jitter for network errors and 5xx. 429 rotates keys and honors `Retry-After`. 4xx are never retried.
+    - [x] The output pipeline decodes (stripping code fences), validates against the schema, runs the task's check, and makes one repair call that includes the error.
+    - [x] Cancellation stops in-flight requests. All timing is tested with a fake clock.
+    - [x] From T20: 501 is never retried; no wait exceeds 60 s (a free-tier 429 asked for 14 hours); local providers get a longer timeout (180 s) and run with thinking off by default (`reasoning_effort: none`; your decision, 2026-10-19). 503 "high demand" is retried with backoff.
   - **Verify:** `core-test LLMTests`
   - **Files:** `Sources/LLM/LLMClient.swift`, `Sources/LLM/RateLimiter.swift`, `Sources/LLM/OutputPipeline.swift`, `Tests/LLMTests/LLMClientTests.swift`
+  - **Done 2026-10-19:** written test-first; 23 client and rate-limiter tests on a virtual clock (every wait is recorded exactly and nothing actually waits). A 429 rests that key and moves to the next at once; when every key rests, the client waits for the first unless that's over 60 s. A model off one key's plan tries the other keys only. The repair call carries the original reply and a note quoting every problem; tokens from both calls count. Per-task timeouts (60 s extraction, 120 s writing) are left to the router (T23), which knows each task.
 
 - [ ] **T23 · Router, budget, cache, call log** (M) · deps: T22, T07
   - **Acceptance:**
