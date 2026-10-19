@@ -15,6 +15,7 @@ let package = Package(
         .library(name: "JobSources", targets: ["JobSources"]),
         .library(name: "Pipeline", targets: ["Pipeline"]),
         .library(name: "MasterResume", targets: ["MasterResume"]),
+        .library(name: "LLM", targets: ["LLM"]),
     ],
     targets: [
         .target(name: "Store", resources: [.copy("Schema")], swiftSettings: strict),
@@ -22,6 +23,8 @@ let package = Package(
         .target(
             name: "JobSources", dependencies: ["Store"], resources: [.copy("Geo/places.json")], swiftSettings: strict),
         .testTarget(name: "JobSourcesTests", dependencies: ["JobSources"], swiftSettings: strict),
+        .target(name: "LLM", dependencies: ["Secrets"], swiftSettings: strict),
+        .testTarget(name: "LLMTests", dependencies: ["LLM"], swiftSettings: strict),
         .target(name: "MasterResume", dependencies: ["Store"], swiftSettings: strict),
         .testTarget(name: "MasterResumeTests", dependencies: ["MasterResume"], swiftSettings: strict),
         .target(name: "Pipeline", dependencies: ["Store", "JobSources"], swiftSettings: strict),

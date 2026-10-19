@@ -207,13 +207,14 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Done 2026-10-19:** app builds clean. One `EntrySection` view serves roles and projects (grouped under "Experience", as the design does) and education, so there are no separate Projects and Education files; the entry editor moved to `EntryEditor.swift`. Bullets keep their ids through every edit; blank bullets are dropped on save. Volunteering and custom entries take bullets too. Deleting asks first. Checked in light and dark with `--render-snapshots`.
   - **Visual differences from `MasterResume.dc.html`:** no "Used in N resumes" on bullets until builds exist (T35); the readiness panel doesn't count "bullets with a number" yet. Not drawn and decided here: the entry editor sheet (fields in a grid, month and year pickers, a switch for "I work here now") and the bullet editor (each bullet in a grouped box with removable metric and skill chips, and a menu to move or remove it).
 
-- [ ] **T19 · LLM core: tasks, schema validator, fake provider** (M, test-first) · deps: T02
+- [x] **T19 · LLM core: tasks, schema validator, fake provider** (M, test-first) · deps: T02
   - **Acceptance:**
-    - [ ] `LLMTask`, `ChatMessage`, `LLMResult` and `LLMError` as in SPEC §5.5.
-    - [ ] `JSONSchema` value type and validator for the subset: object, array, string enums, integer ranges, required fields, max length, max items. Error messages name the failing path.
-    - [ ] `FakeProvider` returns scripted replies per task id.
+    - [x] `LLMTask`, `ChatMessage`, `LLMResult` and `LLMError` as in SPEC §5.5.
+    - [x] `JSONSchema` value type and validator for the subset: object, array, string enums, integer ranges, required fields, max length, max items. Error messages name the failing path.
+    - [x] `FakeProvider` returns scripted replies per task id.
   - **Verify:** `core-test LLMTests`
   - **Files:** `Sources/LLM/LLMTask.swift`, `Sources/LLM/JSONSchema.swift`, `Sources/LLM/SchemaValidator.swift`, `Sources/LLM/FakeProvider.swift`, `Tests/LLMTests/SchemaValidatorTests.swift`
+  - **Done 2026-10-19:** written test-first; 19 LLM tests. The validator reports every issue in document order (up to 20), so the single repair call can quote them all. Unknown extra properties are ignored when validating but the exported schema says `additionalProperties: false`, which strict provider modes need. `LLMProvider` (one model call, nothing more) is the seam T21's adapters implement.
 
 - [ ] **T20 · Spike: live structured output** (S) · deps: T19 · your step: a Gemini key (and optionally local Ollama)
   - **Acceptance:**
