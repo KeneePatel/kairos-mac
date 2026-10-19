@@ -86,6 +86,23 @@ public struct JobRepository: Sendable {
         return known
     }
 
+    /// The source and dedup key of live jobs at these companies (the part of `dedup_key` before
+    /// the first "|"), which near-duplicate checks compare against.
+    public func dedupEntries(companies: Set<String>) async throws -> [(sourceID: UUID, dedupKey: String)] {
+        var entries: [(sourceID: UUID, dedupKey: String)] = []
+        for company in companies.sorted() {
+            // A range on the indexed key: "acme|" up to "acme}" ("}" sorts right after "|").
+            let rows = try await db.query(
+                "SELECT source_id, dedup_key FROM job WHERE deleted = 0 AND dedup_key >= ? AND dedup_key < ?",
+                [.text(company + "|"), .text(company + "}")])
+            for row in rows {
+                let r = RowReader(row: row, table: "job")
+                entries.append((try r.uuid("source_id"), try r.string("dedup_key")))
+            }
+        }
+        return entries
+    }
+
     /// Marks the job deleted. The row stays as a tombstone, without its description, which a
     /// deleted job no longer needs.
     @discardableResult

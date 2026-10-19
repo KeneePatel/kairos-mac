@@ -12,6 +12,8 @@ let package = Package(
         .library(name: "Store", targets: ["Store"]),
         .library(name: "Render", targets: ["Render"]),
         .library(name: "Secrets", targets: ["Secrets"]),
+        .library(name: "JobSources", targets: ["JobSources"]),
+        .library(name: "Pipeline", targets: ["Pipeline"]),
     ],
     targets: [
         .target(name: "Store", resources: [.copy("Schema")], swiftSettings: strict),
@@ -19,6 +21,8 @@ let package = Package(
         .target(
             name: "JobSources", dependencies: ["Store"], resources: [.copy("Geo/places.json")], swiftSettings: strict),
         .testTarget(name: "JobSourcesTests", dependencies: ["JobSources"], swiftSettings: strict),
+        .target(name: "Pipeline", dependencies: ["Store", "JobSources"], swiftSettings: strict),
+        .testTarget(name: "PipelineTests", dependencies: ["Pipeline"], swiftSettings: strict),
         .target(name: "Render", resources: [.copy("Templates")], swiftSettings: strict),
         .testTarget(name: "RenderTests", dependencies: ["Render"], swiftSettings: strict),
         .target(name: "Secrets", swiftSettings: strict),

@@ -38,6 +38,10 @@ targets:
         product: Render
       - package: KairosCore
         product: Secrets
+      - package: KairosCore
+        product: JobSources
+      - package: KairosCore
+        product: Pipeline
     info:
       path: Kairos/Info.plist
       properties:

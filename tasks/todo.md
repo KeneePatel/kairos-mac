@@ -150,13 +150,18 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Sources/JobSources/Normalizer.swift`, `Sources/JobSources/Geo/Geo.swift`, `Sources/JobSources/Geo/places.json`, `Sources/JobSources/Deduplicator.swift`, `Tests/JobSourcesTests/NormalizerGeoTests.swift`
   - **Done 2026-10-19:** 35 JobSources tests (the geography table has 74 strings, and a planted wrong row fails it). Postings outside Canada and the US come back as `.outsideCanadaAndUS` for the fetch to drop (SPEC §5.4). `RemoteScope` gained `remote` for "Remote" with no region. Near-duplicates are compared only within one company and across different sources; two URLs on one board are always two jobs.
 
-- [ ] **T14 · First vertical slice in the app** (M) · deps: T10, T12, T13, T05
+- [x] **T14 · First vertical slice in the app** (M) · deps: T10, T12, T13, T05
   - **Acceptance:**
-    - [ ] `Pipeline.FetchRun` runs fetch → normalize → de-duplicate → store → `run` row. It's cancellable and reports progress as an `AsyncStream`.
-    - [ ] The Sources screen adds a company by careers URL (with detection) and lists sources and their health.
-    - [ ] The Jobs screen lists jobs with country and location; the detail view shows the Markdown description. "Fetch now" shows progress and can be stopped.
+    - [x] `Pipeline.FetchRun` runs fetch → normalize → de-duplicate → store → `run` row. It's cancellable and reports progress as an `AsyncStream`.
+    - [x] The Sources screen adds a company by careers URL (with detection) and lists sources and their health.
+    - [x] The Jobs screen lists jobs with country and location; the detail view shows the Markdown description. "Fetch now" shows progress and can be stopped.
   - **Verify:** `core-test PipelineTests`, `app-build`. Manually: add 3 real companies and fetch.
   - **Files:** `Sources/Pipeline/FetchRun.swift`, `App/Kairos/AppModel.swift`, `App/Kairos/Screens/SourcesView.swift`, `App/Kairos/Screens/JobsView.swift`, `App/Kairos/Screens/JobDetailView.swift`
+  - **Done 2026-10-19:** 7 Pipeline tests (fakes against real SQLite: storing, drops, failures counting as empty runs, the concurrency cap, cancellation); app builds clean. Live smoke (`KAIROS_LIVE=1 swift test --filter LiveSmokeTests`) on GitLab (Greenhouse), Spotify (Lever) and Ramp (Ashby): 481 found, 171 dropped as outside Canada and the US (all checked by hand: none Canadian or American), 310 stored, 304 with a country; the other 6 say only "Remote". The in-app run with 3 companies is for Checkpoint B with you.
+  - **Visual differences from the mockups** (CLAUDE.md, Design):
+    - Jobs vs `Main.dc.html`: no verdict filter, verdict or match columns, and the inspector shows posting facts and the description instead of score and requirements. Screening comes in T23–T26. Run status sits in the window subtitle (the native place on macOS 26) rather than as toolbar text, and the button says "Fetch now" (this task's wording) rather than "Run now". The Jobs section opens first because Today needs verdicts. No account footer in the sidebar until accounts exist (T27+).
+    - Sources vs `Sources.dc.html`: no "Locations kept" column, opt-in boards section or titles-and-countries side panel; these belong to the prefilter settings and tier-C boards, which come later. "Can't reach" puts the reason in a tooltip rather than inline. Pause and Remove are in the row's context menu.
+    - Not drawn in the design and decided here: empty states (system `ContentUnavailableView`), the Add company sheet (system form; the detected board shows as a green check and words), and the status "No jobs in N checks" for a degraded board (error colour, triangle icon and words, like "Can't reach").
 
 #### Checkpoint B
 - [ ] 3 real companies fetched; duplicates removed; countries parsed; task-end checks green; reviewed with you

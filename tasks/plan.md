@@ -81,7 +81,7 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 - [x] T11 HTTP client and Greenhouse source
 - [x] T12 Lever and Ashby sources, ATS detection
 - [x] T13 Normalization, geography, de-duplication
-- [ ] T14 First vertical slice in the app
+- [x] T14 First vertical slice in the app
 
 #### Checkpoint B: add 3 real companies, fetch, see de-duplicated jobs with countries
 

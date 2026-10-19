@@ -38,13 +38,15 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 }
 
 struct RootView: View {
-    @State private var selection: AppSection? = .today
+    @Environment(AppModel.self) private var model
+    @State private var selection: AppSection? = .jobs
 
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
                 ForEach(AppSection.workflow) { section in
                     Label(section.title, systemImage: section.symbol).tag(section)
+                        .badge(section == .jobs ? model.jobs.count : 0)
                 }
                 Section("Profile") {
                     ForEach(AppSection.profile) { section in
@@ -54,10 +56,19 @@ struct RootView: View {
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 232)
         } detail: {
-            if let selection {
-                PlaceholderView(section: selection)
-            } else {
-                PlaceholderView(section: .today)
+            switch (model.phase, selection ?? .jobs) {
+            case (.opening, _):
+                ProgressView()
+            case (.failed(let message), _):
+                ContentUnavailableView(
+                    "Kairos couldn't start", systemImage: "exclamationmark.triangle",
+                    description: Text(message).foregroundStyle(Color(.inkSecondary)))
+            case (.ready, .jobs):
+                JobsView()
+            case (.ready, .sources):
+                SourcesView()
+            case (.ready, let section):
+                PlaceholderView(section: section)
             }
         }
     }
@@ -78,5 +89,5 @@ struct PlaceholderView: View {
 }
 
 #Preview {
-    RootView()
+    RootView().environment(AppModel())
 }

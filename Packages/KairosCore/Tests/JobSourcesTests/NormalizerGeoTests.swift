@@ -313,3 +313,35 @@ struct DeduplicatorTests {
         #expect(abs(Deduplicator.similarity(a, b) - expected) < 1e-9)
     }
 }
+
+@Suite("Markdown blocks")
+struct MarkdownBlockTests {
+    @Test func splitsWhatTheConverterWrites() {
+        let html = """
+            <p>Intro<br>second line</p><h3>Requirements</h3><ul><li>Go<ul><li>Generics</li></ul></li></ul>
+            <ol><li>One</li><li>Two</li></ol><hr><p>End</p>
+            """
+        #expect(
+            MarkdownBlock.parse(HTMLToMarkdown.convert(html)) == [
+                .paragraph("Intro\nsecond line"),
+                .heading(level: 3, text: "Requirements"),
+                .item(marker: "•", depth: 0, text: "Go"),
+                .item(marker: "•", depth: 1, text: "Generics"),
+                .item(marker: "1.", depth: 0, text: "One"),
+                .item(marker: "2.", depth: 0, text: "Two"),
+                .rule,
+                .paragraph("End"),
+            ])
+    }
+
+    @Test(arguments: [
+        ("", [MarkdownBlock]()),
+        ("#hashtag is text", [.paragraph("#hashtag is text")]),
+        ("2026. A year", [.paragraph("2026. A year")]),  // four digits isn't a list number
+        ("1.5 million users", [.paragraph("1.5 million users")]),
+        ("####### seven", [.paragraph("####### seven")]),
+    ])
+    func leavesLookalikesAsText(markdown: String, expected: [MarkdownBlock]) {
+        #expect(MarkdownBlock.parse(markdown) == expected)
+    }
+}

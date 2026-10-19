@@ -198,3 +198,36 @@ struct JobRepositoryTests {
         #expect(try await repo.jobs().isEmpty)
     }
 }
+
+@Suite("Dedup entries and run history")
+struct DedupAndRunTests {
+    @Test func dedupEntriesMatchTheWholeCompanyNameOnly() async throws {
+        let db = try await migratedDatabase()
+        var acme = sampleJob(1)
+        acme.dedupKey = "acme|engineer|toronto"
+        var acmeRobotics = sampleJob(2)
+        acmeRobotics.dedupKey = "acme robotics|engineer|toronto"
+        var gone = sampleJob(3)
+        gone.dedupKey = "acme|designer|"
+        let repo = JobRepository(db)
+        try await repo.upsert([acme, acmeRobotics, gone])
+        try await repo.tombstone(gone.id)
+        let entries = try await repo.dedupEntries(companies: ["acme"])
+        #expect(entries.map(\.dedupKey) == ["acme|engineer|toronto"])  // not "acme robotics", not the tombstone
+        #expect(entries.first?.sourceID == sourceA)
+        #expect(try await repo.dedupEntries(companies: []).isEmpty)
+    }
+
+    @Test func aRunIsRecordedFromStartToFinish() async throws {
+        let runs = RunRepository(try await migratedDatabase())
+        let first = try await runs.begin(kind: "fetch")
+        let second = try await runs.begin(kind: "screen")
+        try await runs.finish(first, stats: #"{"found":3}"#, error: "cancelled")
+        let fetches = try await runs.runs(kind: "fetch")
+        #expect(fetches.map(\.id) == [first])
+        #expect(fetches.first?.stats == #"{"found":3}"# && fetches.first?.error == "cancelled")
+        #expect(fetches.first?.finishedAt != nil)
+        #expect(try await runs.runs().map(\.id).sorted { $0.lowercased < $1.lowercased } == [first, second])
+        #expect(try await runs.runs(kind: "screen").first?.finishedAt == nil)
+    }
+}
