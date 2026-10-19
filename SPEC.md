@@ -452,7 +452,7 @@ New accounts start with the Gemini preset. Writing tasks use its newest Flash mo
 ### 5.7 Security and privacy
 - **No inbound network surface.** All server-side authorization lives in Supabase row-level security, never in the client.
 - **Keys:** the app and the PWA ship only the Supabase **publishable** key (`sb_publishable_…`, safe in client code). The secret key never leaves the Supabase dashboard and is never in the repo. The legacy anon and service_role keys are not used; Supabase deprecates them by the end of 2026.
-- **Keychain** holds LLM keys and the session (access and refresh tokens) with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, so nothing syncs through iCloud Keychain. Never in SQLite, Supabase, `UserDefaults` or logs.
+- **Keychain** holds LLM keys and the session (access and refresh tokens) as login-keychain items, which never sync through iCloud Keychain. The data protection keychain needs a paid-program team ID, so access is tied to the app's signature instead; spike T07 showed one stable self-signed certificate keeps that access across updates without prompts (`docs/spikes/keychain-signing.md`). Never in SQLite, Supabase, `UserDefaults` or logs.
 - **Data classification:**
 
   | Class | Fields | Handling |
@@ -945,7 +945,7 @@ Every "every change" and "before commit" row also runs in CI (`.github/workflows
 |---|---|---|
 | Supabase free project pauses after a week of no activity | Low with daily use | Daily syncs; the app degrades to local-only; documented restore steps for the admin |
 | Free SMTP limits or deliverability block sign-ups | Medium | Custom SMTP from day one; invite-only keeps volume tiny; OAuth sign-up avoids email entirely |
-| Unsigned app: friends must approve it in System Settings → Privacy & Security on first launch (macOS 15 removed the Control-click bypass), and ad-hoc signatures can trigger Keychain prompts after updates | High (first launch) | Releases are signed with one stable self-signed certificate, so the code identity stays the same across updates (to verify in an R1 spike); written install guide with screenshots |
+| Unsigned app: friends must approve it in System Settings → Privacy & Security on first launch (macOS 15 removed the Control-click bypass), and ad-hoc signatures can trigger Keychain prompts after updates | High (first launch) | Releases are signed with one stable self-signed certificate, so the code identity stays the same across updates (verified in spike T07). Note from T07: the login keychain may also admit another build with the same bundle ID without a prompt, which is acceptable for keys users can rotate. Written install guide with screenshots |
 | Stretch-mode bullets get probed in interviews | Per user | Opt-in, hard limits, "Be ready to discuss" list per job |
 | Tier-C boards break or block automation | High | Off by default; extractors are resources; health checks |
 | Free LLM tiers shrink | High | Any OpenAI-compatible provider; local Ollama; prefilter; budget guard |

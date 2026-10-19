@@ -78,7 +78,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** `core-test RenderTests`, plus the in-app run. Write-up in `docs/spikes/typst-sandbox.md`, with the fallback decision if it fails.
   - **Files:** `scripts/fetch-typst.sh`, `Sources/Render/TypstRunner.swift`, `Sources/Render/Templates/spike.typ`, `Tests/RenderTests/TypstRunnerTests.swift`, `docs/spikes/typst-sandbox.md`
 
-- [ ] **T07 · Spike: Keychain access across self-signed rebuilds** (S) · deps: T05 · **risk**
+- [x] **T07 · Spike: Keychain access across self-signed rebuilds** (S) · deps: T05 · **risk**
   - **What:** confirm that a stable self-signed certificate keeps Keychain items readable after an update.
   - **Acceptance:**
     - [ ] The `Secrets` target stores and reads a test item with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`.

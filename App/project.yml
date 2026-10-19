@@ -42,6 +42,8 @@ targets:
       path: Kairos/Info.plist
       properties:
         CFBundleDisplayName: Kairos
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.productivity
         NSHumanReadableCopyright: Copyright © 2026 Kenee Patel. MIT License.
         CFBundleURLTypes:
@@ -61,7 +63,9 @@ targets:
         ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        # Signed to run locally until T07 settles the self-signed certificate.
+        # Ad-hoc by default. Release and spike builds pass KAIROS_SIGNING_IDENTITY="Kairos Local Signing"
+        # (docs/signing.md); it only reaches this target, so package resource bundles stay unsigned.
         CODE_SIGN_STYLE: Manual
-        CODE_SIGN_IDENTITY: "-"
+        KAIROS_SIGNING_IDENTITY: "-"
+        CODE_SIGN_IDENTITY: $(KAIROS_SIGNING_IDENTITY)
         ENABLE_HARDENED_RUNTIME: YES

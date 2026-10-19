@@ -30,7 +30,7 @@ build() {  # $1 = build number, $2 = signing identity
   (cd App && xcodegen generate >/dev/null)
   xcodebuild -project App/Kairos.xcodeproj -scheme Kairos -destination 'platform=macOS,arch=arm64' \
     -derivedDataPath build/DerivedData -quiet build \
-    CURRENT_PROJECT_VERSION="$1" CODE_SIGN_IDENTITY="$2"
+    CURRENT_PROJECT_VERSION="$1" KAIROS_SIGNING_IDENTITY="$2" ENABLE_DEBUG_DYLIB=NO
 }
 APP=build/DerivedData/Build/Products/Debug/Kairos.app
 
@@ -46,6 +46,8 @@ pkill -x Kairos
 build 3 "-" && open "$APP" && sleep 3 && open "kairos://debug/keychain-read"
 pkill -x Kairos
 ```
+
+`ENABLE_DEBUG_DYLIB=NO` matters: with the hardened runtime on, macOS won't load Xcode's separate debug library into an app signed by a certificate with no team ID. Release builds don't have that library.
 
 Results appear in the log:
 
