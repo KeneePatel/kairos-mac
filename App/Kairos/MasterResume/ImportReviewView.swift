@@ -1,5 +1,6 @@
 import LLM
 import MasterResume
+import OSLog
 import Observation
 import SwiftUI
 import UniformTypeIdentifiers
@@ -81,6 +82,10 @@ final class ImportSession: Identifiable {
                 keptSkills = Set(draft.skills.map(\.id))
                 step = .review
             } catch let error as LLMError {
+                // The code is safe to log; the detail can quote the model's reply, so it stays private.
+                Logger(subsystem: "com.keneepatel.kairos", category: "import").error(
+                    "Resume import failed: \(error.code, privacy: .public) \(String(describing: error), privacy: .private)"
+                )
                 step = .failed(Self.describe(error))
             } catch {
                 step = .failed("Couldn't get a draft. Try again in a minute.")
@@ -118,8 +123,17 @@ final class ImportSession: Identifiable {
         case .keyRejected: "Your key was rejected. Check it in Settings, AI providers."
         case .modelNotOnPlan(let model):
             "\(model) isn't on your plan. Pick another model for \"Import a resume\" in Settings."
-        case .invalidOutput:
-            "The draft didn't pass Kairos's checks, even after a retry. Try again, or pick another model."
+        case .invalidOutput(let problem):
+            "The draft didn't pass Kairos's checks, even after a retry: \(problem) Try again, or pick another model."
+        case .badRequest(let message):
+            "The AI provider refused the request: \(message)"
+        case .timedOut:
+            "The AI provider took too long. A long resume can take a while; try again, or pick a faster model for "
+                + "\"Import a resume\" in Settings."
+        case .rateLimited:
+            "The AI provider asked Kairos to slow down. Try again in a minute."
+        case .server(let status):
+            "The AI provider had a problem (HTTP \(status)). Try again in a minute."
         case .cancelled: "Stopped."
         default: "Couldn't get a draft from the AI provider (\(error.code)). Try again in a minute."
         }
