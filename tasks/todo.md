@@ -243,15 +243,16 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - [x] From T20: 501 is never retried; no wait exceeds 60 s (a free-tier 429 asked for 14 hours); local providers get a longer timeout (180 s) and run with thinking off by default (`reasoning_effort: none`; your decision, 2026-10-19). 503 "high demand" is retried with backoff.
   - **Verify:** `core-test LLMTests`
   - **Files:** `Sources/LLM/LLMClient.swift`, `Sources/LLM/RateLimiter.swift`, `Sources/LLM/OutputPipeline.swift`, `Tests/LLMTests/LLMClientTests.swift`
-  - **Done 2026-10-19:** written test-first; 23 client and rate-limiter tests on a virtual clock (every wait is recorded exactly and nothing actually waits). A 429 rests that key and moves to the next at once; when every key rests, the client waits for the first unless that's over 60 s. A model off one key's plan tries the other keys only. The repair call carries the original reply and a note quoting every problem; tokens from both calls count. Per-task timeouts (60 s extraction, 120 s writing) are left to the router (T23), which knows each task.
+  - **Done 2026-10-19:** written test-first; 23 client and rate-limiter tests on a virtual clock (every wait is recorded exactly and nothing actually waits). A 429 rests that key and moves to the next at once; when every key rests, the client waits for the first unless that's over 60 s. A model off one key's plan tries the other keys only. The repair call carries the original reply and a note quoting every problem; tokens from both calls count. Per-task timeouts were added in T23.
 
-- [ ] **T23 · Router, budget, cache, call log** (M) · deps: T22, T07
+- [x] **T23 · Router, budget, cache, call log** (M) · deps: T22, T07
   - **Acceptance:**
-    - [ ] `003_llm_local.sql` creates the local-only `llm_call` and `llm_cache` tables. Router: task → provider and model, with a fallback chain.
-    - [ ] The daily call budget pauses LLM steps with "Daily AI budget reached". The cache key is (task, input hash, prompt version, model).
-    - [ ] Keys are read from the Keychain (`Secrets`), never from SQLite. Call log rows never contain prompt or response text.
+    - [x] `003_llm_local.sql` creates the local-only `llm_call` and `llm_cache` tables. Router: task → provider and model, with a fallback chain.
+    - [x] The daily call budget pauses LLM steps with "Daily AI budget reached". The cache key is (task, input hash, prompt version, model).
+    - [x] Keys are read from the Keychain (`Secrets`), never from SQLite. Call log rows never contain prompt or response text.
   - **Verify:** `core-test LLMTests`
   - **Files:** `Sources/Store/Schema/003_llm_local.sql`, `Sources/LLM/LLMRouter.swift`, `Sources/LLM/Budget.swift`, `Sources/LLM/CallLog.swift`, `Tests/LLMTests/RouterBudgetTests.swift`
+  - **Done 2026-10-19:** 19 router, budget, cache and setup tests on a real migrated database. `llm` now depends on `store` for its own two tables, as `master-resume` does (SPEC §4 updated). The router walks each task's chain, falling back on anything but cancellation or the budget; it logs one row per run with counts and codes only (a test checks no prompt or reply text lands there), serves repeats from the cache (rechecked, free, unlogged) and pauses at the daily call or token limit until midnight. `ProviderSetup` holds key names; keys are read from the Keychain only when a client is built. Per-task timeouts: 60 s for extraction, 120 s for writing and resume import; local providers keep 180 s.
 
 - [ ] **T24 · Settings: AI providers** (M) · deps: T23, T05
   - **Acceptance:**

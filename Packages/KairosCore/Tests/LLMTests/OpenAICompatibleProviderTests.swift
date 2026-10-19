@@ -6,7 +6,7 @@ import Testing
 @testable import LLM
 
 /// Answers each request with the next scripted reply and records what was sent.
-private final class FakeTransport: LLMTransport {
+final class FakeTransport: LLMTransport {
     struct Reply: Sendable {
         var status = 200
         var headers: [String: String] = [:]
@@ -152,6 +152,17 @@ struct OpenAICompatibleProviderTests {
         let noSchema = try sentBody(transport.sent[1])
         #expect(noSchema["response_format"] == nil)  // a task without a schema asks for none
         #expect(noSchema["reasoning_effort"] == nil)  // Groq's preset doesn't take it
+    }
+
+    @Test func cloudCallsUseTheTasksTimeoutAndLocalOnesTheirOwn() async throws {
+        let ok = try fixture("gemini-json-gemini-flash-latest.json")
+        let transport = FakeTransport([.init(body: ok), .init(body: ok)])
+        let timed = ChatRequest(
+            task: .analyzeJob, model: "m", messages: [.user("x")], schema: nil, temperature: 0, maxOutputTokens: 10,
+            timeoutSeconds: 60)
+        _ = try await OpenAICompatibleProvider(preset: .gemini, key: "k", transport: transport).complete(timed)
+        _ = try await OpenAICompatibleProvider(preset: .ollamaLocal, key: nil, transport: transport).complete(timed)
+        #expect(transport.sent.map(\.timeoutInterval) == [60, 180])
     }
 
     @Test func openAIUsesItsOwnTokenField() async throws {

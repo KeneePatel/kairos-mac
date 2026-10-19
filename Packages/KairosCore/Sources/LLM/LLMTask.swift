@@ -90,6 +90,8 @@ public protocol LLMTask: Sendable {
 /// How a call ended, as the call log records it.
 public enum LLMOutcome: String, Sendable, CaseIterable {
     case ok, repaired
+    /// Served from `llm_cache`; no call was made.
+    case cached
     case rateLimited = "rate_limited"
     case fellBack = "fell_back"
     case failed
@@ -104,12 +106,14 @@ public struct LLMResult<Output: Sendable>: Sendable {
     public let outputTokens: Int?
     public let latency: Duration
     public let outcome: LLMOutcome
-    /// 1 for a first-try success; more after retries or a repair.
+    /// 1 for a first-try success; more after retries or a repair; 0 from the cache.
     public let attempts: Int
+    /// The validated reply, fences removed: what the cache keeps.
+    public let json: String
 
     public init(
         output: Output, provider: String, model: String, inputTokens: Int?, outputTokens: Int?, latency: Duration,
-        outcome: LLMOutcome, attempts: Int
+        outcome: LLMOutcome, attempts: Int, json: String = ""
     ) {
         self.output = output
         self.provider = provider
@@ -119,6 +123,7 @@ public struct LLMResult<Output: Sendable>: Sendable {
         self.latency = latency
         self.outcome = outcome
         self.attempts = attempts
+        self.json = json
     }
 }
 
@@ -143,6 +148,8 @@ public enum LLMError: Error, Equatable, Sendable {
     /// "Daily AI budget reached" (SPEC §5.5, Budget).
     case budgetReached
     case noProvider(TaskID)
+    /// The provider needs a key and none is saved in the Keychain.
+    case noKey(provider: String)
     /// A `FakeProvider` was asked for more than its script holds.
     case noScriptedReply(TaskID)
 }
@@ -150,6 +157,29 @@ public enum LLMError: Error, Equatable, Sendable {
 /// How hard a thinking model may think. Local models default to `.none` (decided 2026-10-19, T20).
 public enum ReasoningEffort: String, Sendable, CaseIterable {
     case none, low, medium, high
+}
+
+extension LLMError {
+    /// A short code for the call log. Never carries prompt or reply text.
+    public var code: String {
+        switch self {
+        case .keyRejected: "key_rejected"
+        case .modelNotFound: "model_not_found"
+        case .badRequest: "bad_request"
+        case .rateLimited: "rate_limited"
+        case .modelNotOnPlan: "model_not_on_plan"
+        case .server(let status): "server_\(status)"
+        case .network: "network"
+        case .timedOut: "timed_out"
+        case .cancelled: "cancelled"
+        case .invalidJSON: "invalid_json"
+        case .invalidOutput: "invalid_output"
+        case .budgetReached: "budget_reached"
+        case .noProvider: "no_provider"
+        case .noKey: "no_key"
+        case .noScriptedReply: "no_scripted_reply"
+        }
+    }
 }
 
 /// One model call, as every adapter sees it.
@@ -163,10 +193,13 @@ public struct ChatRequest: Sendable {
     public let maxOutputTokens: Int
     /// Sent only to presets that accept `reasoning_effort`.
     public let reasoningEffort: ReasoningEffort?
+    /// The task's own limit (SPEC §5.5: 60 s extraction, 120 s writing). Local providers keep their
+    /// longer one, since a thinking model on a laptop can't meet it (T20).
+    public let timeoutSeconds: Int?
 
     public init(
         task: TaskID, model: String, messages: [ChatMessage], schema: JSONSchema?, temperature: Double,
-        maxOutputTokens: Int, reasoningEffort: ReasoningEffort? = nil
+        maxOutputTokens: Int, reasoningEffort: ReasoningEffort? = nil, timeoutSeconds: Int? = nil
     ) {
         self.task = task
         self.model = model
@@ -175,6 +208,7 @@ public struct ChatRequest: Sendable {
         self.temperature = temperature
         self.maxOutputTokens = maxOutputTokens
         self.reasoningEffort = reasoningEffort
+        self.timeoutSeconds = timeoutSeconds
     }
 }
 

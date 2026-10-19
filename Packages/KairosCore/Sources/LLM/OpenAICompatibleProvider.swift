@@ -44,7 +44,7 @@ public struct OpenAICompatibleProvider: LLMProvider {
             request.schema == nil ? .promptOnly : capabilities.mode(for: request.model, preset: preset.structuredOutput)
         while true {
             let (data, response) = try await transport.send(
-                try urlRequest("chat/completions", body: body(request, mode: mode)))
+                try urlRequest("chat/completions", body: body(request, mode: mode), timeout: timeout(for: request)))
             if response.statusCode == 200 { return try Self.parse(data, model: request.model) }
             let message = Self.errorMessage(in: data) ?? ""
             // A model that doesn't do this kind of structured output: drop a level, remember, resend.
@@ -80,11 +80,16 @@ public struct OpenAICompatibleProvider: LLMProvider {
 
     // MARK: - Requests
 
-    private func urlRequest(_ path: String, body: Data?) throws(LLMError) -> URLRequest {
+    /// The task's limit for cloud providers; local ones keep their own, longer one (T20).
+    func timeout(for request: ChatRequest) -> Int {
+        preset.isLocal ? preset.timeoutSeconds : (request.timeoutSeconds ?? preset.timeoutSeconds)
+    }
+
+    private func urlRequest(_ path: String, body: Data?, timeout: Int? = nil) throws(LLMError) -> URLRequest {
         guard let url = URL(string: preset.baseURL + path), url.scheme == "https" || preset.isLocal else {
             throw .badRequest("\(preset.name): base URL must be https (or a local address)")
         }
-        var request = URLRequest(url: url, timeoutInterval: TimeInterval(preset.timeoutSeconds))
+        var request = URLRequest(url: url, timeoutInterval: TimeInterval(timeout ?? preset.timeoutSeconds))
         request.httpMethod = body == nil ? "GET" : "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let key { request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization") }

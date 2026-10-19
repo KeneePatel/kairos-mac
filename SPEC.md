@@ -130,7 +130,7 @@ Module ids are stable and will not be renamed.
 |---|---|---|
 | `store` | SQLite wrapper, migrations, repositories, hybrid logical clock (HLC), UUIDv7, a separate database per account | — |
 | `secrets` | Keychain: LLM keys, session tokens | — |
-| `llm` | Provider adapters, router, typed tasks, prompt library, context budgeting, schema validation, rate limiting, budget, call log (§5.5) | `secrets` |
+| `llm` | Provider adapters, router, typed tasks, prompt library, context budgeting, schema validation, rate limiting, budget, call log (§5.5) | `secrets`, `store` (for its local `llm_call` and `llm_cache` tables, as `master-resume` keeps its own repository; added in T23) |
 | `sources` | `JobSource` protocol; ATS, aggregator and WebKit sources; URL normalization; de-duplication; location and country parsing | `store` |
 | `master-resume` | The user's master resume: schema, required-field validation, versioning, editor model, import from a resume file or GitHub, full-length export (§5.10) | `store`, `llm` |
 | `screening` | Prefilter rules (including work authorization, language, remote scope), job analysis, verdict, ranking | `store`, `llm`, `master-resume` |

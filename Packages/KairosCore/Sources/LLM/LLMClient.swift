@@ -31,12 +31,17 @@ public struct RunOptions: Sendable {
     public var budget: TokenBudget
     public var temperature: Double
     public var reasoningEffort: ReasoningEffort?
+    public var timeoutSeconds: Int?
 
-    public init(model: String, budget: TokenBudget, temperature: Double, reasoningEffort: ReasoningEffort? = nil) {
+    public init(
+        model: String, budget: TokenBudget, temperature: Double, reasoningEffort: ReasoningEffort? = nil,
+        timeoutSeconds: Int? = nil
+    ) {
         self.model = model
         self.budget = budget
         self.temperature = temperature
         self.reasoningEffort = reasoningEffort
+        self.timeoutSeconds = timeoutSeconds
     }
 }
 
@@ -153,7 +158,8 @@ public actor LLMClient {
                 output: output, provider: last.provider, model: last.response.model,
                 inputTokens: Self.sum(calls.map(\.response.inputTokens)),
                 outputTokens: Self.sum(calls.map(\.response.outputTokens)), latency: clock.now - started,
-                outcome: outcome, attempts: calls.reduce(0) { $0 + $1.attempts })
+                outcome: outcome, attempts: calls.reduce(0) { $0 + $1.attempts },
+                json: OutputPipeline.unfenced(last.response.text))
         }
     }
 
@@ -163,14 +169,15 @@ public actor LLMClient {
         ChatRequest(
             task: T.id, model: options.model, messages: messages, schema: T.outputSchema,
             temperature: options.temperature, maxOutputTokens: options.budget.output,
-            reasoningEffort: options.reasoningEffort)
+            reasoningEffort: options.reasoningEffort, timeoutSeconds: options.timeoutSeconds)
     }
 
     private func withDefaults(_ request: ChatRequest) -> ChatRequest {
         guard request.reasoningEffort == nil, let effort = policy.defaultReasoningEffort else { return request }
         return ChatRequest(
             task: request.task, model: request.model, messages: request.messages, schema: request.schema,
-            temperature: request.temperature, maxOutputTokens: request.maxOutputTokens, reasoningEffort: effort)
+            temperature: request.temperature, maxOutputTokens: request.maxOutputTokens, reasoningEffort: effort,
+            timeoutSeconds: request.timeoutSeconds)
     }
 
     /// The key to use: the last one that worked, else the next that isn't resting or off this plan.
