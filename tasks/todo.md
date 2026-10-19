@@ -223,14 +223,14 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - [x] The write-up states each preset's capability flag.
   - **Verify:** `KAIROS_LIVE_LLM=1 core-test LiveStructuredOutput`; `docs/spikes/structured-output.md`
   - **Files:** `Tests/LLMTests/LiveStructuredOutputTests.swift`, `Tests/Fixtures/llm/*.json`, `docs/spikes/structured-output.md`
-  - **Done 2026-10-19** (you ran Gemini; I ran Ollama `qwen3.5:4B`): see `docs/spikes/structured-output.md`. Gemini Flash-Lite passes in strict schema mode (half the tokens of JSON mode). Ollama refuses every `response_format` for this model with HTTP 501 but answers correctly with the schema in the prompt; with thinking on it takes about 100 s per posting. `RecordedRepliesTests` checks every saved reply offline: schema, precision and recall against hand labels, error shapes, and no keys. One follow-up run with your key measures Gemini Flash (not Lite); the first run's picker chose a variant with no free-tier quota and has been fixed.
+  - **Done 2026-10-19** (you ran Gemini; I ran Ollama `qwen3.5:4B`): see `docs/spikes/structured-output.md`. Gemini Flash-Lite passes in strict schema mode (half the tokens of JSON mode). Ollama refuses every `response_format` for this model with HTTP 501 but answers correctly with the schema in the prompt; with thinking on it takes about 100 s per posting. `RecordedRepliesTests` checks every saved reply offline: schema, precision and recall against hand labels, error shapes, and no keys. Second run: `gemini-flash-latest` is valid and correct in JSON mode, with 504 hidden thinking tokens counted only in `total_tokens`; its schema mode met a temporary 503, now the retryable-error fixture. You confirmed thinking off for local models.
 
 - [ ] **T21 · OpenAI-compatible adapter and presets** (M) · deps: T20
   - **Acceptance:**
     - [ ] Presets for Gemini, Ollama local, Ollama Cloud, Groq, OpenRouter and OpenAI, each with its base URL and capability flags (from T20).
     - [ ] Builds `chat/completions` requests (with `response_format` mode and `reasoning_effort` where supported), parses `usage`, and lists models with `GET /models`.
     - [ ] Maps 400, 401, 403, 404, 429 (with `Retry-After`) and 5xx to typed errors.
-    - [ ] From T20: capability is per (provider, model). HTTP 501 "structured output is unavailable" (Ollama) resends once without `response_format` and remembers the model as prompt-only. Gemini errors arrive as an array (`[{"error":…}]`); both shapes parse. A 429 whose quota limit is 0 maps to "model not on your plan", not a rate limit. Model defaults use Google's `gemini-flash-latest` / `gemini-flash-lite-latest` aliases.
+    - [ ] From T20: capability is per (provider, model). HTTP 501 "structured output is unavailable" (Ollama) resends once without `response_format` and remembers the model as prompt-only. Gemini errors arrive as an array (`[{"error":…}]`); both shapes parse. A 429 whose quota limit is 0 maps to "model not on your plan", not a rate limit. Model defaults use Google's `gemini-flash-latest` / `gemini-flash-lite-latest` aliases. Output tokens are `total − prompt` when that exceeds `completion_tokens` (Gemini Flash's hidden thinking).
   - **Verify:** `core-test LLMTests` (recorded fixtures)
   - **Files:** `Sources/LLM/OpenAICompatibleProvider.swift`, `Sources/LLM/ProviderPreset.swift`, `Tests/LLMTests/OpenAICompatibleProviderTests.swift`
 
@@ -239,7 +239,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - [ ] Token-bucket limiter (requests per minute) and a concurrency cap per provider. Retries: 3 with backoff and jitter for network errors and 5xx. 429 rotates keys and honors `Retry-After`. 4xx are never retried.
     - [ ] The output pipeline decodes (stripping code fences), validates against the schema, runs the task's check, and makes one repair call that includes the error.
     - [ ] Cancellation stops in-flight requests. All timing is tested with a fake clock.
-    - [ ] From T20: 501 is never retried; no wait exceeds 60 s (a free-tier 429 asked for 14 hours); local providers get a longer timeout (180 s) and run extraction with thinking off by default.
+    - [ ] From T20: 501 is never retried; no wait exceeds 60 s (a free-tier 429 asked for 14 hours); local providers get a longer timeout (180 s) and run with thinking off by default (`reasoning_effort: none`; your decision, 2026-10-19). 503 "high demand" is retried with backoff.
   - **Verify:** `core-test LLMTests`
   - **Files:** `Sources/LLM/LLMClient.swift`, `Sources/LLM/RateLimiter.swift`, `Sources/LLM/OutputPipeline.swift`, `Tests/LLMTests/LLMClientTests.swift`
 

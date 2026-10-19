@@ -1,26 +1,26 @@
 {
-  "choices": [
+  "choices" : [
     {
-      "finish_reason": "stop",
-      "index": 0,
-      "message": {
-        "content": "{\n  \"requirements\": [\n    {\n      \"text\": \"3+ years building services in Go or Java\",\n      \"kind\": \"must\"\n    },\n    {\n      \"text\": \"strong PostgreSQL\",\n      \"kind\": \"must\"\n    },\n    {\n      \"text\": \"experience with message queues such as RabbitMQ or Kafka\",\n      \"kind\": \"must\"\n    },\n    {\n      \"text\": \"Kubernetes\",\n      \"kind\": \"nice\"\n    },\n    {\n      \"text\": \"gRPC\",\n      \"kind\": \"nice\"\n    },\n    {\n      \"text\": \"French\",\n      \"kind\": \"nice\"\n    },\n    {\n      \"text\": \"legally entitled to work in Canada\",\n      \"kind\": \"must\"\n    }\n  ],\n  \"years_required\": 3,\n  \"remote\": true\n}",
-        "extra_content": {
-          "google": {
-            "thought_signature": "redacted"
+      "finish_reason" : "stop",
+      "index" : 0,
+      "message" : {
+        "content" : "{\n  \"requirements\": [\n    {\n      \"text\": \"3+ years building services in Go or Java\",\n      \"kind\": \"must\"\n    },\n    {\n      \"text\": \"strong PostgreSQL\",\n      \"kind\": \"must\"\n    },\n    {\n      \"text\": \"experience with message queues such as RabbitMQ or Kafka\",\n      \"kind\": \"must\"\n    },\n    {\n      \"text\": \"Kubernetes\",\n      \"kind\": \"nice\"\n    },\n    {\n      \"text\": \"gRPC\",\n      \"kind\": \"nice\"\n    },\n    {\n      \"text\": \"French\",\n      \"kind\": \"nice\"\n    },\n    {\n      \"text\": \"legally entitled to work in Canada\",\n      \"kind\": \"must\"\n    }\n  ],\n  \"years_required\": 3,\n  \"remote\": false\n}",
+        "extra_content" : {
+          "google" : {
+            "thought_signature" : "redacted"
           }
         },
-        "role": "assistant"
+        "role" : "assistant"
       }
     }
   ],
-  "created": 1792428205,
-  "id": "rEjWaqi1JtOsuMYPgJLG2Q4",
-  "model": "gemini-flash-lite-latest",
-  "object": "chat.completion",
-  "usage": {
-    "completion_tokens": 208,
-    "prompt_tokens": 145,
-    "total_tokens": 353
+  "created" : 1792429044,
+  "id" : "80vWapSrHrzhytMPpLeB2Q4",
+  "model" : "gemini-flash-lite-latest",
+  "object" : "chat.completion",
+  "usage" : {
+    "completion_tokens" : 208,
+    "prompt_tokens" : 145,
+    "total_tokens" : 353
   }
 }

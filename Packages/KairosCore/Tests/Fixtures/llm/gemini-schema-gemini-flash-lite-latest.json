@@ -1,26 +1,26 @@
 {
-  "choices": [
+  "choices" : [
     {
-      "finish_reason": "stop",
-      "index": 0,
-      "message": {
-        "content": "{\"requirements\":[{\"text\":\"3+ years building services in Go or Java\",\"kind\":\"must\"},{\"text\":\"strong PostgreSQL\",\"kind\":\"must\"},{\"text\":\"experience with message queues such as RabbitMQ or Kafka\",\"kind\":\"must\"},{\"text\":\"legally entitled to work in Canada\",\"kind\":\"must\"},{\"text\":\"Kubernetes\",\"kind\":\"nice\"},{\"text\":\"gRPC\",\"kind\":\"nice\"},{\"text\":\"French\",\"kind\":\"nice\"}],\"years_required\":3,\"remote\":false}",
-        "extra_content": {
-          "google": {
-            "thought_signature": "redacted"
+      "finish_reason" : "stop",
+      "index" : 0,
+      "message" : {
+        "content" : "{\"requirements\":[{\"text\":\"3+ years building services in Go or Java\",\"kind\":\"must\"},{\"text\":\"Strong PostgreSQL experience\",\"kind\":\"must\"},{\"text\":\"Experience with message queues such as RabbitMQ or Kafka\",\"kind\":\"must\"},{\"text\":\"Must be legally entitled to work in Canada\",\"kind\":\"must\"},{\"text\":\"Kubernetes\",\"kind\":\"nice\"},{\"text\":\"gRPC\",\"kind\":\"nice\"},{\"text\":\"French language skills\",\"kind\":\"nice\"}],\"years_required\":3,\"remote\":false}",
+        "extra_content" : {
+          "google" : {
+            "thought_signature" : "redacted"
           }
         },
-        "role": "assistant"
+        "role" : "assistant"
       }
     }
   ],
-  "created": 1792428204,
-  "id": "q0jWapLTDb-xytMPwcfQ6AI",
-  "model": "gemini-flash-lite-latest",
-  "object": "chat.completion",
-  "usage": {
-    "completion_tokens": 97,
-    "prompt_tokens": 145,
-    "total_tokens": 242
+  "created" : 1792429043,
+  "id" : "8UvWatiZIJ6GytMPxqCTqQw",
+  "model" : "gemini-flash-lite-latest",
+  "object" : "chat.completion",
+  "usage" : {
+    "completion_tokens" : 100,
+    "prompt_tokens" : 145,
+    "total_tokens" : 245
   }
 }

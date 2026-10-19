@@ -12,12 +12,14 @@
 |---|---|---|---|---|---|---|
 | Gemini · `gemini-flash-lite-latest` | `json_schema` (strict) | 200 | valid | 1.0 / 1.0 | 97 | under 1 s |
 | Gemini · `gemini-flash-lite-latest` | `json_object` | 200 | valid | 1.0 / 1.0 | 208 (pretty-printed) | under 1 s |
-| Gemini · `gemini-omni-1.1-flash` | both | 429 | — | — | — | — |
+| Gemini · `gemini-flash-latest` | `json_schema` (strict) | **503** "high demand" (temporary) | — | — | — | — |
+| Gemini · `gemini-flash-latest` | `json_object` | 200 | valid | 1.0 / 1.0 | 96 shown + **504 hidden thinking** | under 1 s |
+| Gemini · `gemini-omni-1.1-flash` (first run's wrong pick) | both | 429 | — | — | — | — |
 | Ollama 0.40 · `qwen3.5:4B` (nvfp4) | `json_schema` and `json_object` | **501** "structured output is unavailable" | — | — | — | instant |
 | Ollama · `qwen3.5:4B` | no `response_format`, thinking on | 200 | valid | 1.0 / 1.0 on one run; 1.0 / 0.71 on another (merged three nice-to-haves into one item) | 1,904–2,669 | 92–117 s |
 | Ollama · `qwen3.5:4B` | no `response_format`, thinking off (`reasoning_effort: none`) | 200 | valid after removing a code fence | 0.875 / 1.0 on one run (listed the job title as a requirement); 1.0 / 1.0 on another | 221–239 | 10–11 s |
 
-**Gemini Flash (not Lite) is still unmeasured.** The first run's picker sorted model names and chose `gemini-omni-1.1-flash`, a variant whose free-tier quota is 0. The picker now prefers Google's `gemini-flash-latest` / `gemini-flash-lite-latest` aliases and never picks a variant. One more run with your key fills the row.
+**Second run (same day):** the fixed picker chose Google's `gemini-flash-latest` alias. The first run had sorted names and chosen `gemini-omni-1.1-flash`, which has a free-tier quota of 0. Flash's schema mode met a temporary 503 ("high demand"), so it's the one cell left unmeasured; Flash-Lite shows the endpoint's schema mode works. Gemini lists 63 models, including `gemini-flash-latest` and `gemini-flash-lite-latest` (saved in `gemini-models.json`, ids only). Ollama's replies were identical to the first run's apart from ids: at temperature 0 the thinking-mode merge reproduces.
 
 ## Capability flags for T21
 
@@ -34,9 +36,11 @@
 3. **Gemini errors arrive wrapped in an array** (`[{"error": {...}}]`). T21's error parser handles both shapes.
 4. **A free-tier quota of 0 isn't a rate limit to wait out.** The 429 carried "limit: 0" and a retry delay of about 14 hours. T22 caps any wait at 60 s (SPEC §5.5) and treats "limit: 0" as "model not on your plan": skip to the next model in the chain and say so in Settings.
 5. **Fences happen.** Ollama with thinking off wrapped its JSON in a Markdown fence. T22's output pipeline strips fences before validating (already in SPEC §5.5).
-6. **Local thinking is slow.** About 100 s and about 2,000 tokens per posting with thinking on, against about 10 s off, on this Mac. At about 40 analyses a day that's over an hour. T22 gives local providers a longer timeout (proposed 180 s, against 60 s for cloud). Local extraction runs with thinking off by default, relying on validation plus the one repair call.
-7. **Temperature 0 isn't deterministic.** The same model gave different lists on two runs. That supports caching by input hash (SPEC §5.5) and means prompt evals should repeat each posting.
-8. **Prompt rules for T28 (`analyzeJob`):**
+6. **Local thinking is slow.** About 100 s and about 2,000 tokens per posting with thinking on, against about 10 s off, on this Mac. At about 40 analyses a day that's over an hour. **Decided with you (2026-10-19):** local models run with thinking off by default, relying on validation plus the one repair call. T22 gives local providers a 180 s timeout, against 60 s for cloud.
+7. **Hidden thinking tokens.** Gemini Flash thinks by default without showing it: 504 tokens appear only in `total_tokens`, five times the visible answer. T21 counts output as `total − prompt` when that's larger than `completion_tokens`, so budgets and costs aren't understated. Flash-Lite showed none.
+8. **503 is temporary; 501 isn't.** A busy Gemini model answers 503 "high demand" in the same array wrapper. That's the 5xx the client retries with backoff, unlike Ollama's 501.
+9. **Temperature 0 isn't fully deterministic.** The same model gave different lists on two runs (a manual run and the harness run), though the harness run then repeated exactly. That supports caching by input hash (SPEC §5.5) and means prompt evals should repeat each posting.
+10. **Prompt rules for T28 (`analyzeJob`):**
    - one requirement per item, never several skills in one;
    - never a job title as a requirement;
    - no booleans for many-valued facts. Gemini answered `remote: true` in one mode and `false` in the other for "hybrid, 2 days a week"; the real schema uses the remote-scope enum.

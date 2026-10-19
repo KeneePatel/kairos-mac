@@ -99,6 +99,15 @@ struct RecordedRepliesTests {
         }
         #expect(error["code"] == .number(429))
         #expect(error["status"] == .string("RESOURCE_EXHAUSTED"))
+        // A busy model answers 503 in the same wrapper: temporary, so the client retries it.
+        guard case .array(let busy)? = replies["gemini-error-503-high-demand.json"],
+            case .object(let busyWrapper)? = busy.first, case .object(let busyError)? = busyWrapper["error"]
+        else {
+            Issue.record("Gemini 503 fixture missing or reshaped")
+            return
+        }
+        #expect(busyError["code"] == .number(503))
+        #expect(busyError["status"] == .string("UNAVAILABLE"))
         // Ollama refuses `response_format` for models without structured output (HTTP 501).
         guard case .object(let ollama)? = replies["ollama-schema-qwen3.5_4B.json"],
             case .object(let ollamaError)? = ollama["error"]
@@ -107,6 +116,20 @@ struct RecordedRepliesTests {
             return
         }
         #expect(ollamaError["message"] == .string("structured output is unavailable"))
+    }
+
+    /// Gemini Flash thinks without showing it: those tokens appear only in `total_tokens`. Output
+    /// budgets and costs must count them (T21 parses usage that way).
+    @Test func hiddenThinkingTokensShowOnlyInTheTotal() throws {
+        let replies = Dictionary(uniqueKeysWithValues: try Self.replies().map { ($0.name, $0.body) })
+        guard case .object(let reply)? = replies["gemini-json-gemini-flash-latest.json"],
+            case .object(let usage)? = reply["usage"], case .number(let prompt)? = usage["prompt_tokens"],
+            case .number(let completion)? = usage["completion_tokens"], case .number(let total)? = usage["total_tokens"]
+        else {
+            Issue.record("Gemini Flash reply missing or reshaped")
+            return
+        }
+        #expect(total - prompt - completion > 0)
     }
 
     @Test func noFixtureHoldsAKeyOrASignature() throws {
