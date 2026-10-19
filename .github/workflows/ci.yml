@@ -52,6 +52,14 @@ jobs:
       - name: Test with coverage
         run: swift test --package-path Packages/KairosCore --enable-code-coverage
 
+      - name: Build the app (warnings are errors)
+        if: hashFiles('App/project.yml') != ''
+        run: |
+          brew install xcodegen
+          (cd App && xcodegen generate)
+          xcodebuild -project App/Kairos.xcodeproj -scheme Kairos -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath build/DerivedData -quiet build
+
       - name: Changed-line coverage
         run: scripts/coverage-diff.sh "${{ steps.base.outputs.ref }}"
 

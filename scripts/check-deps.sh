@@ -14,9 +14,10 @@ if ! grep -q "No external dependencies found" <<<"$deps"; then
     echo "$deps"
 fi
 
-# The app project adds none either.
-if [ -f App/project.yml ] && grep -qE '^packages:' App/project.yml; then
-    report "App/project.yml declares Swift packages"
+# The app project adds none either: the only package it may name is the
+# local KairosCore (a `path:`), never one fetched from a `url:`.
+if [ -f App/project.yml ] && grep -qE '^[[:space:]]+(url|github):' App/project.yml; then
+    report "App/project.yml declares a remote Swift package"
 fi
 
 # Bundled binaries: only typst.

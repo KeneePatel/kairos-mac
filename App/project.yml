@@ -1,0 +1,51 @@
+# Generates App/Kairos.xcodeproj (gitignored): run `xcodegen generate` in App/.
+name: Kairos
+options:
+  bundleIdPrefix: com.keneepatel
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+packages:
+  KairosCore:
+    path: ../Packages/KairosCore
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  Kairos:
+    type: application
+    platform: macOS
+    sources:
+      - path: Kairos
+    dependencies:
+      - package: KairosCore
+        product: Store
+    info:
+      path: Kairos/Info.plist
+      properties:
+        CFBundleDisplayName: Kairos
+        LSApplicationCategoryType: public.app-category.productivity
+        NSHumanReadableCopyright: Copyright © 2026 Kenee Patel. MIT License.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.keneepatel.kairos
+            CFBundleURLSchemes: [kairos]
+    entitlements:
+      path: Kairos/Kairos.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.files.user-selected.read-write: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.keneepatel.kairos
+        # Signed to run locally until T07 settles the self-signed certificate.
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: YES

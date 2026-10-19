@@ -51,7 +51,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** the GitHub Actions run results for both branches.
   - **Files:** `.github/workflows/ci.yml`
 
-- [ ] **T05 · App shell** (M) · deps: T02 · needs P1 decided (XcodeGen)
+- [x] **T05 · App shell** (M) · deps: T02 · needs P1 decided (XcodeGen)
   - **What:** a SwiftUI app that links `KairosCore` and shows the final navigation.
   - **Acceptance:**
     - [ ] `App/project.yml` generates `App/Kairos.xcodeproj` with `xcodegen generate`.
