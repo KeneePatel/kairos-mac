@@ -42,7 +42,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** run each script on the clean tree (exit 0). In a throwaway branch, plant a `try!` and a commit with a `Co-Authored-By` trailer: each must fail. Delete the branch.
   - **Files:** `scripts/floor-guard.swift`, `scripts/check-deps.sh`, `scripts/check-commits.sh`, `scripts/coverage-diff.sh`, `.swift-format`
 
-- [ ] **T04 · CI workflow** (S) · deps: T03 · your step: push the repo to GitHub
+- [x] **T04 · CI workflow** (S) · deps: T03 · your step: push the repo to GitHub
   - **What:** `.github/workflows/ci.yml` runs on every pull request and every push to `main`.
   - **Acceptance:**
     - [ ] Runs format lint, build with warnings as errors, tests, changed-line coverage, floor guard, `check-deps`, `check-commits` and gitleaks (`--redact`).
@@ -95,9 +95,9 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** every link resolves (`grep` the index against `ls docs/decisions`).
   - **Files:** `docs/decisions/*` (14 small docs; mechanical, so an exception to the five-file guideline), `SPEC.md`
 
-### Checkpoint A: Foundation
-- [ ] CI green on `main`; all `CONSTRAINTS.md` commands run
-- [ ] T06 and T07 write-ups reviewed with you; fallback decided if either failed
+### Checkpoint A: Foundation (passed 2026-10-19)
+- [x] CI green on `main`; all `CONSTRAINTS.md` commands run; a pull request with a planted `try!` went red
+- [x] T06 and T07 write-ups reviewed with you; both spikes passed, no fallback needed
 
 ---
 

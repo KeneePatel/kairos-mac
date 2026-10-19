@@ -1,6 +1,6 @@
 # Implementation Plan: Kairos for macOS
 
-**Status:** Approved 2026-10-19. In progress: Phase 0.
+**Status:** Approved 2026-10-19. Phase 0 done (Checkpoint A passed); in progress: Phase 1.
 **Spec:** `SPEC.md` (draft, awaiting final approval) · **Look and feel:** `design/kairos/README.md` · **Quality bar:** `CONSTRAINTS.md` · **Tasks:** `tasks/todo.md`
 
 ## Overview
@@ -63,16 +63,16 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 - [x] T01 Repository bootstrap
 - [x] T02 Package skeleton with HLC and UUIDv7
 - [x] T03 Guard scripts and formatter config
-- [ ] T04 CI workflow
+- [x] T04 CI workflow
 - [x] T05 App shell
 - [x] T05a Design tokens, app icon, menu bar icon
 - [x] T06 Spike: Typst inside the sandboxed, self-signed app
 - [x] T07 Spike: Keychain access across self-signed rebuilds
 - [x] T08 Split the decision records into `docs/decisions/`
 
-### Checkpoint A: Foundation
-- [ ] CI green; every `CONSTRAINTS.md` check runs
-- [ ] Spike write-ups reviewed with you; fallbacks decided if needed
+### Checkpoint A: Foundation (passed 2026-10-19)
+- [x] CI green; every `CONSTRAINTS.md` check runs; a pull request with a planted `try!` went red
+- [x] Spike write-ups reviewed with you; both passed, no fallback needed
 
 ### Phase 1: R1 Local MVP
 **Slice 1: Jobs in**
