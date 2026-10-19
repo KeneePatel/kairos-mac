@@ -16,6 +16,8 @@ let package = Package(
     targets: [
         .target(name: "Store", resources: [.copy("Schema")], swiftSettings: strict),
         .testTarget(name: "StoreTests", dependencies: ["Store"], swiftSettings: strict),
+        .target(name: "JobSources", dependencies: ["Store"], swiftSettings: strict),
+        .testTarget(name: "JobSourcesTests", dependencies: ["JobSources"], swiftSettings: strict),
         .target(name: "Render", resources: [.copy("Templates")], swiftSettings: strict),
         .testTarget(name: "RenderTests", dependencies: ["Render"], swiftSettings: strict),
         .target(name: "Secrets", swiftSettings: strict),

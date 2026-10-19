@@ -124,13 +124,14 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Sources/Store/Schema/001_sources_jobs.sql`, `Sources/Store/JobRepository.swift`, `Sources/Store/SourceRepository.swift`, `Tests/StoreTests/JobRepositoryTests.swift`
   - **Done 2026-10-19:** 63 Store tests pass. The HLC clock lives in the `Database` actor, so stamps follow commit order. Also added: `city` on `job` and `empty_runs` on `source` (SPEC §6.2 updated), the degraded-after-3-empty-runs rule, and `knownIDs` for the fetch de-duplication step.
 
-- [ ] **T11 · HTTP client and Greenhouse source** (M) · deps: T02
+- [x] **T11 · HTTP client and Greenhouse source** (M) · deps: T02
   - **Acceptance:**
-    - [ ] `HTTPClient` protocol, a URLSession implementation, and a test `URLProtocol` that fails any request it wasn't scripted for (the no-network rule).
-    - [ ] `JobSource` and `Posting` exactly as in SPEC §10. `GreenhouseSource` maps a recorded `boards-api.greenhouse.io` response.
-    - [ ] Errors are typed (`SourceError`); a timeout and an HTTP 404 each map correctly.
+    - [x] `HTTPClient` protocol, a URLSession implementation, and a test `URLProtocol` that fails any request it wasn't scripted for (the no-network rule).
+    - [x] `JobSource` and `Posting` exactly as in SPEC §10. `GreenhouseSource` maps a recorded `boards-api.greenhouse.io` response.
+    - [x] Errors are typed (`SourceError`); a timeout and an HTTP 404 each map correctly.
   - **Verify:** `core-test JobSourcesTests`
   - **Files:** `Sources/JobSources/HTTPClient.swift`, `Sources/JobSources/JobSource.swift`, `Sources/JobSources/GreenhouseSource.swift`, `Tests/JobSourcesTests/GreenhouseSourceTests.swift`, `Tests/Fixtures/greenhouse_jobs.json`
+  - **Done 2026-10-19:** 11 JobSources tests pass. Checked against a live board: Greenhouse escapes `content` once, so the source decodes one level of entities; `postedAt` uses `first_published` (falls back to `updated_at`, which moves on every edit). Errors name host and path only, never the query, because Adzuna puts its key there. The fixture keeps the live shape with sample-company content.
 
 - [ ] **T12 · Lever and Ashby sources, ATS detection** (M) · deps: T11
   - **Acceptance:**
