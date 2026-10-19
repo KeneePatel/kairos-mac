@@ -19,20 +19,30 @@ public struct SourceQuery: Sendable, Equatable {
     }
 }
 
+/// Where the board says the work happens, when it says.
+public enum Workplace: String, Sendable, CaseIterable {
+    case onsite, hybrid, remote
+}
+
 /// One posting as a source returns it, before normalization turns it into a `Job`.
 public struct Posting: Sendable, Equatable {
     public var sourceID: SourceID
     public var url: URL
     public var company: String
     public var title: String
-    /// As the board writes it, for example "Toronto, ON" or "Remote - Canada".
+    /// The main location as the board writes it, for example "Toronto, ON" or "Remote - Canada".
     public var location: String
     public var postedAt: Date?
     public var descriptionHTML: String
+    /// Further locations the board lists. A US-first posting can still list Toronto.
+    public var otherLocations: [String]
+    /// The main location's country as the board reports it: a code ("CA") or a name ("Canada").
+    public var countryHint: String?
+    public var workplace: Workplace?
 
     public init(
         sourceID: SourceID, url: URL, company: String, title: String, location: String, postedAt: Date?,
-        descriptionHTML: String
+        descriptionHTML: String, otherLocations: [String] = [], countryHint: String? = nil, workplace: Workplace? = nil
     ) {
         self.sourceID = sourceID
         self.url = url
@@ -41,6 +51,9 @@ public struct Posting: Sendable, Equatable {
         self.location = location
         self.postedAt = postedAt
         self.descriptionHTML = descriptionHTML
+        self.otherLocations = otherLocations
+        self.countryHint = countryHint
+        self.workplace = workplace
     }
 }
 

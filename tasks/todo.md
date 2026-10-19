@@ -133,12 +133,13 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Sources/JobSources/HTTPClient.swift`, `Sources/JobSources/JobSource.swift`, `Sources/JobSources/GreenhouseSource.swift`, `Tests/JobSourcesTests/GreenhouseSourceTests.swift`, `Tests/Fixtures/greenhouse_jobs.json`
   - **Done 2026-10-19:** 11 JobSources tests pass. Checked against a live board: Greenhouse escapes `content` once, so the source decodes one level of entities; `postedAt` uses `first_published` (falls back to `updated_at`, which moves on every edit). Errors name host and path only, never the query, because Adzuna puts its key there. The fixture keeps the live shape with sample-company content.
 
-- [ ] **T12 · Lever and Ashby sources, ATS detection** (M) · deps: T11
+- [x] **T12 · Lever and Ashby sources, ATS detection** (M) · deps: T11
   - **Acceptance:**
-    - [ ] `LeverSource` (`api.lever.co/v0/postings/{slug}?mode=json`) and `AshbySource` (`api.ashbyhq.com/posting-api/job-board/{org}`) map recorded responses.
-    - [ ] `ATSDetector` turns a careers URL (boards.greenhouse.io, jobs.lever.co, jobs.ashbyhq.com, and embedded variants) into a source kind and slug, or returns a clear "not detected".
+    - [x] `LeverSource` (`api.lever.co/v0/postings/{slug}?mode=json`) and `AshbySource` (`api.ashbyhq.com/posting-api/job-board/{org}`) map recorded responses.
+    - [x] `ATSDetector` turns a careers URL (boards.greenhouse.io, jobs.lever.co, jobs.ashbyhq.com, and embedded variants) into a source kind and slug, or returns a clear "not detected".
   - **Verify:** `core-test JobSourcesTests`
   - **Files:** `Sources/JobSources/LeverSource.swift`, `Sources/JobSources/AshbySource.swift`, `Sources/JobSources/ATSDetector.swift`, `Tests/JobSourcesTests/LeverAshbyTests.swift`, `Tests/Fixtures/lever_ashby.json`
+  - **Done 2026-10-19:** 19 JobSources tests pass. Fixtures are two files (`lever_postings.json`, `ashby_job_board.json`) because the shapes differ. Checked against live boards: Lever dates are epoch milliseconds and its requirements sit in `lists`, which are now folded into the description; Ashby unlisted jobs are skipped. `Posting` gained optional `otherLocations`, `countryHint` and `workplace` (defaults keep the SPEC §10 call valid) so T13 can use the boards' own location data; Ashby's secondary locations often add Canada.
 
 - [ ] **T13 · Normalization, geography, de-duplication** (M) · deps: T11
   - **Acceptance:**
