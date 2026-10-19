@@ -1,5 +1,4 @@
-#!/usr/bin/env swift
-// floor-guard: diff-scoped enforcement of the CONSTRAINTS.md floor. A Swift
+#!/usr/bin/env swift  // floor-guard: diff-scoped enforcement of the CONSTRAINTS.md floor. A Swift
 // port of the constraint-driven-development skill's reference guard, with
 // patterns for this stack.
 //
@@ -61,7 +60,10 @@ for file in untrackedList.split(separator: "\n") {
 
 // MARK: - walk the diff
 
-struct Line { let file: String; let text: String }
+struct Line {
+    let file: String
+    let text: String
+}
 var added: [Line] = []
 var removed: [Line] = []
 var deleted: [String] = []
@@ -97,10 +99,15 @@ for raw in (tracked + "\n" + untracked).split(separator: "\n", omittingEmptySubs
 
 // MARK: - rules
 
-struct Finding { let rule: String; let file: String; let text: String }
+struct Finding {
+    let rule: String
+    let file: String
+    let text: String
+}
 var findings: [Finding] = []
 func flag(_ rule: String, _ file: String, _ text: String) {
-    findings.append(Finding(rule: rule, file: file, text: String(text.trimmingCharacters(in: .whitespaces).prefix(120))))
+    findings.append(
+        Finding(rule: rule, file: file, text: String(text.trimmingCharacters(in: .whitespaces).prefix(120))))
 }
 func matches(_ pattern: String, _ text: String) -> Bool {
     text.range(of: pattern, options: .regularExpression) != nil
@@ -127,7 +134,9 @@ for line in added where line.file != guardFile {
         flag("unfinished-work", line.file, line.text)
     }
     if isTest(line.file) && matches(skips, line.text) { flag("test-made-easier", line.file, line.text) }
-    if isConstraints(line.file) && matches(#"^\| *(W|E)\d+ *\|"#, line.text) { flag("new-exception", line.file, line.text) }
+    if isConstraints(line.file) && matches(#"^\| *(W|E)\d+ *\|"#, line.text) {
+        flag("new-exception", line.file, line.text)
+    }
 }
 
 // 2b. A test file deleted, or an assertion removed from a test file that remains.
@@ -151,7 +160,9 @@ func ruleKey(_ text: String) -> String? {
     }
     return nil
 }
-func isExceptionRow(_ text: String) -> Bool { matches(#"^\| *(W|E)\d+ *\|"#, text.trimmingCharacters(in: .whitespaces)) }
+func isExceptionRow(_ text: String) -> Bool {
+    matches(#"^\| *(W|E)\d+ *\|"#, text.trimmingCharacters(in: .whitespaces))
+}
 
 enum Direction { case min, max }
 func thresholds(_ text: String) -> [(n: Double, dir: Direction?)] {
@@ -216,6 +227,7 @@ if findings.isEmpty {
 }
 var report = "floor-guard: \(findings.count) floor violation(s):\n"
 for f in findings { report += "  [\(f.rule)] \(f.file): \(f.text)\n" }
-report += "\nEach is a move that lowers the bar. Fix the code, or route it through a tracked exception in CONSTRAINTS.md.\n"
+report +=
+    "\nEach is a move that lowers the bar. Fix the code, or route it through a tracked exception in CONSTRAINTS.md.\n"
 FileHandle.standardError.write(Data(report.utf8))
 exit(1)

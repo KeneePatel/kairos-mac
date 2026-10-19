@@ -60,7 +60,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** `app-build`; launch and check manually.
   - **Files:** `App/project.yml`, `App/Kairos/KairosApp.swift`, `App/Kairos/RootView.swift`, `App/Kairos/Kairos.entitlements`, `App/Kairos/Info.plist`
 
-- [ ] **T05a · Design tokens, app icon, menu bar icon** (M) · deps: T05
+- [x] **T05a · Design tokens, app icon, menu bar icon** (M) · deps: T05
   - **What:** turn `design/kairos/tokens.json` into code once, so no view ever holds a raw colour.
   - **Acceptance:**
     - [ ] `scripts/gen-tokens.swift` generates one Asset Catalog colour set per colour token (Any and Dark, keeping alpha for `rgba()` tokens) and `DesignTokens.swift` with the type styles, spacing and radii as named constants.

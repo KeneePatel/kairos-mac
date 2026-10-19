@@ -71,7 +71,7 @@ struct PlaceholderView: View {
         ContentUnavailableView(
             section.title,
             systemImage: section.symbol,
-            description: Text("This screen isn't built yet.")
+            description: Text("This screen isn't built yet.").foregroundStyle(Color(.inkSecondary))
         )
         .navigationTitle(section.title)
     }
