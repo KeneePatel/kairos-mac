@@ -294,6 +294,15 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Done 2026-10-19** (your run): Flash in strict schema mode is valid and correct (2 calls: the client retried a failed first try); Flash-Lite in 0.85 s; hidden thinking counted (588 output tokens for about 96 shown). Results are in `docs/spikes/structured-output.md`. `scripts/live-llm.sh` now runs these tests with the key from your Keychain, so the key never has to be typed or shown.
   - **Verify:** `scripts/live-llm.sh` or `KAIROS_LIVE_LLM=1 GEMINI_API_KEY=… swift test --package-path Packages/KairosCore --filter LiveAdapter` (you run it: the real adapter and client, `LiveAdapterTests.swift`); `core-test LLMTests`
 
+- [x] **T24a · Backup keys that take over when one runs out** (S) · deps: T22, T24 · you asked 2026-10-19
+  - **Acceptance:**
+    - [x] Settings takes several keys per provider: a primary plus backups, tried in order (SPEC §5.5, "together they form the rotation pool").
+    - [x] A key that used up its quota (a 429 with a retry time) rests for that model until then, and every later operation skips it without spending a request. Other models on the same key keep working (Gemini counts quota per model).
+    - [x] When every key is used up, the error says when the first is back, and the task's fallback model takes over if it has one.
+    - [x] "Test" checks every key, not just the primary, and each key shows Works, Rejected or "Used up: <model>, back in about …".
+  - **Verify:** `core-test LLMTests` (`KeyRestsTests`); `--render-snapshots` (AI settings)
+  - **Done 2026-10-19:** Most of the pool already existed (T22 rotated on a 429, T24 stored backup keys), but each operation built a new client and forgot which keys were used up. Now one `KeyRests` per provider is shared by every router the app builds, keyed by Keychain account and model; all `SystemClock`s share one start, so clients agree on when a rest ends. Rests last for the session only: after a relaunch one quick 429 finds out again. The same sharing fixes `ModelCapabilities`, which the app also rebuilt for every operation. The add-key sheet says that Gemini counts quota per Google Cloud project, so a backup key adds requests only if it's from a different project.
+
 #### Checkpoint C
 - [x] T20a's re-check reported to you
 - [ ] Your real resume imported into a valid master resume

@@ -87,14 +87,17 @@ public struct LLMSettings: Codable, Sendable, Equatable {
 
     /// A router over the providers that can run: those needing a key and lacking one are left out,
     /// and tasks routed only to them fail with `.noProvider` until a key is added.
+    /// `capabilities` and `rests` are per provider id; pass the same ones to every router so what one
+    /// operation learned (a refused mode, a used-up key) holds for the next.
     public func router(
         db: Database, secrets: any SecretStore, capabilities: [String: ModelCapabilities] = [:],
-        transport: any LLMTransport = URLSessionTransport()
+        rests: [String: KeyRests] = [:], transport: any LLMTransport = URLSessionTransport()
     ) -> LLMRouter {
         var clients: [String: LLMClient] = [:]
         for provider in providers {
             if let client = try? provider.setup.client(
-                secrets: secrets, capabilities: capabilities[provider.id] ?? ModelCapabilities(), transport: transport)
+                secrets: secrets, capabilities: capabilities[provider.id] ?? ModelCapabilities(),
+                rests: rests[provider.id] ?? KeyRests(), transport: transport)
             {
                 clients[provider.id] = client
             }

@@ -101,6 +101,10 @@
                 ModelRef(provider: "gemini", model: "gemini-flash-latest"),
                 ModelRef(provider: "ollama-local", model: "qwen3.5:4B"),
             ]
+            // The primary used up its Flash quota; the backup carries on.
+            let rests = KeyRests()
+            rests.rest(
+                key: "llm.gemini.primary", model: "gemini-flash-latest", until: SystemClock().now + .seconds(26_000))
             return AISettingsModel(
                 preview: settings,
                 models: [
@@ -111,7 +115,8 @@
                 ],
                 usage: ["gemini": Usage(calls: 131, tokens: 48_000), "ollama-local": Usage(calls: 12, tokens: 9_000)],
                 masked: ["llm.gemini.primary": "AIza••••••••••••Q2xk", "llm.gemini.backup": "AIza••••••••••••7mPa"],
-                db: db)
+                keyChecks: ["llm.gemini.primary": .works, "llm.gemini.backup": .works], rests: ["gemini": rests], db: db
+            )
         }
 
         private static func sampleResume() -> MasterResume {

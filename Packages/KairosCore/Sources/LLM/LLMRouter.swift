@@ -41,22 +41,26 @@ public struct ProviderSetup: Sendable, Equatable {
 
     /// A client over every key found, which together form the rotation pool.
     public func client(
-        secrets: any SecretStore, capabilities: ModelCapabilities = ModelCapabilities(),
+        secrets: any SecretStore, capabilities: ModelCapabilities = ModelCapabilities(), rests: KeyRests = KeyRests(),
         transport: any LLMTransport = URLSessionTransport(), clock: any LLMClock = SystemClock()
     ) throws(LLMError) -> LLMClient {
-        let keys: [String?]
+        // Each key goes by its Keychain account, so a rest follows the key whatever its position.
+        let keys: [(id: String, key: String?)]
         if preset.needsKey {
-            keys = keyNames.compactMap { name in (try? secrets.read(name)) ?? nil }.filter { !$0.isEmpty }
+            keys = keyNames.compactMap { name in
+                guard let key = (try? secrets.read(name)) ?? nil, !key.isEmpty else { return nil }
+                return (name.account, key)
+            }
             guard !keys.isEmpty else { throw .noKey(provider: preset.name) }
         } else {
-            keys = [nil]
+            keys = [("no-key", nil)]
         }
         let providers: [any LLMProvider] = keys.map {
-            OpenAICompatibleProvider(preset: preset, key: $0, transport: transport, capabilities: capabilities)
+            OpenAICompatibleProvider(preset: preset, key: $0.key, transport: transport, capabilities: capabilities)
         }
         var policy = ClientPolicy(preset: preset)
         if let requestsPerMinute { policy.requestsPerMinute = requestsPerMinute }
-        return LLMClient(keys: providers, policy: policy, clock: clock)
+        return LLMClient(keys: providers, keyIDs: keys.map(\.id), rests: rests, policy: policy, clock: clock)
     }
 }
 

@@ -16,38 +16,48 @@ final class AISettingsModel {
         case failed(String)
     }
 
+    /// What "Test" found for one key.
+    enum KeyCheck: Equatable {
+        case checking, works, rejected
+        case failed(String)
+    }
+
     private(set) var settings = LLMSettings.defaults()
     private(set) var models: [String: Models] = [:]
     private(set) var usage: [String: Usage] = [:]
     /// Keychain account → masked key, for display only.
     private(set) var masked: [String: String] = [:]
+    /// Keychain account → what the last "Test" found.
+    private(set) var keyChecks: [String: KeyCheck] = [:]
     private(set) var error: String?
 
     @ObservationIgnored private let db: Database
     @ObservationIgnored private let secrets: any SecretStore
-    /// Shared with the router, so a model's refusals are learned once (T21).
-    @ObservationIgnored let capabilities: [String: ModelCapabilities]
+    /// Per provider, shared by every router: a model's refusals are learned once (T21), and a key
+    /// that used up its quota is skipped by later operations until it's back.
+    @ObservationIgnored private var capabilities: [String: ModelCapabilities] = [:]
+    @ObservationIgnored private var rests: [String: KeyRests] = [:]
     @ObservationIgnored private let log = Logger(subsystem: "com.keneepatel.kairos", category: "ai-settings")
 
     init(db: Database, secrets: any SecretStore) {
         self.db = db
         self.secrets = secrets
-        capabilities = [:]
     }
 
     #if DEBUG
         /// For previews and snapshots.
         init(
             preview settings: LLMSettings, models: [String: Models], usage: [String: Usage], masked: [String: String],
-            db: Database
+            keyChecks: [String: KeyCheck] = [:], rests: [String: KeyRests] = [:], db: Database
         ) {
             self.db = db
             secrets = InMemorySecretStore()
-            capabilities = [:]
             self.settings = settings
             self.models = models
             self.usage = usage
             self.masked = masked
+            self.keyChecks = keyChecks
+            self.rests = rests
         }
     #endif
 
@@ -66,7 +76,24 @@ final class AISettingsModel {
     var usedToday: Int { usage.values.reduce(0) { $0 + $1.calls } }
 
     func router() -> LLMRouter {
-        settings.router(db: db, secrets: secrets, capabilities: capabilities)
+        for provider in settings.providers {
+            if capabilities[provider.id] == nil { capabilities[provider.id] = ModelCapabilities() }
+            if rests[provider.id] == nil { rests[provider.id] = KeyRests() }
+        }
+        return settings.router(db: db, secrets: secrets, capabilities: capabilities, rests: rests)
+    }
+
+    /// The models a key used up, and roughly when each is back, e.g. "gemini-flash-latest, back in
+    /// about 7 hours". Nil while it's fine. Kept for this session only: after a relaunch, one quick
+    /// refusal finds out again.
+    func restLine(for keyName: String, of providerID: String) -> String? {
+        guard let resting = rests[providerID]?.resting(key: keyName, at: SystemClock().now), !resting.isEmpty
+        else { return nil }
+        return resting.map { rest in
+            let back = rest.remaining.formatted(
+                .units(allowed: [.hours, .minutes], width: .wide, maximumUnitCount: 1, fractionalPart: .hide))
+            return "\(rest.model), back in about \(rest.remaining < .seconds(60) ? "a minute" : back)"
+        }.joined(separator: "; ")
     }
 
     // MARK: - Keys
@@ -105,6 +132,7 @@ final class AISettingsModel {
         guard let index = settings.providers.firstIndex(where: { $0.id == providerID }) else { return }
         try? secrets.delete(SecretKey(name))
         settings.providers[index].keyNames.removeAll { $0 == name }
+        keyChecks[name] = nil
         await save()
     }
 
@@ -167,20 +195,36 @@ final class AISettingsModel {
         await save()
     }
 
+    /// Lists the provider's models, checking every key on the way so a mistyped backup shows up now
+    /// rather than when the primary runs out. Listing models doesn't use generation quota.
     func refreshModels(for providerID: String) async {
         guard let provider = settings.provider(providerID) else { return }
-        let key = provider.keyNames.lazy.compactMap { try? self.secrets.read(SecretKey($0)) }.first
-        if provider.preset.needsKey && key == nil {
+        let keys: [(name: String?, key: String?)] =
+            provider.preset.needsKey
+            ? provider.keyNames.compactMap { name in
+                ((try? secrets.read(SecretKey(name))) ?? nil).map { (name, $0) }
+            } : [(nil, nil)]
+        if keys.isEmpty {
             models[providerID] = .failed("Add a key first.")
             return
         }
         models[providerID] = .loading
-        let client = OpenAICompatibleProvider(preset: provider.preset, key: key)
-        do {
-            models[providerID] = .loaded(provider.preset.chatModels(from: try await client.listModels()))
-        } catch {
-            models[providerID] = .failed(Self.describe(error, provider: provider.preset))
+        var result: Models?
+        for (name, key) in keys {
+            if let name { keyChecks[name] = .checking }
+            do {
+                let ids = try await OpenAICompatibleProvider(preset: provider.preset, key: key).listModels()
+                if let name { keyChecks[name] = .works }
+                if case .loaded? = result {} else { result = .loaded(provider.preset.chatModels(from: ids)) }
+            } catch {
+                let message = Self.describe(error, provider: provider.preset)
+                if let name {
+                    keyChecks[name] = if case .keyRejected = error { .rejected } else { .failed(message) }
+                }
+                if result == nil { result = .failed(message) }
+            }
         }
+        models[providerID] = result
     }
 
     // MARK: - Routing and budget

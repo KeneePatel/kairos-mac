@@ -83,7 +83,9 @@ private struct ProviderCard: View {
                 .help("Kairos stays under this so the provider doesn't refuse requests. Raise it on a paid plan.")
                 Spacer()
                 if preset.needsKey {
-                    PillButton(title: "Add key", symbol: "key") { keySheet = .add }
+                    PillButton(title: provider.keyNames.isEmpty ? "Add key" : "Add backup key", symbol: "key") {
+                        keySheet = .add
+                    }
                 }
                 PillButton(title: preset.isLocal ? "Refresh" : "Test", symbol: "arrow.clockwise") {
                     Task { await model.refreshModels(for: provider.id) }
@@ -143,27 +145,45 @@ private struct ProviderCard: View {
         VStack(spacing: 0) {
             ForEach(Array(provider.keyNames.enumerated()), id: \.element) { index, name in
                 if index > 0 { Divider().overlay(Color(.separatorRow)) }
-                HStack(spacing: Spacing.space3) {
-                    Text(index == 0 ? "Primary" : "Backup").font(TypeStyle.headline).foregroundStyle(Color(.ink))
-                        .frame(width: 70, alignment: .leading)
-                    if index > 0 {
-                        Text("used when Primary hits a cap").font(TypeStyle.callout).foregroundStyle(
-                            Color(.inkSecondary))
-                    }
-                    Spacer()
-                    Text(model.masked[name] ?? "Not on this Mac").font(.system(.callout, design: .monospaced))
-                        .foregroundStyle(Color(.ink2))
-                    Button(index == 0 ? "Replace" : "Remove") {
-                        if index == 0 {
-                            keySheet = .replace(name)
-                        } else {
-                            Task { await model.removeKey(name, from: provider.id) }
+                // Redrawn each minute so "back in about…" stays true while Settings is open.
+                TimelineView(.everyMinute) { _ in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: Spacing.space3) {
+                            Text(index == 0 ? "Primary" : "Backup").font(TypeStyle.headline).foregroundStyle(
+                                Color(.ink)
+                            )
+                            .frame(width: 70, alignment: .leading)
+                            if index > 0 {
+                                Text("used when Primary hits a cap").font(TypeStyle.callout).foregroundStyle(
+                                    Color(.inkSecondary))
+                            }
+                            Spacer()
+                            check(name)
+                            Text(model.masked[name] ?? "Not on this Mac").font(.system(.callout, design: .monospaced))
+                                .foregroundStyle(Color(.ink2))
+                            Button(index == 0 ? "Replace" : "Remove") {
+                                if index == 0 {
+                                    keySheet = .replace(name)
+                                } else {
+                                    Task { await model.removeKey(name, from: provider.id) }
+                                }
+                            }
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(Color(.accentText))
+                        }
+                        if let line = model.restLine(for: name, of: provider.id) {
+                            Label {
+                                Text("Used up: \(line)").foregroundStyle(Color(.inkSecondary))
+                            } icon: {
+                                Image(systemName: "hourglass").foregroundStyle(Color(.maybe))
+                            }
+                            .font(TypeStyle.callout)
+                            .padding(.leading, 70 + Spacing.space3)
                         }
                     }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(Color(.accentText))
                 }
                 .padding(.horizontal, Spacing.space3)
+                .padding(.vertical, 6)
                 .frame(minHeight: 36)
             }
             if provider.keyNames.isEmpty {
@@ -178,6 +198,18 @@ private struct ProviderCard: View {
             }
         }
         .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+    }
+
+    /// What "Test" found for this key, as an icon and a word with the colour.
+    @ViewBuilder private func check(_ name: String) -> some View {
+        switch model.keyChecks[name] {
+        case .checking?: ProgressView().controlSize(.mini)
+        case .works?: label("Works", "checkmark.circle.fill", Color(.yes))
+        case .rejected?: label("Rejected", "xmark.octagon.fill", Color(.error))
+        case .failed(let message)?:
+            label("Not checked", "exclamationmark.triangle.fill", Color(.inkSecondary)).help(message)
+        case nil: EmptyView()
+        }
     }
 
     @ViewBuilder private var models: some View {
@@ -214,13 +246,34 @@ private struct KeySheet: View {
     @State private var key = ""
     @FocusState private var focused: Bool
 
+    private var isBackup: Bool { mode == .add && !provider.keyNames.isEmpty }
+
+    private var title: String {
+        switch mode {
+        case .add: isBackup ? "Add a backup key for \(provider.preset.name)" : "Add a key for \(provider.preset.name)"
+        case .replace: "Replace the primary key"
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.space5) {
             VStack(alignment: .leading, spacing: Spacing.space1) {
-                Text(mode == .add ? "Add a key for \(provider.preset.name)" : "Replace the primary key")
-                    .font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                Text(title).font(TypeStyle.title3).foregroundStyle(Color(.ink))
                 Text("It's saved in your Keychain on this Mac. Kairos shows only its first and last characters.")
                     .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+            }
+            if isBackup {
+                Label {
+                    Text(
+                        provider.preset.id == "gemini"
+                            ? "Kairos switches to a backup when a key runs out. Gemini counts quota per Google Cloud project, so a backup adds requests only if it's from a different project."
+                            : "Kairos switches to a backup when a key runs out."
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "info.circle")
+                }
+                .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
             }
             LabeledField(title: "API key") {
                 SecureField("API key", text: $key, prompt: Text("Paste the key"))

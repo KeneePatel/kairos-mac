@@ -10,11 +10,13 @@ public protocol LLMClock: Sendable {
 }
 
 public struct SystemClock: LLMClock {
-    private let start = ContinuousClock.now
+    /// One start for every instance, so clients built at different times agree on when a key's
+    /// rest ends (`KeyRests`).
+    private static let start = ContinuousClock.now
 
     public init() {}
 
-    public var now: Duration { ContinuousClock.now - start }
+    public var now: Duration { ContinuousClock.now - Self.start }
 
     public func sleep(for duration: Duration) async throws(LLMError) {
         do {

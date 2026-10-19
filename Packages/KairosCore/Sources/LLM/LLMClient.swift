@@ -58,21 +58,26 @@ public struct Completion: Sendable {
 /// Choosing providers and models, the fallback chain, the budget and the cache belong to the router.
 public actor LLMClient {
     private let keys: [any LLMProvider]
+    /// What each key is called in `rests`: its Keychain account when built from Settings.
+    private let keyIDs: [String]
+    private let rests: KeyRests
     private let policy: ClientPolicy
     private let clock: any LLMClock
     private let limiter: RateLimiter
     private let jitter: @Sendable () -> Double
     /// The key that last worked; calls start there.
     private var current = 0
-    /// Keys a 429 told to rest, and until when.
-    private var restingUntil: [Int: Duration] = [:]
 
-    /// `keys` holds one provider per key, all for the same service.
+    /// `keys` holds one provider per key, all for the same service. Clients that share `rests` (and
+    /// a clock) skip the keys any of them found used up.
     public init(
-        keys: [any LLMProvider], policy: ClientPolicy, clock: any LLMClock = SystemClock(),
+        keys: [any LLMProvider], keyIDs: [String]? = nil, rests: KeyRests = KeyRests(), policy: ClientPolicy,
+        clock: any LLMClock = SystemClock(),
         jitter: @escaping @Sendable () -> Double = { Double.random(in: 0.5...1.5) }
     ) {
         self.keys = keys
+        self.keyIDs = keyIDs.flatMap { $0.count == keys.count ? $0 : nil } ?? keys.indices.map { "key-\($0)" }
+        self.rests = rests
         self.policy = policy
         self.clock = clock
         self.jitter = jitter
@@ -86,17 +91,18 @@ public actor LLMClient {
         var attempts = 0
         var failures = 0
         var waits = 0
-        var lastDelay: Int?
         var offPlan: Set<Int> = []
         while true {
             if Task.isCancelled { throw .cancelled }
-            guard let index = nextKey(skipping: offPlan) else {
+            guard let index = nextKey(skipping: offPlan, model: request.model) else {
                 if offPlan.count == keys.count { throw .modelNotOnPlan(request.model) }
                 // Every usable key is resting: wait for the first, if that's soon enough.
-                let wait = (restingUntil.values.min() ?? clock.now) - clock.now
+                let back = keys.indices.filter { !offPlan.contains($0) }
+                    .compactMap { rests.until(key: keyIDs[$0], model: request.model) }.min()
+                let wait = (back ?? clock.now) - clock.now
                 waits += 1
                 guard wait <= policy.maxWait, waits <= policy.attempts else {
-                    throw .rateLimited(retryAfterSeconds: lastDelay)
+                    throw .rateLimited(retryAfterSeconds: Self.wholeSeconds(wait))
                 }
                 try await clock.sleep(for: max(wait, .zero))
                 continue
@@ -116,8 +122,7 @@ public actor LLMClient {
                 current = index
                 return Completion(response: response, attempts: attempts, provider: keys[index].name)
             case .failure(.rateLimited(let delay)):
-                lastDelay = delay
-                restingUntil[index] = clock.now + .seconds(delay ?? 60)
+                rests.rest(key: keyIDs[index], model: request.model, until: clock.now + .seconds(delay ?? 60))
             case .failure(.modelNotOnPlan):
                 // Another key may be on a plan that has this model.
                 offPlan.insert(index)
@@ -180,17 +185,23 @@ public actor LLMClient {
             timeoutSeconds: request.timeoutSeconds)
     }
 
-    /// The key to use: the last one that worked, else the next that isn't resting or off this plan.
-    private func nextKey(skipping offPlan: Set<Int>) -> Int? {
+    /// The key to use: the last one that worked, else the next that isn't resting from `model` or off
+    /// this plan.
+    private func nextKey(skipping offPlan: Set<Int>, model: String) -> Int? {
         let now = clock.now
         for step in 0..<keys.count {
             let index = (current + step) % keys.count
             if offPlan.contains(index) { continue }
-            if let until = restingUntil[index], until > now { continue }
-            restingUntil[index] = nil
+            if let until = rests.until(key: keyIDs[index], model: model), until > now { continue }
             return index
         }
         return nil
+    }
+
+    /// Rounded up, so "back in 0 s" never happens.
+    private static func wholeSeconds(_ duration: Duration) -> Int {
+        let (seconds, attoseconds) = duration.components
+        return Int(seconds) + (attoseconds > 0 ? 1 : 0)
     }
 
     /// 1 s, 2 s, 4 s … times a jitter factor, never more than `maxWait`.
