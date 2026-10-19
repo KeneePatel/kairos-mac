@@ -87,7 +87,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** manual A/B runs; write-up in `docs/spikes/keychain-signing.md`.
   - **Files:** `Sources/Secrets/Keychain.swift`, `Tests/SecretsTests/KeychainTests.swift`, `docs/spikes/keychain-signing.md`, `docs/signing.md`
 
-- [ ] **T08 · Split the decision records into `docs/decisions/`** (S, docs only) · deps: T01
+- [x] **T08 · Split the decision records into `docs/decisions/`** (S, docs only) · deps: T01
   - **What:** move SPEC Appendix A into one file per ADR (documentation-and-adrs), and leave an index in the spec.
   - **Acceptance:**
     - [ ] `docs/decisions/ADR-001-…md` through `ADR-014-…md`, each with Status, Date, Context, Decision, Alternatives and Consequences.

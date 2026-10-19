@@ -68,7 +68,7 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 - [x] T05a Design tokens, app icon, menu bar icon
 - [x] T06 Spike: Typst inside the sandboxed, self-signed app
 - [ ] T07 Spike: Keychain access across self-signed rebuilds
-- [ ] T08 Split the decision records into `docs/decisions/`
+- [x] T08 Split the decision records into `docs/decisions/`
 
 ### Checkpoint A: Foundation
 - [ ] CI green; every `CONSTRAINTS.md` check runs

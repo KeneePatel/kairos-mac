@@ -975,82 +975,26 @@ None. XcodeGen was approved as a dev-only tool on 2026-10-19 (plan decision P1).
 
 ---
 
-## Appendix A — Decision records (Proposed)
+## Appendix A — Decision records
 
-### ADR-001: Native SwiftUI app
-- **Status:** Accepted 2026-10-18. The owner chose SwiftUI over Tauri 2 (comparison in `docs/platform-choice.md`).
-- **Decision:** SwiftUI app with the core in a Swift package.
-- **Alternatives:** Tauri 2 (best if Windows comes); Electron + Python (today: three runtimes, ~400 MB); Python + pywebview.
-- **Consequences:** No Windows worker without a port. The backend and the PWA are already platform-neutral.
+Each decision has its own file in `docs/decisions/` (Status, Date, Context, Decision, Alternatives, Consequences). Add new ones there with the next number.
 
-### ADR-002: System SQLite with a thin wrapper
-- **Decision:** `import SQLite3` plus about 400 lines of wrapper, with one database file per account.
-- **Alternatives:** GRDB (the first dependency to take if needed); SwiftData / Core Data (opaque schema); SQLite.swift.
-
-### ADR-003: Supabase as the online database (supersedes "Turso")
-- **Context:** Friends need sign-up and sign-in, and each user's data must be invisible to the others, on free tiers, with minimal client dependencies.
-- **Decision:** Supabase Free: Auth + Postgres with row-level security + Storage, all over REST, in the Canada (Central) region.
-- **Alternatives:**
-  - *Turso:* same dialect as SQLite, but no end-user auth. It would need Clerk or Auth0 (JWKS, beta) plus per-user databases created through its Platform API by a backend.
-  - *Cloudflare D1 + Worker:* auth written by hand.
-  - *Neon:* Auth and a Data API in beta; no file storage; 0.5 GB.
-  - *Firebase:* Storage has required a billing account since February 2026; NoSQL; heavy SDK if not using REST.
-  - *CloudKit:* needs the paid developer program.
-  - *PocketBase:* a server to host.
-- **Consequences:** Postgres on the server, SQLite on clients, bridged by a generic row store (ADR-011). A free project pauses after a week of no activity.
-
-### ADR-004: Typst instead of LaTeX
-- **Decision:** A bundled Typst CLI with JSON-driven templates.
-- **Alternatives:** LaTeX/Tectonic (escaping, compile failures, font hacks); WebKit HTML printing (zero binaries, fiddly pagination; the fallback); CoreText drawing.
-
-### ADR-005: Tiered job sources, public APIs first, Canada first
-- **Decision:** Tier A ATS APIs on by default; tier B Adzuna (`ca` before `us`); tier C WebKit runners opt-in (Indeed Canada, Job Bank and others).
-- **Alternatives:** Playwright; paid scraping APIs; a JobSpy sidecar.
-
-### ADR-006: Swift concurrency instead of an agent framework
-- **Decision:** `TaskGroup`, bounded loops, an actor queue, cancellation.
-
-### ADR-007: Typed LLM tasks over one OpenAI-compatible adapter
-- **Decision:**
-  - Each LLM use is a typed task: prompt builder, output schema, semantic check, version.
-  - A router picks the provider and model per task.
-  - One Chat Completions adapter covers Gemini (default), Ollama (fallback), Groq, OpenRouter and OpenAI. Foundation Models handles triage; Anthropic is optional.
-  - Every output is validated locally whatever the provider promises. Keys are per user and never synced.
-- **Alternatives:** Provider SDKs (dependencies, a different shape each); free-text prompting with regex parsing, like the original (fragile); local MLX models (a dependency, multi-GB downloads).
-- **Consequences:** Adding a provider is a preset, not code. Structured-output support varies, hence the capability flags and the mandatory local schema check.
-
-### ADR-008: Master resume, verifier, strict and stretch modes
-- **Context:** You want the option to stretch beyond the master resume. Friends sharing the app may not.
-- **Decision:** Strict by default for every account. Stretch is opt-in per user and off until they turn it on. Gap bullets are limited to skills marked Can discuss, every gap bullet is flagged, and the hard limits never bend.
-- **Alternatives:** Always strict (rejected by you). Always stretch with free invention, like the original (no hard limits, nothing flagged, risky for friends who didn't choose it).
-- **Consequences:** The verifier is the single enforcement point, so its tests are the most important in the codebase.
-
-### ADR-009: Code computes the verdict
-- **Decision:** The LLM extracts requirements and flags; code computes the verdict and ranking, Canada first.
-
-### ADR-010: Accounts: Supabase Auth, invite-only
-- **Decision:** Email + password with confirmation, Google and GitHub OAuth through `ASWebAuthenticationSession` with PKCE, and invites enforced by a before-user-created hook. Sessions live in the Keychain. Deletion via a security-definer function after Storage cleanup.
-- **Alternatives:** Open sign-up (abuse and quota risk); magic links only (more email volume on a constrained SMTP); supabase-swift SDK (a dependency); writing our own auth (never).
-
-### ADR-011: Generic remote row store
-- **Decision:** One `sync_row` table (user, table, row id, HLC, tombstone, JSONB data, seq). Clients may only read it; writes go through `sync_push`, which serializes each user's pushes with an advisory lock.
-- **Alternatives:** A mirrored per-table Postgres schema (two dialects); direct PostgREST upserts (no conditional last-writer-wins, unsafe pull ordering).
-- **Consequences:** No server-side queries over individual fields. Not needed: all logic runs on clients.
-
-### ADR-012: PWA companion instead of a native iPhone app
-- **Decision:** A framework-free PWA on Supabase, hosted on GitHub Pages (the repo is public).
-- **Alternatives:** Native iOS (needs the paid program to reach friends' phones); Expo (back to Node and tunnels or a dev account).
-- **Consequences:** Works on any phone or desktop, including Windows friends.
-
-### ADR-013: Distribution without the paid developer program
-- **Decision:** A DMG on GitHub Releases signed with one stable self-signed code-signing certificate; an in-app update check against the GitHub Releases API; an install guide covering "Open Anyway" in System Settings. A tag-triggered GitHub Actions workflow (free macOS runners for public repos) builds and publishes it, with the certificate stored as an encrypted repository secret.
-- **Alternatives:** Notarized Developer ID (needs the paid program); Homebrew cask (unsigned casks are being phased out); build-from-source only.
-
-### ADR-014: One master resume per user
-- **Context:** The builders need one complete, editable source of truth, and the verifier needs ids to check claims against.
-- **Decision:** A structured master resume (contact, experience, projects, education, skills marked Proven or Can discuss, additional sections) with required LinkedIn URL, phone and email, versioned on every save. It replaces both the fact bank and per-role base resumes.
-- **Alternatives:** Free-text resume files (the original; claims can't be checked); several base resumes per role (duplicate upkeep; rejected by you).
-- **Consequences:** Onboarding has one real step, reviewing the imported draft. After that, every builder reads from one place.
+| ADR | Decision |
+|---|---|
+| [ADR-001](docs/decisions/ADR-001-native-swiftui-app.md) | Native SwiftUI app |
+| [ADR-002](docs/decisions/ADR-002-system-sqlite-with-a-thin-wrapper.md) | System SQLite with a thin wrapper |
+| [ADR-003](docs/decisions/ADR-003-supabase-as-the-online-database-supersedes-turso.md) | Supabase as the online database (supersedes "Turso") |
+| [ADR-004](docs/decisions/ADR-004-typst-instead-of-latex.md) | Typst instead of LaTeX |
+| [ADR-005](docs/decisions/ADR-005-tiered-job-sources-public-apis-first-canada-first.md) | Tiered job sources, public APIs first, Canada first |
+| [ADR-006](docs/decisions/ADR-006-swift-concurrency-instead-of-an-agent-framework.md) | Swift concurrency instead of an agent framework |
+| [ADR-007](docs/decisions/ADR-007-typed-llm-tasks-over-one-openai-compatible-adapter.md) | Typed LLM tasks over one OpenAI-compatible adapter |
+| [ADR-008](docs/decisions/ADR-008-master-resume-verifier-strict-and-stretch-modes.md) | Master resume, verifier, strict and stretch modes |
+| [ADR-009](docs/decisions/ADR-009-code-computes-the-verdict.md) | Code computes the verdict |
+| [ADR-010](docs/decisions/ADR-010-accounts-supabase-auth-invite-only.md) | Accounts: Supabase Auth, invite-only |
+| [ADR-011](docs/decisions/ADR-011-generic-remote-row-store.md) | Generic remote row store |
+| [ADR-012](docs/decisions/ADR-012-pwa-companion-instead-of-a-native-iphone-app.md) | PWA companion instead of a native iPhone app |
+| [ADR-013](docs/decisions/ADR-013-distribution-without-the-paid-developer-program.md) | Distribution without the paid developer program |
+| [ADR-014](docs/decisions/ADR-014-one-master-resume-per-user.md) | One master resume per user |
 
 ---
 
