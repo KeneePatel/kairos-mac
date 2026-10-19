@@ -14,7 +14,7 @@ let package = Package(
         .library(name: "Secrets", targets: ["Secrets"]),
     ],
     targets: [
-        .target(name: "Store", swiftSettings: strict),
+        .target(name: "Store", resources: [.copy("Schema")], swiftSettings: strict),
         .testTarget(name: "StoreTests", dependencies: ["Store"], swiftSettings: strict),
         .target(name: "Render", resources: [.copy("Templates")], swiftSettings: strict),
         .testTarget(name: "RenderTests", dependencies: ["Render"], swiftSettings: strict),

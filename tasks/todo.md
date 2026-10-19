@@ -105,14 +105,15 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
 
 ### Slice 1: Jobs in
 
-- [ ] **T09 · SQLite wrapper and migrator** (M) · deps: T02
+- [x] **T09 · SQLite wrapper and migrator** (M) · deps: T02
   - **What:** the thin wrapper over `import SQLite3` (ADR-002).
   - **Acceptance:**
-    - [ ] Opens in WAL mode, runs prepared statements with bound parameters, and handles nested-safe transactions with rollback on error.
-    - [ ] The migrator applies `Schema/NNN_*.sql` in order, tracks `PRAGMA user_version`, and refuses a database newer than the app.
-    - [ ] Per-account layout (`Application Support/Kairos/<account>/kairos.sqlite`, with `local/` before sign-in). A startup check reports JSON1, FTS5 and STRICT support.
+    - [x] Opens in WAL mode, runs prepared statements with bound parameters, and handles nested-safe transactions with rollback on error.
+    - [x] The migrator applies `Schema/NNN_*.sql` in order, tracks `PRAGMA user_version`, and refuses a database newer than the app.
+    - [x] Per-account layout (`Application Support/Kairos/<account>/kairos.sqlite`, with `local/` before sign-in). A startup check reports JSON1, FTS5 and STRICT support.
   - **Verify:** `core-test StoreTests`. Record project coverage in `CONSTRAINTS.md` → "Measured".
   - **Files:** `Sources/Store/Database.swift`, `Sources/Store/Statement.swift`, `Sources/Store/Migrator.swift`, `Sources/Store/AccountStore.swift`, `Tests/StoreTests/DatabaseTests.swift`
+  - **Done 2026-10-19:** 38 Store tests pass (plus `MigratorTests`, `AccountStoreTests`). System SQLite 3.54.0 has JSON1, STRICT and FTS5. Changed-line coverage 94.7%; project 87.2%.
 
 - [ ] **T10 · Jobs schema and repositories** (M) · deps: T09
   - **Acceptance:**

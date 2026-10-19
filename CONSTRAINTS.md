@@ -40,7 +40,7 @@ Every row names the command that produces its verdict. Gitleaks is the external 
 
 | Metric | Today | Direction |
 |--------|-------|-----------|
-| Project line coverage (KairosCore) | Not measured yet. Record it at the end of task T09 | Must not fall (tolerance 0.5%) |
+| Project line coverage (KairosCore) | 87.2% of 570 lines (2026-10-19, T09). The gated live keychain test is off in this run, so `Secrets` shows 24% | Must not fall (tolerance 0.5%) |
 | App bundle size | 43 MB on disk, debug build with typst bundled (2026-10-19, T06) | Must not grow by more than 5 MB in a release without a stated reason |
 
 ## Exceptions
