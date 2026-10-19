@@ -283,10 +283,10 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Why:** you asked (2026-10-19) to note these and come back to them. Doing this after T21–T22 means the real adapter, not the spike harness, gets checked.
   - **Acceptance:**
     - [ ] Gemini Flash (`gemini-flash-latest`) in strict schema mode: measured. Both runs so far hit a temporary 503 "high demand", so this cell of `docs/spikes/structured-output.md` is still empty. If schema mode keeps failing, the Gemini preset falls back to JSON mode.
-    - [ ] Ollama `qwen3.5:4B` with thinking on merged "Kubernetes, gRPC, French" into one requirement (a known issue in `RecordedRepliesTests`). Re-check once T28's `analyzeJob` prompt asks for one requirement per item, then remove the known-issue marker if it's fixed. Thinking stays off by default either way.
+    - [x] Ollama through the real adapter and client (2026-10-19): the 501 refusal was handled and the model learned as prompt-only on its own, thinking was off by default, valid output in 8.5 s on one call. It listed the job title as a requirement again, which T28's prompt rule fixes. The thinking-mode merge re-check moved to T28, where the prompt that fixes it is written.
     - [ ] Hidden thinking tokens: confirm T21's usage parsing counts them (`total − prompt`) against a fresh Gemini Flash reply.
     - [ ] Report the results to you, and update the write-up and fixtures.
-  - **Verify:** `KAIROS_LIVE_LLM=1 GEMINI_API_KEY=… swift test --package-path Packages/KairosCore --filter LiveStructuredOutput` (you run it); `core-test LLMTests`
+  - **Verify:** `KAIROS_LIVE_LLM=1 GEMINI_API_KEY=… swift test --package-path Packages/KairosCore --filter LiveAdapter` (you run it: the real adapter and client, `LiveAdapterTests.swift`); `core-test LLMTests`
 
 #### Checkpoint C
 - [ ] T20a's re-check reported to you
@@ -299,18 +299,19 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
 - [ ] **T27 · Prefilter rules** (M, test-first) · deps: T10, T13, T15
   - **Acceptance:**
     - [ ] Rules, in order: title include/exclude, seniority, years-required regex against your maximum, location and country policy, remote scope, work authorization, clearance, French, blacklist, posting age, already applied. The first failure is recorded with its rule id.
-    - [ ] `004_private_settings.sql` creates the local-only `private_setting` table (work authorization, clearance). It's excluded from sync by design.
+    - [ ] `005_private_settings.sql` creates the local-only `private_setting` table (work authorization, clearance). It's excluded from sync by design.
     - [ ] Table-driven tests: at least 5 cases per rule, including French-language postings and "Remote (US only)".
   - **Verify:** `core-test ScreeningTests`
-  - **Files:** `Sources/Screening/Prefilter.swift`, `Sources/Screening/Rules.swift`, `Sources/Screening/YearsParser.swift`, `Sources/Store/Schema/004_private_settings.sql`, `Tests/ScreeningTests/PrefilterTests.swift`
+  - **Files:** `Sources/Screening/Prefilter.swift`, `Sources/Screening/Rules.swift`, `Sources/Screening/YearsParser.swift`, `Sources/Store/Schema/005_private_settings.sql`, `Tests/ScreeningTests/PrefilterTests.swift`
 
 - [ ] **T28 · Job analysis task** (M) · deps: T27, T23
   - **Acceptance:**
     - [ ] Posting cleanup removes boilerplate and truncates to budget, keeping requirements sections first.
     - [ ] The `analyzeJob` task (prompt v1, schema) receives only the posting plus skill names and languages. Output: requirements (must or nice, matched skill), years, seniority, domains, flags.
-    - [ ] `005_screening.sql` creates `job_analysis` and `screening`; results are cached by prompt version.
+    - [ ] `006_screening.sql` creates `job_analysis` and `screening`; results are cached by prompt version.
+    - [ ] From T20/T20a: the prompt asks for one requirement per item (never several skills in one) and never the job title. Re-record Ollama `qwen3.5:4B` with thinking on and remove `RecordedRepliesTests`' known-issue marker if the merge is gone.
   - **Verify:** `core-test ScreeningTests` (fake provider plus recorded replies)
-  - **Files:** `Sources/Screening/PostingCleaner.swift`, `Sources/Screening/AnalyzeJobTask.swift`, `Sources/Screening/AnalysisRepository.swift`, `Sources/Store/Schema/005_screening.sql`, `Tests/ScreeningTests/AnalyzeJobTaskTests.swift`
+  - **Files:** `Sources/Screening/PostingCleaner.swift`, `Sources/Screening/AnalyzeJobTask.swift`, `Sources/Screening/AnalysisRepository.swift`, `Sources/Store/Schema/006_screening.sql`, `Tests/ScreeningTests/AnalyzeJobTaskTests.swift`
 
 - [ ] **T29 · Verdict and ranking** (S, test-first) · deps: T28
   - **Acceptance:**
@@ -366,10 +367,10 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
 - [ ] **T35 · Match score, rewrite loop, build queue** (M) · deps: T34, T32
   - **Acceptance:**
     - [ ] Match score uses the SPEC §5.3 weights. Sections under 70 get `rewriteSection`, at most 3 passes, keeping the best version. Page fitting drops the lowest-ranked bullets.
-    - [ ] `006_builds.sql` creates `build` and `artifact`; builds record `master_version` and mode.
+    - [ ] `007_builds.sql` creates `build` and `artifact`; builds record `master_version` and mode.
     - [ ] The build queue (2 workers) resumes a crashed build from cached steps.
   - **Verify:** `core-test TailoringTests`, `core-test PipelineTests`
-  - **Files:** `Sources/Tailoring/MatchScore.swift`, `Sources/Tailoring/BuildLoop.swift`, `Sources/Pipeline/BuildQueue.swift`, `Sources/Store/Schema/006_builds.sql`, `Tests/TailoringTests/BuildLoopTests.swift`
+  - **Files:** `Sources/Tailoring/MatchScore.swift`, `Sources/Tailoring/BuildLoop.swift`, `Sources/Pipeline/BuildQueue.swift`, `Sources/Store/Schema/007_builds.sql`, `Tests/TailoringTests/BuildLoopTests.swift`
 
 - [ ] **T36 · Build screen** (M) · deps: T35, T31
   - **Acceptance:**
@@ -431,7 +432,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** `app-build`; manual over two days
 
 - [ ] **T45 · Application tracking** (M) · deps: R1
-  - **Acceptance:** `007_applications.sql`; status board; append-only timeline; notes; follow-up reminders as notifications.
+  - **Acceptance:** `008_applications.sql`; status board; append-only timeline; notes; follow-up reminders as notifications.
   - **Verify:** `core-test StoreTests`; `app-build`
 
 - [ ] **T46 · Retention and `kairos doctor`** (S) · deps: T45
@@ -466,7 +467,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** `app-build`; manual
 
 - [ ] **T52 · Sync push and pull** (M) · deps: T51
-  - **Acceptance:** `008_sync_local.sql` (outbox triggers, sync state); push through `sync_push`; pull over REST; clock update on receipt; watermark. Convergence tests with a fake remote.
+  - **Acceptance:** `009_sync_local.sql` (outbox triggers, sync state); push through `sync_push`; pull over REST; clock update on receipt; watermark. Convergence tests with a fake remote.
   - **Verify:** `core-test SyncTests`
 
 - [ ] **T53 · Sync of PDFs, restore, command queue** (M) · deps: T52
