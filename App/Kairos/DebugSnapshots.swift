@@ -1,5 +1,6 @@
 #if DEBUG
     import AppKit
+    import LLM
     import MasterResume
     import Store
     import SwiftUI
@@ -42,6 +43,12 @@
                         to: folder.appending(path: "entry-editor-\(name).png"), appearance: appearance)
                 }
             }
+            let ai = sampleAISettings(db: db)
+            for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+                render(
+                    ProvidersView().environment(ai).frame(width: 980, height: 1_640).background(Color(.surface)),
+                    to: folder.appending(path: "ai-settings-\(name).png"), appearance: appearance)
+            }
             print("snapshots: \(folder.path)")
             exit(0)
         }
@@ -59,6 +66,27 @@
             try? png.write(to: url)
             // The container is closed to other processes, so the terminal gets a copy on stdout.
             print("SNAPSHOT \(url.lastPathComponent) \(png.base64EncodedString())")
+        }
+
+        /// Sample keys are made-up strings shown masked; nothing here is a real key.
+        @MainActor private static func sampleAISettings(db: Database) -> AISettingsModel {
+            var settings = LLMSettings.defaults()
+            settings.providers[0].keyNames = ["llm.gemini.primary", "llm.gemini.backup"]
+            settings.routes["writeExperience"] = [
+                ModelRef(provider: "gemini", model: "gemini-flash-latest"),
+                ModelRef(provider: "ollama-local", model: "qwen3.5:4B"),
+            ]
+            return AISettingsModel(
+                preview: settings,
+                models: [
+                    "gemini": .loaded([
+                        "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-3.5-flash", "gemini-2.5-flash",
+                    ]),
+                    "ollama-local": .loaded(["qwen3.5:4B"]),
+                ],
+                usage: ["gemini": Usage(calls: 131, tokens: 48_000), "ollama-local": Usage(calls: 12, tokens: 9_000)],
+                masked: ["llm.gemini.primary": "AIza••••••••••••Q2xk", "llm.gemini.backup": "AIza••••••••••••7mPa"],
+                db: db)
         }
 
         private static func sampleResume() -> MasterResume {

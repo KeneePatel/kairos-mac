@@ -24,6 +24,11 @@ public struct CallRecord: Sendable, Equatable {
 public struct Usage: Sendable, Equatable {
     public let calls: Int
     public let tokens: Int
+
+    public init(calls: Int, tokens: Int) {
+        self.calls = calls
+        self.tokens = tokens
+    }
 }
 
 /// The local-only `llm_call` table.
@@ -62,6 +67,22 @@ public struct CallLog: Sendable {
             """, [SQLValue(date)]
         ).first
         return Usage(calls: row?.int("calls") ?? 0, tokens: row?.int("tokens") ?? 0)
+    }
+
+    /// Usage per provider id since `date`, for the provider cards ("131 calls today").
+    public func usageByProvider(since date: Date) async throws -> [String: Usage] {
+        let rows = try await db.query(
+            """
+            SELECT provider, coalesce(sum(attempt), 0) AS calls,
+                   coalesce(sum(coalesce(input_tokens, 0) + coalesce(output_tokens, 0)), 0) AS tokens
+            FROM llm_call WHERE at >= ? GROUP BY provider
+            """, [SQLValue(date)])
+        var usage: [String: Usage] = [:]
+        for row in rows {
+            guard let provider = row.string("provider") else { continue }
+            usage[provider] = Usage(calls: row.int("calls") ?? 0, tokens: row.int("tokens") ?? 0)
+        }
+        return usage
     }
 
     @discardableResult

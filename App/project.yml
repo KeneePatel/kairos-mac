@@ -44,6 +44,8 @@ targets:
         product: Pipeline
       - package: KairosCore
         product: MasterResume
+      - package: KairosCore
+        product: LLM
     info:
       path: Kairos/Info.plist
       properties:

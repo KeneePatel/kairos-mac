@@ -2,7 +2,7 @@ import Foundation
 
 /// The user's daily limits (SPEC §5.5, Budget). When one is reached, LLM steps pause with "Daily AI
 /// budget reached" and the rest of the pipeline carries on.
-public struct Budget: Sendable, Equatable {
+public struct Budget: Sendable, Equatable, Codable {
     public var dailyCalls: Int
     public var dailyTokens: Int?
 

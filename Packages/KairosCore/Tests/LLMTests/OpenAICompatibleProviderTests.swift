@@ -90,6 +90,18 @@ struct ProviderPresetTests {
         #expect(!remote.isLocal)
     }
 
+    @Test func onlyChatModelsAreOfferedAliasesFirst() throws {
+        let ids = try JSONDecoder().decode([String].self, from: ScriptedURLProtocol.fixture("llm/gemini-models.json"))
+        let chat = ProviderPreset.gemini.chatModels(from: ids)
+        #expect(Array(chat.prefix(2)) == ["gemini-flash-latest", "gemini-flash-lite-latest"])
+        #expect(chat.contains("gemini-3.5-flash") && chat.contains("gemini-2.5-flash-lite"))
+        #expect(!chat.contains { $0.contains("tts") || $0.contains("image") || $0.contains("embedding") })
+        #expect(!chat.contains { $0.hasPrefix("antigravity") || $0.hasPrefix("deep-research") })  // agent products
+        let firstPreview = try #require(chat.firstIndex { $0.contains("preview") })
+        #expect(chat[firstPreview...].allSatisfy { $0.contains("preview") })  // previews come last
+        #expect(ProviderPreset.ollamaLocal.chatModels(from: ["qwen3.5:4B", "nomic-embed-text"]) == ["qwen3.5:4B"])
+    }
+
     @Test func modesFallBackInOrder() {
         #expect(StructuredOutput.schema.fallback == .jsonMode)
         #expect(StructuredOutput.jsonMode.fallback == .promptOnly)

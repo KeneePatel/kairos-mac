@@ -231,3 +231,30 @@ struct DedupAndRunTests {
         #expect(try await runs.runs(kind: "screen").first?.finishedAt == nil)
     }
 }
+
+@Suite("Settings repository")
+struct SettingsRepositoryTests {
+    struct Sample: Codable, Equatable {
+        var name: String
+        var limit: Int
+    }
+
+    @Test func storesReplacesAndDeletesADocument() async throws {
+        let db = try await migratedDatabase()
+        let settings = SettingsRepository(db)
+        #expect(try await settings.value("llm", as: Sample.self) == nil)
+        try await settings.save(Sample(name: "gemini", limit: 300), for: "llm")
+        try await settings.save(Sample(name: "gemini", limit: 150), for: "llm")
+        #expect(try await settings.value("llm", as: Sample.self) == Sample(name: "gemini", limit: 150))
+        try await settings.delete("llm")
+        #expect(try await settings.value("llm", as: Sample.self) == nil)
+        let tombstone = try await db.query("SELECT deleted, updated_hlc FROM setting WHERE key = 'llm'").first
+        #expect(tombstone?.bool("deleted") == true && tombstone?.string("updated_hlc") != nil)  // the deletion syncs
+    }
+
+    @Test func aDocumentThatNoLongerDecodesReadsAsMissing() async throws {
+        let db = try await migratedDatabase()
+        try await SettingsRepository(db).save(["unexpected": true], for: "llm")
+        #expect(try await SettingsRepository(db).value("llm", as: Sample.self) == nil)
+    }
+}

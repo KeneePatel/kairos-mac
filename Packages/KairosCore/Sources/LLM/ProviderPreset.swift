@@ -94,6 +94,21 @@ public struct ProviderPreset: Sendable, Equatable, Identifiable {
 
     public static let all: [ProviderPreset] = [.gemini, .ollamaLocal, .ollamaCloud, .groq, .openRouter, .openAI]
 
+    /// The ids worth offering for text tasks: no image, speech, video or embedding models; for
+    /// Gemini only its own model families (its list also carries agent products such as
+    /// `deep-research-preview`). `-latest` aliases first, previews last (T20: Gemini lists 63).
+    public func chatModels(from ids: [String]) -> [String] {
+        let skipped = ["tts", "image", "imagen", "embed", "aqa", "live", "audio", "veo", "learnlm", "robotics"]
+        var chat = ids.filter { id in !skipped.contains { id.lowercased().contains($0) } }
+        if id == "gemini" {
+            chat = chat.filter { $0.hasPrefix("gemini-") || $0.hasPrefix("gemma-") }
+        }
+        let aliases = chat.filter { $0.hasSuffix("-latest") }
+        let previews = chat.filter { !$0.hasSuffix("-latest") && $0.contains("preview") }
+        let stable = chat.filter { !$0.hasSuffix("-latest") && !$0.contains("preview") }
+        return aliases + stable + previews
+    }
+
     /// A provider at your own base URL, such as a self-hosted gateway. Treated as unmeasured.
     public static func custom(name: String, baseURL: URL, needsKey: Bool) -> ProviderPreset {
         let local = ["localhost", "127.0.0.1", "::1"].contains(baseURL.host() ?? "")

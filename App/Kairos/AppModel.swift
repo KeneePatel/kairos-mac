@@ -3,6 +3,7 @@ import JobSources
 import OSLog
 import Observation
 import Pipeline
+import Secrets
 import Store
 
 /// What the screens show for the open account, and the actions they call. One per window scene.
@@ -29,6 +30,8 @@ final class AppModel {
     private(set) var isFetching = false
     /// The master resume editor's state; there once the database is open.
     private(set) var resume: ResumeModel?
+    /// AI providers, keys (in the Keychain) and routing; there once the database is open.
+    private(set) var ai: AISettingsModel?
 
     @ObservationIgnored private var db: Database?
     @ObservationIgnored private var fetchTask: Task<Void, Never>?
@@ -51,6 +54,9 @@ final class AppModel {
             let resume = ResumeModel(db: db)
             await resume.load()
             self.resume = resume
+            let ai = AISettingsModel(db: db, secrets: KeychainStore(service: "com.keneepatel.kairos"))
+            await ai.load()
+            self.ai = ai
             await reload()
             phase = .ready
         } catch {

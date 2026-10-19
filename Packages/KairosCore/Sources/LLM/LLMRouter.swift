@@ -1,8 +1,8 @@
 import Foundation
 import Secrets
 
-/// A model at a configured provider: one link in a task's chain.
-public struct ModelRef: Hashable, Sendable {
+/// A model at a configured provider: one link in a task's chain. `provider` is the setup's id.
+public struct ModelRef: Hashable, Sendable, Codable {
     public let provider: String
     public let model: String
 
@@ -29,11 +29,14 @@ public struct ProviderSetup: Sendable, Equatable {
     public let id: String
     public let preset: ProviderPreset
     public let keyNames: [SecretKey]
+    /// Overrides the preset's limit, for paid plans with more headroom.
+    public let requestsPerMinute: Int?
 
-    public init(id: String, preset: ProviderPreset, keyNames: [SecretKey] = []) {
+    public init(id: String, preset: ProviderPreset, keyNames: [SecretKey] = [], requestsPerMinute: Int? = nil) {
         self.id = id
         self.preset = preset
         self.keyNames = keyNames
+        self.requestsPerMinute = requestsPerMinute
     }
 
     /// A client over every key found, which together form the rotation pool.
@@ -51,7 +54,9 @@ public struct ProviderSetup: Sendable, Equatable {
         let providers: [any LLMProvider] = keys.map {
             OpenAICompatibleProvider(preset: preset, key: $0, transport: transport, capabilities: capabilities)
         }
-        return LLMClient(keys: providers, policy: ClientPolicy(preset: preset), clock: clock)
+        var policy = ClientPolicy(preset: preset)
+        if let requestsPerMinute { policy.requestsPerMinute = requestsPerMinute }
+        return LLMClient(keys: providers, policy: policy, clock: clock)
     }
 }
 

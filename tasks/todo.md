@@ -254,13 +254,15 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Sources/Store/Schema/003_llm_local.sql`, `Sources/LLM/LLMRouter.swift`, `Sources/LLM/Budget.swift`, `Sources/LLM/CallLog.swift`, `Tests/LLMTests/RouterBudgetTests.swift`
   - **Done 2026-10-19:** 19 router, budget, cache and setup tests on a real migrated database. `llm` now depends on `store` for its own two tables, as `master-resume` does (SPEC §4 updated). The router walks each task's chain, falling back on anything but cancellation or the budget; it logs one row per run with counts and codes only (a test checks no prompt or reply text lands there), serves repeats from the cache (rechecked, free, unlogged) and pauses at the daily call or token limit until midnight. `ProviderSetup` holds key names; keys are read from the Keychain only when a client is built. Per-task timeouts: 60 s for extraction, 120 s for writing and resume import; local providers keep 180 s.
 
-- [ ] **T24 · Settings: AI providers** (M) · deps: T23, T05
+- [x] **T24 · Settings: AI providers** (M) · deps: T23, T05
   - **Acceptance:**
-    - [ ] Add a provider from a preset or a custom URL. Add keys (they form the pool); keys are stored in the Keychain and shown masked.
-    - [ ] "Test" lists models through `GET /models`. Pick a model per task; set the fallback chain, requests per minute and daily budget.
-    - [ ] The onboarding privacy note covers Gemini's free-tier data terms and offers local Ollama.
+    - [x] Add a provider from a preset or a custom URL. Add keys (they form the pool); keys are stored in the Keychain and shown masked.
+    - [x] "Test" lists models through `GET /models`. Pick a model per task; set the fallback chain, requests per minute and daily budget.
+    - [x] The onboarding privacy note covers Gemini's free-tier data terms and offers local Ollama.
   - **Verify:** `app-build`; manual test with your key
   - **Files:** `App/Kairos/Settings/ProvidersView.swift`, `App/Kairos/Settings/ProviderEditor.swift`, `App/Kairos/Settings/TaskRoutingView.swift`
+  - **Done 2026-10-19:** app builds clean; checked in light and dark with `--render-snapshots`. Settings are the synced "llm" document in a new `setting` table (`004_settings.sql`); it names keys but never holds them, and keys go straight to the login Keychain and are only shown masked. "Test" and "Refresh" list a provider's models, keeping text models only: Gemini's 63 ids include image, speech and embedding models and agent products (`deep-research-preview`), so its list keeps `gemini-`/`gemma-` ids, aliases first and previews last. Each task gets a model and a fallback; the daily budget and each provider's requests per minute are editable. Onboarding doesn't exist yet, so the privacy note (Gemini's free-tier terms, Ollama as the private option, "Keep everything on this Mac") lives in this screen; T25's onboarding will show the same panel. **Your step:** add your Gemini key in Settings → AI providers and choose Test.
+  - **Visual differences from `SettingsAI.dc.html`:** tasks are the SPEC catalog's ("Read job postings", "Write experience"…) rather than the mockup's ("Score match", "Check every claim"), with one daily budget instead of a cap per task (SPEC §5.5). Ollama's models show without sizes (the OpenAI-compatible list has none). No "Show the last request sent" (a debug view for later). The General, Schedule and Account tabs are placeholders.
 
 - [ ] **T25 · Import a resume into the master resume** (M) · deps: T24, T18
   - **Acceptance:**
