@@ -178,13 +178,14 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Sources/Store/Schema/002_master_resume.sql`, `Sources/MasterResume/Model.swift`, `Sources/MasterResume/MasterResumeRepository.swift`, `Tests/MasterResumeTests/RepositoryTests.swift`
   - **Done 2026-10-19:** 18 MasterResume tests. Edits are small operations (save header, save entries, delete, reorder, skills), each one transaction with its own version bump, rather than one whole-document save: that would delete rows another device added since the editor loaded, once sync exists. Bullets dropped from an entry are tombstoned, so builds that cited them can still say so. Dates are months (`YYYY-MM`); entry fields are typed per kind.
 
-- [ ] **T16 · Master resume validation** (S, test-first) · deps: T15
+- [x] **T16 · Master resume validation** (S, test-first) · deps: T15
   - **Acceptance:**
-    - [ ] Required fields are enforced: name, email, phone, LinkedIn URL, total years, at least one experience bullet, at least 5 Proven skills.
-    - [ ] Email format; phone normalized to E.164 with +1 by default; LinkedIn `https://www.linkedin.com/in/<handle>`; GitHub `https://github.com/<user>`; portfolio `https://…`.
-    - [ ] `BuildReadiness` lists the missing items. A warning appears when total years disagrees with the experience dates by more than a year.
+    - [x] Required fields are enforced: name, email, phone, LinkedIn URL, total years, at least one experience bullet, at least 5 Proven skills.
+    - [x] Email format; phone normalized to E.164 with +1 by default; LinkedIn `https://www.linkedin.com/in/<handle>`; GitHub `https://github.com/<user>`; portfolio `https://…`.
+    - [x] `BuildReadiness` lists the missing items. A warning appears when total years disagrees with the experience dates by more than a year.
   - **Verify:** `core-test MasterResumeTests` (table-driven cases)
   - **Files:** `Sources/MasterResume/Validator.swift`, `Sources/MasterResume/PhoneNumber.swift`, `Tests/MasterResumeTests/ValidatorTests.swift`
+  - **Done 2026-10-19:** written test-first (failed to compile, then passed); 38 MasterResume tests. Validation tidies common variants into the required form (`linkedin.com/in/x` → `https://www.linkedin.com/in/x`, `jordan.dev` → `https://jordan.dev`) rather than rejecting them, but refuses `http://` portfolios instead of upgrading them, since the site may not serve https. Phone numbers with an extension are refused rather than shortened. Overlapping jobs count once in the years check.
 
 - [ ] **T17 · Editor: contact, skills, additional sections** (M) · deps: T16, T05
   - **Acceptance:**
