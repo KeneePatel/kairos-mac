@@ -12,6 +12,17 @@ public struct YearMonth: Comparable, Hashable, Sendable, Codable, CustomStringCo
         self.month = month
     }
 
+    private init(clampedYear year: Int, month: Int) {
+        self.year = min(max(year, 1900), 2200)
+        self.month = min(max(month, 1), 12)
+    }
+
+    /// The month `date` falls in.
+    public static func containing(_ date: Date, calendar: Calendar = .current) -> YearMonth {
+        let parts = calendar.dateComponents([.year, .month], from: date)
+        return YearMonth(clampedYear: parts.year ?? 2000, month: parts.month ?? 1)
+    }
+
     /// Parses "YYYY-MM".
     public init?(_ text: String) {
         let parts = text.split(separator: "-")

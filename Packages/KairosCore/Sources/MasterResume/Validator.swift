@@ -3,6 +3,8 @@ import Foundation
 /// A header field the editor shows an inline message for.
 public enum ResumeField: String, Sendable, CaseIterable {
     case fullName, email, phone, linkedIn, gitHub, portfolio, totalYears
+
+    public var isOptional: Bool { self == .gitHub || self == .portfolio }
 }
 
 public struct FieldIssue: Equatable, Sendable {
@@ -24,9 +26,9 @@ public struct FieldIssue: Equatable, Sendable {
         case (.phone, .missing): "Add your phone number."
         case (.phone, .invalid): "Use a full phone number with its area code, like 416-555-0123."
         case (.linkedIn, .missing): "Add your LinkedIn profile URL."
-        case (.linkedIn, .invalid): "Use your profile's address, like https://www.linkedin.com/in/your-name."
-        case (.gitHub, _): "Use your profile's address, like https://github.com/your-name."
-        case (.portfolio, _): "Use an address that starts with https://."
+        case (.linkedIn, .invalid): "Use your LinkedIn profile's address, like https://www.linkedin.com/in/your-name."
+        case (.gitHub, _): "Use your GitHub profile's address, like https://github.com/your-name."
+        case (.portfolio, _): "Your portfolio address should start with https://."
         case (.totalYears, .missing): "Enter your total years of experience."
         case (.totalYears, .invalid): "Enter a number of years from 0 to 60."
         }
@@ -40,6 +42,9 @@ public struct HeaderValidation: Equatable, Sendable {
     public var issues: [FieldIssue]
 
     public var isValid: Bool { issues.isEmpty }
+
+    /// Issues with fields every build needs. A malformed optional link only keeps that link off resumes.
+    public var blocking: [FieldIssue] { issues.filter { !$0.field.isOptional } }
 
     public func issue(for field: ResumeField) -> FieldIssue? {
         issues.first { $0.field == field }
@@ -104,7 +109,8 @@ public enum Validator {
     }
 
     public static func readiness(_ resume: MasterResume, now: YearMonth) -> BuildReadiness {
-        var missing = validate(resume.header).issues.map(Requirement.header)
+        let header = validate(resume.header)
+        var missing = header.blocking.map(Requirement.header)
         let hasBullet = resume.entries(.experience).contains { entry in
             entry.bullets.contains { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         }
@@ -115,6 +121,15 @@ public enum Validator {
         if proven < provenSkillsNeeded { missing.append(.provenSkills(have: proven, need: provenSkillsNeeded)) }
 
         var warnings: [String] = []
+        // Builds leave a malformed optional link off rather than refusing to run (the design's
+        // "Portfolio is left off until fixed").
+        if header.issue(for: .gitHub) != nil {
+            warnings.append(
+                "Your GitHub link is left off resumes until it's a profile address, like https://github.com/your-name.")
+        }
+        if header.issue(for: .portfolio) != nil {
+            warnings.append("Your portfolio is left off resumes until its address starts with https://.")
+        }
         if let entered = resume.header.totalYears, (0...60).contains(entered),
             let dated = experienceYears(resume.entries, now: now), abs(entered - dated) > 1
         {

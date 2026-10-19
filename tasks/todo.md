@@ -187,13 +187,15 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Sources/MasterResume/Validator.swift`, `Sources/MasterResume/PhoneNumber.swift`, `Tests/MasterResumeTests/ValidatorTests.swift`
   - **Done 2026-10-19:** written test-first (failed to compile, then passed); 38 MasterResume tests. Validation tidies common variants into the required form (`linkedin.com/in/x` → `https://www.linkedin.com/in/x`, `jordan.dev` → `https://jordan.dev`) rather than rejecting them, but refuses `http://` portfolios instead of upgrading them, since the site may not serve https. Phone numbers with an extension are refused rather than shortened. Overlapping jobs count once in the years check.
 
-- [ ] **T17 · Editor: contact, skills, additional sections** (M) · deps: T16, T05
+- [x] **T17 · Editor: contact, skills, additional sections** (M) · deps: T16, T05
   - **Acceptance:**
-    - [ ] The contact form shows inline validation, and required fields are marked.
-    - [ ] Skills: add, categorize, reorder, and toggle Proven / Can discuss.
-    - [ ] Certifications, awards, volunteering, publications, languages (with proficiency) and custom sections are editable. Saving bumps the version shown in the header.
+    - [x] The contact form shows inline validation, and required fields are marked.
+    - [x] Skills: add, categorize, reorder, and toggle Proven / Can discuss.
+    - [x] Certifications, awards, volunteering, publications, languages (with proficiency) and custom sections are editable. Saving bumps the version shown in the header.
   - **Verify:** `app-build`; manual walkthrough; `core-test MasterResumeTests`
   - **Files:** `App/Kairos/MasterResume/MasterResumeView.swift`, `ContactSection.swift`, `SkillsSection.swift`, `AdditionalSections.swift`
+  - **Done 2026-10-19:** app builds clean; 43 MasterResume tests. Fields save on Return or when you leave them; a malformed value shows its fix below the field once you've moved on, and missing ones are listed in the readiness panel instead of shouting from an empty form. Skills reorder by drag (dropping on the other group switches Proven / Can discuss). Following the design ("Portfolio is left off until fixed"), a malformed GitHub or portfolio link no longer blocks a build; it's a warning, and the render step (T32) must leave such links off. Checked by rendering the real views offscreen in light and dark (`Kairos --render-snapshots`, debug builds only).
+  - **Visual differences from `MasterResume.dc.html`:** no Experience section, bullet chips or "Numbers" count yet (T18); a field with an error keeps the system border instead of a red outline, with the message and icon under it; the subtitle shows the version number rather than "edited Oct 16"; no "Used in N resumes" counts until builds exist. Not drawn in the design and decided here: the additional sections as grouped rows with chevrons, the entry editor sheet, the skill popover, and empty-section captions ("Optional").
 
 - [ ] **T18 · Editor: experience, projects, education** (M) · deps: T17
   - **Acceptance:**

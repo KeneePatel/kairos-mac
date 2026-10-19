@@ -6,6 +6,12 @@ struct KairosApp: App {
     private let log = Logger(subsystem: "com.keneepatel.kairos", category: "app")
     @State private var model = AppModel()
 
+    init() {
+        #if DEBUG
+            DebugSnapshots.runIfRequested()
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

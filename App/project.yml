@@ -42,6 +42,8 @@ targets:
         product: JobSources
       - package: KairosCore
         product: Pipeline
+      - package: KairosCore
+        product: MasterResume
     info:
       path: Kairos/Info.plist
       properties:

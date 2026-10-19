@@ -27,6 +27,8 @@ final class AppModel {
     /// The fetch in flight, or the last one this session; it holds per-source failures.
     private(set) var progress: FetchRun.Progress?
     private(set) var isFetching = false
+    /// The master resume editor's state; there once the database is open.
+    private(set) var resume: ResumeModel?
 
     @ObservationIgnored private var db: Database?
     @ObservationIgnored private var fetchTask: Task<Void, Never>?
@@ -46,6 +48,9 @@ final class AppModel {
             }
             try await Migrator.migrate(db, with: Migrator.bundled())
             self.db = db
+            let resume = ResumeModel(db: db)
+            await resume.load()
+            self.resume = resume
             await reload()
             phase = .ready
         } catch {

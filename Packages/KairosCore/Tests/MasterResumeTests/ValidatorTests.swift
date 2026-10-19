@@ -194,6 +194,19 @@ struct BuildReadinessTests {
         #expect(Validator.readiness(resume, now: now).missing == [.header(.init(field: .email, kind: .invalid))])
     }
 
+    @Test func aMalformedOptionalLinkIsLeftOffRatherThanBlocking() {
+        var resume = readyResume()
+        resume.header.gitHubURL = "gitlab.com/jrivera"
+        resume.header.portfolioURL = "http://jordan.dev"
+        let readiness = Validator.readiness(resume, now: now)
+        #expect(readiness.isReady)
+        #expect(
+            readiness.warnings == [
+                "Your GitHub link is left off resumes until it's a profile address, like https://github.com/your-name.",
+                "Your portfolio is left off resumes until its address starts with https://.",
+            ])
+    }
+
     @Test func warnsWhenTotalYearsDisagreesWithTheDatesByMoreThanAYear() {
         // The fixture's one job runs 2022-10 to now (2025-10): 3 years.
         #expect(Validator.readiness(readyResume(totalYears: 3.9), now: now).warnings.isEmpty)
@@ -217,5 +230,32 @@ struct BuildReadinessTests {
         var resume = readyResume(totalYears: 20)
         resume.entries[0].start = nil
         #expect(Validator.readiness(resume, now: now).warnings.isEmpty)
+    }
+}
+
+@Suite("Validation messages")
+struct ValidationMessageTests {
+    @Test(arguments: ResumeField.allCases)
+    func everyFieldHasAMessageForEachProblem(_ field: ResumeField) {
+        for kind in [FieldIssue.Kind.missing, .invalid] {
+            #expect(!FieldIssue(field: field, kind: kind).message.isEmpty)
+        }
+    }
+
+    @Test func linkMessagesNameTheirSite() {
+        #expect(FieldIssue(field: .linkedIn, kind: .invalid).message.contains("LinkedIn"))
+        #expect(FieldIssue(field: .gitHub, kind: .invalid).message.contains("GitHub"))
+        #expect(FieldIssue(field: .portfolio, kind: .invalid).message.contains("portfolio"))
+    }
+
+    @Test func onlyTheLinksAreOptional() {
+        #expect(ResumeField.allCases.filter(\.isOptional) == [.gitHub, .portfolio])
+    }
+
+    @Test func theCurrentMonthComesFromTheCalendar() throws {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = try #require(TimeZone(identifier: "UTC"))
+        #expect(YearMonth.containing(Date(timeIntervalSince1970: 1_760_000_000), calendar: utc) == month("2025-10"))
+        #expect(YearMonth.containing(Date(timeIntervalSince1970: 0), calendar: utc) == month("1970-01"))
     }
 }

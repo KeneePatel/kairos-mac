@@ -67,6 +67,10 @@ struct RootView: View {
                 JobsView()
             case (.ready, .sources):
                 SourcesView()
+            case (.ready, .masterResume):
+                if let resume = model.resume {
+                    MasterResumeView().environment(resume)
+                }
             case (.ready, let section):
                 PlaceholderView(section: section)
             }

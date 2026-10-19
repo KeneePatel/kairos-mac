@@ -88,7 +88,7 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 **Slice 2: Master resume, plus the LLM layer**
 - [x] T15 Master resume schema, model, versioning
 - [x] T16 Master resume validation
-- [ ] T17 Editor: contact, skills, additional sections
+- [x] T17 Editor: contact, skills, additional sections
 - [ ] T18 Editor: experience, projects, education
 - [ ] T19 LLM core: tasks, schema validator, fake provider
 - [ ] T20 Spike: live structured output (Gemini, Ollama)
