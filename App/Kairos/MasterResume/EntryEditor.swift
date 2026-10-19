@@ -7,10 +7,12 @@ struct EntryEditor: View {
     @Environment(ResumeModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State var entry: ResumeEntry
+    /// Set when editing a draft (import review): the edit goes here instead of to the master resume.
+    var onSave: ((ResumeEntry) -> Void)? = nil
     @State private var techText = ""
     @State private var courseworkText = ""
 
-    private var isNew: Bool { !model.resume.entries.contains { $0.id == entry.id } }
+    private var isNew: Bool { onSave == nil && !model.resume.entries.contains { $0.id == entry.id } }
     private let columns = [GridItem(.adaptive(minimum: 220), spacing: Spacing.space4, alignment: .top)]
 
     /// Kinds whose entries carry bullets (SPEC §5.10: experience, projects, custom sections; volunteering too).
@@ -61,7 +63,11 @@ struct EntryEditor: View {
             school.coursework = Self.list(courseworkText)
             saved.fields = .education(school)
         }
-        Task { await model.save(saved) }
+        if let onSave {
+            onSave(saved)
+        } else {
+            Task { await model.save(saved) }
+        }
         dismiss()
     }
 

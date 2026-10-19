@@ -65,6 +65,25 @@ final class ResumeModel {
         await perform { try await $0.reorderEntries(order) }
     }
 
+    /// What you kept from an import: entries in one save, skills in another, and the header text only
+    /// where the field is still empty (an import never overwrites what you wrote).
+    func addImport(entries: [ResumeEntry], skills: [Skill], headline: String?, highlights: String?, totalYears: Double?)
+        async
+    {
+        if !entries.isEmpty { await perform { try await $0.save(entries) } }
+        let known = Set(resume.skills.map { $0.name.lowercased() })
+        let fresh = skills.filter { !known.contains($0.name.lowercased()) }
+        if !fresh.isEmpty { await perform { try await $0.save(fresh) } }
+        var header = resume.header
+        if header.headline.isEmpty, let headline { header.headline = headline }
+        if header.highlights.isEmpty, let highlights { header.highlights = highlights }
+        if header.totalYears == nil, let totalYears { header.totalYears = totalYears }
+        if header != resume.header {
+            let updated = header
+            await perform { try await $0.saveHeader(updated) }
+        }
+    }
+
     func save(_ skill: Skill) async {
         let name = skill.name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }

@@ -43,6 +43,14 @@
                         to: folder.appending(path: "entry-editor-\(name).png"), appearance: appearance)
                 }
             }
+            if let draft = sampleDraft() {
+                for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+                    render(
+                        ImportReviewView(session: ImportSession(preview: draft)).environment(resume)
+                            .background(Color(.surface)),
+                        to: folder.appending(path: "import-review-\(name).png"), appearance: appearance)
+                }
+            }
             let ai = sampleAISettings(db: db)
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 render(
@@ -66,6 +74,23 @@
             try? png.write(to: url)
             // The container is closed to other processes, so the terminal gets a copy on stdout.
             print("SNAPSHOT \(url.lastPathComponent) \(png.base64EncodedString())")
+        }
+
+        /// A draft as the import task would return it (sample data).
+        private static func sampleDraft() -> ImportDraft? {
+            let json = """
+                {"headline":"Backend developer","total_years":5,
+                 "experience":[{"title":"Software Developer, Backend","employer":"Harbourline Logistics","location":"Toronto, ON",
+                   "start":"2022-03","current":true,"bullets":["Built an event pipeline handling 4.2M events a day",
+                   "Onboarded 11 carriers in 4 days instead of 3 weeks","Migrated 14 services to Kubernetes"]}],
+                 "projects":[{"name":"Dockyard","role":"Author","start":"2023-01","current":true,"bullets":["Open-source Go CLI"]}],
+                 "education":[{"institution":"University of Waterloo","credential":"BMath","field":"Computer Science","start":"2015-09","end":"2019-04"}],
+                 "skills":[{"name":"Go","level":"proven"},{"name":"PostgreSQL","level":"proven"},{"name":"Kafka","level":"can_discuss"}],
+                 "languages":[{"language":"French","proficiency":"conversational"}]}
+                """
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            return (try? decoder.decode(ImportResumeTask.Output.self, from: Data(json.utf8))).map(ImportDraft.init)
         }
 
         /// Sample keys are made-up strings shown masked; nothing here is a real key.

@@ -97,7 +97,7 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 - [x] T22 LLM client: rate limits, retries, key rotation, repair
 - [x] T23 Router, budget, cache, call log
 - [x] T24 Settings: AI providers
-- [ ] T25 Import a resume into the master resume
+- [x] T25 Import a resume into the master resume
 - [ ] T26 Import GitHub repos as projects
 
 #### Checkpoint C: your real resume imported into a valid master resume; no contact data in any prompt

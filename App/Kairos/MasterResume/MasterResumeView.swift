@@ -4,7 +4,9 @@ import SwiftUI
 /// The master resume: every section on one scrolling page, with build readiness in the inspector.
 struct MasterResumeView: View {
     @Environment(ResumeModel.self) private var model
+    @Environment(AISettingsModel.self) private var ai
     @State private var editing: ResumeEntry?
+    @State private var importing: ImportSession?
     @State private var deleting: ResumeEntry?
     @State private var showsReadiness = true
 
@@ -33,6 +35,14 @@ struct MasterResumeView: View {
         .navigationTitle("Master resume")
         .navigationSubtitle("Version \(model.resume.version) · the only source for every resume Kairos builds")
         .toolbar {
+            ToolbarItem {
+                Button {
+                    importing = ImportSession(router: ai.router())
+                } label: {
+                    Label("Import resume…", systemImage: "square.and.arrow.down").labelStyle(.titleAndIcon)
+                }
+                .help("Draft your master resume from a resume PDF or pasted text")
+            }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     ForEach([EntryKind.experience, .project, .education], id: \.self) { kind in
@@ -50,6 +60,7 @@ struct MasterResumeView: View {
             }
         }
         .sheet(item: $editing) { entry in EntryEditor(entry: entry) }
+        .sheet(item: $importing) { session in ImportReviewView(session: session) }
         .confirmationDialog(
             "Delete this \(deleting?.kind.itemName.lowercased() ?? "entry")?",
             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting

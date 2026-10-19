@@ -68,8 +68,8 @@ struct RootView: View {
             case (.ready, .sources):
                 SourcesView()
             case (.ready, .masterResume):
-                if let resume = model.resume {
-                    MasterResumeView().environment(resume)
+                if let resume = model.resume, let ai = model.ai {
+                    MasterResumeView().environment(resume).environment(ai)
                 }
             case (.ready, .settings):
                 if let ai = model.ai {

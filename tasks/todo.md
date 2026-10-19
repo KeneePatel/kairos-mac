@@ -264,13 +264,15 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Done 2026-10-19:** app builds clean; checked in light and dark with `--render-snapshots`. Settings are the synced "llm" document in a new `setting` table (`004_settings.sql`); it names keys but never holds them, and keys go straight to the login Keychain and are only shown masked. "Test" and "Refresh" list a provider's models, keeping text models only: Gemini's 63 ids include image, speech and embedding models and agent products (`deep-research-preview`), so its list keeps `gemini-`/`gemma-` ids, aliases first and previews last. Each task gets a model and a fallback; the daily budget and each provider's requests per minute are editable. Onboarding doesn't exist yet, so the privacy note (Gemini's free-tier terms, Ollama as the private option, "Keep everything on this Mac") lives in this screen; T25's onboarding will show the same panel. **Your step:** add your Gemini key in Settings → AI providers and choose Test.
   - **Visual differences from `SettingsAI.dc.html`:** tasks are the SPEC catalog's ("Read job postings", "Write experience"…) rather than the mockup's ("Score match", "Check every claim"), with one daily budget instead of a cap per task (SPEC §5.5). Ollama's models show without sizes (the OpenAI-compatible list has none). No "Show the last request sent" (a debug view for later). The General, Schedule and Account tabs are placeholders.
 
-- [ ] **T25 · Import a resume into the master resume** (M) · deps: T24, T18
+- [x] **T25 · Import a resume into the master resume** (M) · deps: T24, T18
   - **Acceptance:**
-    - [ ] Text comes from a PDF (PDFKit) or a paste. **Before anything is sent, code removes** the contact values already entered, plus anything shaped like an email, phone number or profile URL (test-first).
-    - [ ] The `importResume` task (prompt v1, schema) returns a draft. The review screen accepts or edits each section; nothing is saved without confirmation.
-    - [ ] Onboarding order: required contact fields first, then import.
+    - [x] Text comes from a PDF (PDFKit) or a paste. **Before anything is sent, code removes** the contact values already entered, plus anything shaped like an email, phone number or profile URL (test-first).
+    - [x] The `importResume` task (prompt v1, schema) returns a draft. The review screen accepts or edits each section; nothing is saved without confirmation.
+    - [x] Onboarding order: required contact fields first, then import.
   - **Verify:** `core-test MasterResumeTests` (redaction table tests); manual import of your real resume
   - **Files:** `Sources/MasterResume/ResumeTextExtractor.swift`, `Sources/MasterResume/ImportResumeTask.swift`, `App/Kairos/MasterResume/ImportReviewView.swift`, `Tests/MasterResumeTests/RedactionTests.swift`
+  - **Done 2026-10-19:** redaction written test-first (30 table cases and a whole resume); 13 more import tests, including the prompt-privacy test SPEC §5.5 asks for. Prompts are versioned resources (`LLM/Prompts/importResume.v1.md`, loaded by `PromptLibrary`). Your city isn't removed: it would strip every job location too. The import sheet shows exactly what gets sent, refuses to run until your name, email, phone and LinkedIn are filled in, and saves only what you tick; edits in review change the draft, not the master resume, and header text fills only empty fields. **Your step:** add your Gemini key in Settings, then Master resume → Import resume… with your real resume (Checkpoint C).
+  - **Not drawn in the design and decided here:** the import sheet (choose a PDF or paste, a "What gets sent" disclosure with the redacted text, a review list with a checkbox and Edit… per entry and per skill chip).
 
 - [ ] **T26 · Import GitHub repos as projects** (S) · deps: T25
   - **Acceptance:**
