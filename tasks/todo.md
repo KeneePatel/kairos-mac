@@ -163,8 +163,9 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - Sources vs `Sources.dc.html`: no "Locations kept" column, opt-in boards section or titles-and-countries side panel; these belong to the prefilter settings and tier-C boards, which come later. "Can't reach" puts the reason in a tooltip rather than inline. Pause and Remove are in the row's context menu.
     - Not drawn in the design and decided here: empty states (system `ContentUnavailableView`), the Add company sheet (system form; the detected board shows as a green check and words), and the status "No jobs in N checks" for a degraded board (error colour, triangle icon and words, like "Can't reach").
 
-#### Checkpoint B
-- [ ] 3 real companies fetched; duplicates removed; countries parsed; task-end checks green; reviewed with you
+#### Checkpoint B (passed 2026-10-19)
+- [x] 3 real companies fetched; duplicates removed; countries parsed; task-end checks green; reviewed with you
+  - Your review found one issue: in the Add company sheet the careers-page placeholder sat beside its label, so the field didn't read as a box to paste into. Fixed: labels above full-width bordered fields, the cursor starts in the careers field, and Return adds.
 
 ### Slice 2: Master resume, plus the LLM layer
 

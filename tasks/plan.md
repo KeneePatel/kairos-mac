@@ -1,6 +1,6 @@
 # Implementation Plan: Kairos for macOS
 
-**Status:** Approved 2026-10-19. Phase 0 done (Checkpoint A passed); in progress: Phase 1.
+**Status:** Approved 2026-10-19. Phase 0 done (Checkpoint A passed); Phase 1 slice 1 done (Checkpoint B passed); in progress: slice 2.
 **Spec:** `SPEC.md` (draft, awaiting final approval) · **Look and feel:** `design/kairos/README.md` · **Quality bar:** `CONSTRAINTS.md` · **Tasks:** `tasks/todo.md`
 
 ## Overview
@@ -83,7 +83,7 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 - [x] T13 Normalization, geography, de-duplication
 - [x] T14 First vertical slice in the app
 
-#### Checkpoint B: add 3 real companies, fetch, see de-duplicated jobs with countries
+#### Checkpoint B: add 3 real companies, fetch, see de-duplicated jobs with countries (passed 2026-10-19)
 
 **Slice 2: Master resume, plus the LLM layer**
 - [ ] T15 Master resume schema, model, versioning

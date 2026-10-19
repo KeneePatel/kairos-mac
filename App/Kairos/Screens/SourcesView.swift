@@ -112,60 +112,100 @@ private struct SourceStatus: View {
     }
 }
 
-/// Paste a careers page; Kairos says which board it found before you add it.
+/// Paste a careers page; Kairos says which board it found before you add it. Labels sit above
+/// full-width bordered fields, so each one reads as a box to type or paste into.
 private struct AddCompanySheet: View {
+    private enum Field { case careersURL, name }
+
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var careersURL = ""
     @State private var name = ""
     @State private var error: String?
     @State private var saving = false
+    @FocusState private var focus: Field?
 
     private var detection: ATSDetection? {
         careersURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : ATSDetector.detect(careersURL)
     }
 
     var body: some View {
-        Form {
-            Section {
-                TextField("Careers page", text: $careersURL, prompt: Text("https://jobs.lever.co/company"))
-                TextField("Company name", text: $name, prompt: Text("Optional"))
-            } header: {
-                Text("Add a company").font(TypeStyle.title3)
-            } footer: {
-                VStack(alignment: .leading, spacing: Spacing.space1) {
-                    switch detection {
-                    case .detected(let kind, let slug)?:
-                        Label("\(kind.displayName) board “\(slug)”", systemImage: "checkmark.circle")
-                            .foregroundStyle(Color(.yes))
-                    case .notDetected(let reason)?:
-                        Label(reason, systemImage: "info.circle").foregroundStyle(Color(.inkSecondary))
-                    case nil:
-                        Text("Greenhouse, Lever and Ashby boards work today.").foregroundStyle(Color(.inkSecondary))
-                    }
-                    if let error {
-                        Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Color(.error))
-                    }
+        VStack(alignment: .leading, spacing: Spacing.space5) {
+            VStack(alignment: .leading, spacing: Spacing.space1) {
+                Text("Add a company").font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                Text("Kairos checks the company's job board for new postings.")
+                    .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+            }
+
+            VStack(alignment: .leading, spacing: Spacing.space2) {
+                Text("Careers page").font(TypeStyle.headline).foregroundStyle(Color(.ink))
+                TextField("Careers page", text: $careersURL, prompt: Text("Paste a link, like jobs.lever.co/company"))
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                    .controlSize(.large)
+                    .focused($focus, equals: .careersURL)
+                    .onSubmit(submit)
+                detectionNote
+            }
+
+            VStack(alignment: .leading, spacing: Spacing.space2) {
+                HStack(spacing: Spacing.space1) {
+                    Text("Company name").font(TypeStyle.headline).foregroundStyle(Color(.ink))
+                    Text("Optional").font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
                 }
-                .font(TypeStyle.callout)
+                TextField("Company name", text: $name, prompt: Text("As you'd like it shown"))
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                    .controlSize(.large)
+                    .focused($focus, equals: .name)
+                    .onSubmit(submit)
             }
-        }
-        .formStyle(.grouped)
-        .frame(width: 480)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+
+            if let error {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(TypeStyle.callout).foregroundStyle(Color(.error))
             }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Add") { Task { await add() } }
+
+            HStack(spacing: Spacing.space2) {
+                Spacer()
+                Button("Cancel", role: .cancel) { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Add company", action: submit)
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
                     .disabled(saving || !isDetected)
             }
+            .controlSize(.large)
         }
+        .padding(Spacing.space6)
+        .frame(width: 520)
+        .onAppear { focus = .careersURL }
+    }
+
+    /// Under the field: which board was found, or why not yet. Colour always comes with an icon and words.
+    @ViewBuilder private var detectionNote: some View {
+        Group {
+            switch detection {
+            case .detected(let kind, let slug)?:
+                Label("Found the \(kind.displayName) board “\(slug)”", systemImage: "checkmark.circle")
+                    .foregroundStyle(Color(.yes))
+            case .notDetected(let reason)?:
+                Label(reason, systemImage: "info.circle").foregroundStyle(Color(.inkSecondary))
+            case nil:
+                Text("Greenhouse, Lever and Ashby boards work today.").foregroundStyle(Color(.inkSecondary))
+            }
+        }
+        .font(TypeStyle.callout)
     }
 
     private var isDetected: Bool {
         if case .detected? = detection { return true }
         return false
+    }
+
+    private func submit() {
+        guard isDetected, !saving else { return }
+        Task { await add() }
     }
 
     private func add() async {
