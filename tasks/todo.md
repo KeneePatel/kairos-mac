@@ -223,6 +223,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - [ ] The write-up states each preset's capability flag.
   - **Verify:** `KAIROS_LIVE_LLM=1 core-test LiveStructuredOutput`; `docs/spikes/structured-output.md`
   - **Files:** `Tests/LLMTests/LiveStructuredOutputTests.swift`, `Tests/Fixtures/llm/*.json`, `docs/spikes/structured-output.md`
+  - **Prepared 2026-10-19 (waiting on your key):** the harness is in `LiveStructuredOutputTests.swift`. It asks Gemini's `GET /models` for the newest Flash and Flash-Lite, then sends a sample posting in schema mode and in JSON mode, prints one line per request (valid or the schema issues, fences, tokens, latency) and saves each reply to `Tests/Fixtures/llm/`. Ollama runs too once a model is installed (`ollama pull <model>`; `OLLAMA_MODEL` picks one). Run it in your own terminal so the key stays out of any transcript: `KAIROS_LIVE_LLM=1 GEMINI_API_KEY=… swift test --package-path Packages/KairosCore --filter LiveStructuredOutput`.
 
 - [ ] **T21 · OpenAI-compatible adapter and presets** (M) · deps: T20
   - **Acceptance:**
