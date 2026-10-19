@@ -23,12 +23,12 @@ let package = Package(
         .target(
             name: "JobSources", dependencies: ["Store"], resources: [.copy("Geo/places.json")], swiftSettings: strict),
         .testTarget(name: "JobSourcesTests", dependencies: ["JobSources", "TestSupport"], swiftSettings: strict),
-        .target(name: "LLM", dependencies: ["Secrets", "Store"], swiftSettings: strict),
+        .target(name: "LLM", dependencies: ["Secrets", "Store"], resources: [.copy("Prompts")], swiftSettings: strict),
         .testTarget(name: "LLMTests", dependencies: ["LLM", "TestSupport"], swiftSettings: strict),
         // Test helpers shared by test targets (the scripted URLProtocol, fixtures). Never shipped.
         .target(name: "TestSupport", path: "Tests/TestSupport", swiftSettings: strict),
-        .target(name: "MasterResume", dependencies: ["Store"], swiftSettings: strict),
-        .testTarget(name: "MasterResumeTests", dependencies: ["MasterResume"], swiftSettings: strict),
+        .target(name: "MasterResume", dependencies: ["Store", "LLM"], swiftSettings: strict),
+        .testTarget(name: "MasterResumeTests", dependencies: ["MasterResume", "LLM"], swiftSettings: strict),
         .target(name: "Pipeline", dependencies: ["Store", "JobSources"], swiftSettings: strict),
         .testTarget(name: "PipelineTests", dependencies: ["Pipeline"], swiftSettings: strict),
         .target(name: "Render", resources: [.copy("Templates")], swiftSettings: strict),
