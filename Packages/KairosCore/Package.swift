@@ -11,11 +11,14 @@ let package = Package(
     products: [
         .library(name: "Store", targets: ["Store"]),
         .library(name: "Render", targets: ["Render"]),
+        .library(name: "Secrets", targets: ["Secrets"]),
     ],
     targets: [
         .target(name: "Store", swiftSettings: strict),
         .testTarget(name: "StoreTests", dependencies: ["Store"], swiftSettings: strict),
         .target(name: "Render", resources: [.copy("Templates")], swiftSettings: strict),
         .testTarget(name: "RenderTests", dependencies: ["Render"], swiftSettings: strict),
+        .target(name: "Secrets", swiftSettings: strict),
+        .testTarget(name: "SecretsTests", dependencies: ["Secrets"], swiftSettings: strict),
     ]
 )

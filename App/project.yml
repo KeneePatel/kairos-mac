@@ -36,6 +36,8 @@ targets:
         product: Store
       - package: KairosCore
         product: Render
+      - package: KairosCore
+        product: Secrets
     info:
       path: Kairos/Info.plist
       properties:
