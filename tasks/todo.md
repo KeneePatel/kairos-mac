@@ -69,7 +69,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Verify:** run the generator twice (no diff the second time); `scripts/check-design.sh`; `app-build`; the icon shows in the Dock and the menu bar.
   - **Files:** `scripts/gen-tokens.swift`, `scripts/check-design.sh`, `App/Kairos/Assets.xcassets/`, `App/Kairos/DesignTokens.swift`
 
-- [ ] **T06 · Spike: Typst inside the sandboxed, self-signed app** (M) · deps: T05 · **high risk**
+- [x] **T06 · Spike: Typst inside the sandboxed, self-signed app** (M) · deps: T05 · **high risk**
   - **What:** prove that the sandboxed app can run a bundled `typst` binary on JSON input and read the resulting PDF.
   - **Acceptance:**
     - [ ] `scripts/fetch-typst.sh` downloads a pinned release for `aarch64-apple-darwin` and verifies its SHA-256 into `Vendor/typst/`.

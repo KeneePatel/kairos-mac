@@ -1,5 +1,4 @@
-#!/usr/bin/env swift  // floor-guard: diff-scoped enforcement of the CONSTRAINTS.md floor. A Swift
-// port of the constraint-driven-development skill's reference guard, with
+#!/usr/bin/env swift  // floor-guard: diff-scoped enforcement of the CONSTRAINTS.md floor. A Swift  // port of the constraint-driven-development skill's reference guard, with
 // patterns for this stack.
 //
 // Usage: swift scripts/floor-guard.swift [--base <ref>]
@@ -189,6 +188,22 @@ func thresholds(_ text: String) -> [(n: Double, dir: Direction?)] {
     }
 }
 
+// Rows of the "Measured, not yet enforced" table record today's numbers, which are meant to be
+// updated as they're re-measured (the ratchet that compares them is a separate check). Their
+// numbers aren't thresholds, so only deleting one of those rows counts here.
+func measuredKeys(_ text: String) -> Set<String> {
+    var keys: Set<String> = []
+    var inMeasured = false
+    for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+        if line.hasPrefix("## ") { inMeasured = line.lowercased().contains("measured") }
+        if inMeasured, line.hasPrefix("|"), let key = ruleKey(String(line)) { keys.insert(key) }
+    }
+    return keys
+}
+let constraintsNow = (try? String(contentsOfFile: "CONSTRAINTS.md", encoding: .utf8)) ?? ""
+let constraintsThen = git(["show", "\(mergeBase):CONSTRAINTS.md"]) ?? ""
+let measured = measuredKeys(constraintsNow).union(measuredKeys(constraintsThen))
+
 let removedRules = removed.filter { isConstraints($0.file) && ruleKey($0.text) != nil }
 let addedRules = added.filter { isConstraints($0.file) && ruleKey($0.text) != nil }
 for r in removedRules {
@@ -196,6 +211,7 @@ for r in removedRules {
         if !isExceptionRow(r.text) { flag("rule-removed", r.file, r.text) }  // dropping an exception tightens
         continue
     }
+    if let key = ruleKey(r.text), measured.contains(key) { continue }
     let was = thresholds(r.text)
     let now = thresholds(a.text)
     var verdict: String?

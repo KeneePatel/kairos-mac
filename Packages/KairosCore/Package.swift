@@ -9,10 +9,13 @@ let package = Package(
     name: "KairosCore",
     platforms: [.macOS(.v26)],
     products: [
-        .library(name: "Store", targets: ["Store"])
+        .library(name: "Store", targets: ["Store"]),
+        .library(name: "Render", targets: ["Render"]),
     ],
     targets: [
         .target(name: "Store", swiftSettings: strict),
         .testTarget(name: "StoreTests", dependencies: ["Store"], swiftSettings: strict),
+        .target(name: "Render", resources: [.copy("Templates")], swiftSettings: strict),
+        .testTarget(name: "RenderTests", dependencies: ["Render"], swiftSettings: strict),
     ]
 )

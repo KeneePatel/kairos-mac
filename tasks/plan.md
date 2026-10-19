@@ -66,7 +66,7 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 - [ ] T04 CI workflow
 - [x] T05 App shell
 - [x] T05a Design tokens, app icon, menu bar icon
-- [ ] T06 Spike: Typst inside the sandboxed, self-signed app
+- [x] T06 Spike: Typst inside the sandboxed, self-signed app
 - [ ] T07 Spike: Keychain access across self-signed rebuilds
 - [ ] T08 Split the decision records into `docs/decisions/`
 

@@ -43,6 +43,9 @@ jobs:
           xcodebuild -version
           swift --version
 
+      - name: Fetch Typst (pinned, checksum verified)
+        run: scripts/fetch-typst.sh
+
       - name: Format
         run: swift format lint --strict --recursive Packages $( [ -d App ] && echo App )
 

@@ -24,9 +24,18 @@ targets:
     platform: macOS
     sources:
       - path: Kairos
+      # The one bundled binary (CONSTRAINTS.md): fetched by scripts/fetch-typst.sh, copied into
+      # Contents/MacOS and signed with the app. It runs inside the app's sandbox.
+      - path: ../Vendor/typst/typst
+        buildPhase:
+          copyFiles:
+            destination: executables
+        attributes: [CodeSignOnCopy]
     dependencies:
       - package: KairosCore
         product: Store
+      - package: KairosCore
+        product: Render
     info:
       path: Kairos/Info.plist
       properties:
