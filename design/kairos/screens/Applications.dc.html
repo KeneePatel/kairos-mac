@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kairos · Applications</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0B63CE}a:hover{color:#084C9E}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; background: #FFFFFF; color: #1D1D1F; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 18px; -webkit-font-smoothing: antialiased">
+
+<nav aria-label="Kairos sections" style="flex: 1 1 220px; box-sizing: border-box; margin: 8px; padding: 14px 10px 10px; border-radius: 18px; background: rgba(232, 232, 237, 0.74); backdrop-filter: blur(30px) saturate(1.6); -webkit-backdrop-filter: blur(30px) saturate(1.6); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 8px 28px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.7); display: flex; flex-direction: column; gap: 18px">
+<div aria-hidden="true" style="display: flex; gap: 8px; padding: 0 6px">
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #FF5F57; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18)"></span>
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #FEBC2E; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18)"></span>
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #28C840; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18)"></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5C5C63" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"></circle><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.06 1.06M11.54 11.54l1.06 1.06M3.4 12.6l1.06-1.06M11.54 4.46l1.06-1.06"></path></svg>
+<span style="flex: 1">Today</span>
+<span style="font-size: 12px; color: #5C5C63; font-variant-numeric: tabular-nums">12</span>
+</a>
+<a href="Build.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5C5C63" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.75h5.5l3 3v9.5H4z"></path><path d="M9.5 1.75v3h3M6.25 8.5h4M6.25 11h4"></path></svg>
+<span style="flex: 1">Build</span>
+<span style="font-size: 12px; color: #5C5C63">1 running</span>
+</a>
+<a href="Applications.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; background: rgba(11, 99, 206, 0.13); color: #1D1D1F; font-weight: 600; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#0B63CE" stroke-width="1.5" stroke-linejoin="round"><rect x="1.75" y="2.25" width="3.5" height="11.5" rx="1"></rect><rect x="6.25" y="2.25" width="3.5" height="8" rx="1"></rect><rect x="10.75" y="2.25" width="3.5" height="5.5" rx="1"></rect></svg>
+<span style="flex: 1">Applications</span>
+<span style="font-size: 12px; color: #3A3A40; font-variant-numeric: tabular-nums">9</span>
+</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 10px 4px; font-size: 11px; line-height: 14px; font-weight: 600; color: #5C5C63">Profile</div>
+<a href="MasterResume.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5C5C63" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.75"></rect><circle cx="5.75" cy="7" r="1.5"></circle><path d="M3.75 11c.4-1.2 1.2-1.75 2-1.75s1.6.55 2 1.75M9.5 6.5h3M9.5 9h3"></path></svg>
+<span style="flex: 1">Master resume</span>
+</a>
+<a href="Sources.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5C5C63" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="1.4"></circle><path d="M5.2 5.2a4 4 0 0 0 0 5.6M10.8 5.2a4 4 0 0 1 0 5.6M3.1 3.1a7 7 0 0 0 0 9.8M12.9 3.1a7 7 0 0 1 0 9.8"></path></svg>
+<span style="flex: 1">Sources</span>
+</a>
+</div>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 2px">
+<a href="SettingsAI.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5C5C63" stroke-width="1.5" stroke-linecap="round"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"></path><circle cx="10.5" cy="4.5" r="1.5"></circle><circle cx="5.5" cy="11.5" r="1.5"></circle></svg>
+<span style="flex: 1">Settings</span>
+</a>
+<div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 10px 10px 4px; border-top: 1px solid rgba(0, 0, 0, 0.08)">
+<span aria-hidden="true" style="width: 26px; height: 26px; flex: none; border-radius: 50%; background: #D3D3DA; color: #1D1D1F; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">JR</span>
+<div style="display: flex; flex-direction: column; min-width: 0">
+<span style="font-weight: 600">Jordan Rivera</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Synced 7:58 AM</span>
+</div>
+</div>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 52px; padding: 10px 16px 8px 8px; box-sizing: border-box">
+<div style="display: flex; flex-direction: column">
+<h1 style="margin: 0; font-size: 15px; line-height: 19px; font-weight: 700">Applications</h1>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">9 active · 3 closed · 2 follow-ups due this week</span>
+</div>
+<div style="flex: 1 1 0"></div>
+<button type="button" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px 0 12px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.78); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06); color: #1D1D1F; font: inherit; font-weight: 500; cursor: pointer"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#1D1D1F" stroke-width="1.6" stroke-linecap="round"><path d="M8 3v10M3 8h10"></path></svg>Add application</button>
+</div>
+
+<div style="flex: 1 1 auto; overflow-x: auto; padding: 4px 16px 16px 8px">
+<div style="display: grid; grid-template-columns: repeat(5, minmax(156px, 1fr)); gap: 10px; align-items: start; min-width: 820px">
+
+<section aria-labelledby="col-applied" style="display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 14px; background: #F4F4F6">
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding: 2px 4px 2px"><h2 id="col-applied" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Applied</h2><span style="font-size: 12px; color: #5C5C63">4</span></div>
+<article style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.05)">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 600">Saltmarsh Games</h3>
+<span style="font-size: 12px; line-height: 16px; color: #3A3A40">Backend Engineer, Live Services</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Applied Oct 16</span>
+</article>
+<article style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.05)">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 600">Orchard Bank</h3>
+<span style="font-size: 12px; line-height: 16px; color: #3A3A40">Developer, Core Banking APIs</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Applied Oct 14</span>
+</article>
+<article style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.05)">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 600">Juniper Transit</h3>
+<span style="font-size: 12px; line-height: 16px; color: #3A3A40">Software Developer II</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Applied Oct 10</span>
+<span style="display: inline-flex; align-items: center; align-self: flex-start; gap: 4px; margin-top: 2px; height: 20px; padding: 0 7px; border-radius: 6px; background: #F0F0F3; font-size: 11px; color: #3A3A40"><svg aria-hidden="true" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="#3A3A40" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5V7a4 4 0 0 1 8 0v4.5l1.25 1.25H2.75z"></path><path d="M6.5 14.25h3"></path></svg>Follow up Mon, Oct 20</span>
+</article>
+<article style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.05)">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 600">Corvid Security</h3>
+<span style="font-size: 12px; line-height: 16px; color: #3A3A40">Backend Engineer, Detection</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Applied Oct 3 · no reply yet</span>
+<span style="display: inline-flex; align-items: center; align-self: flex-start; gap: 4px; margin-top: 2px; height: 20px; padding: 0 7px; border-radius: 6px; background: #1D1D1F; font-size: 11px; font-weight: 600; color: #FFFFFF"><svg aria-hidden="true" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5V7a4 4 0 0 1 8 0v4.5l1.25 1.25H2.75z"></path><path d="M6.5 14.25h3"></path></svg>Follow up today</span>
+</article>
+</section>
+
+<section aria-labelledby="col-screen" style="display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 14px; background: #F4F4F6">
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding: 2px 4px 2px"><h2 id="col-screen" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Screen</h2><span style="font-size: 12px; color: #5C5C63">2</span></div>
+<article style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.05)">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 600">Lumen Rail</h3>
+<span style="font-size: 12px; line-height: 16px; color: #3A3A40">Backend Developer</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Recruiter call Mon, Oct 20 · 2:00 PM</span>
+</article>
+<article style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.05)">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 600">Westbay Insurance</h3>
+<span style="font-size: 12px; line-height: 16px; color: #3A3A40">Python Developer</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Screen done Oct 15 · waiting</span>
+</article>
+</section>
+
+<section aria-labelledby="col-interview" style="display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 14px; background: #F4F4F6">
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding: 2px 4px 2px"><h2 id="col-interview" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Interview</h2><span style="font-size: 12px; color: #5C5C63">2</span></div>
+<article aria-current="true" style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #E7F0FC; box-shadow: 0 0 0 2px #0B63CE">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 600">Bramblewood Health</h3>
+<span style="font-size: 12px; line-height: 16px; color: #3A3A40">Backend Engineer, Patient Records</span>
+<span style="font-size: 11px; line-height: 14px; color: #4F4F56">System design Tue, Oct 21</span>
+<span style="display: inline-flex; align-items: center; align-self: flex-start; gap: 4px; margin-top: 2px; height: 20px; padding: 0 7px; border-radius: 6px; background: #1D1D1F; font-size: 11px; font-weight: 600; color: #FFFFFF"><svg aria-hidden="true" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5V7a4 4 0 0 1 8 0v4.5l1.25 1.25H2.75z"></path><path d="M6.5 14.25h3"></path></svg>Thank-you note today</span>
+</article>
+<article style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.05)">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 600">Cinder Analytics</h3>
+<span style="font-size: 12px; line-height: 16px; color: #3A3A40">Software Engineer, Data Platform</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Take-home due Wed, Oct 22</span>
+</article>
+</section>
+
+<section aria-labelledby="col-offer" style="display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 14px; background: #F4F4F6">
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding: 2px 4px 2px"><h2 id="col-offer" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Offer</h2><span style="font-size: 12px; color: #5C5C63">1</span></div>
+<article style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.05)">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 600">Driftwood Mobility</h3>
+<span style="font-size: 12px; line-height: 16px; color: #3A3A40">Software Developer II</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Offer Oct 15 · reply by Sat, Oct 25</span>
+</article>
+</section>
+
+<section aria-labelledby="col-closed" style="display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 14px; background: #F4F4F6">
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding: 2px 4px 2px"><h2 id="col-closed" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Closed</h2><span style="font-size: 12px; color: #5C5C63">3</span></div>
+<article style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #FAFAFB; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.10)">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 500; color: #4F4F56">Granite Peak Software</h3>
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">Backend Developer</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Not selected · Oct 9</span>
+</article>
+<article style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #FAFAFB; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.10)">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 500; color: #4F4F56">Ostrich Pay</h3>
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">Platform Engineer</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">You withdrew · Oct 6</span>
+</article>
+<article style="display: flex; flex-direction: column; gap: 4px; padding: 10px 11px; border-radius: 10px; background: #FAFAFB; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.10)">
+<h3 style="margin: 0; font-size: 13px; line-height: 17px; font-weight: 500; color: #4F4F56">Harrow Media</h3>
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">Software Engineer, APIs</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Role filled · Oct 2</span>
+</article>
+</section>
+
+</div>
+</div>
+</main>
+
+<aside aria-label="Application details" style="flex: 1 1 352px; min-width: 0; box-sizing: border-box; border-left: 1px solid #E5E5EA; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 18px; background: #FFFFFF">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">Bramblewood Health</span>
+<h2 style="margin: 0; font-size: 17px; line-height: 22px; font-weight: 700">Backend Engineer, Patient Records</h2>
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">Toronto, ON · Remote, Canada · Applied Oct 1 via Greenhouse</span>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<label for="status-btn" style="font-size: 12px; font-weight: 600">Status</label>
+<button id="status-btn" type="button" aria-haspopup="listbox" style="display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px 0 12px; border: 0; border-radius: 8px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.08); color: #1D1D1F; font: inherit; font-weight: 500; cursor: pointer">Interview<svg aria-hidden="true" width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="#3A3A40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5L5 2l2.5 2.5M2.5 7.5L5 10l2.5-2.5"></path></svg></button>
+<span style="font-size: 12px; color: #5C5C63">since Oct 14</span>
+</div>
+
+<section aria-labelledby="tl-h" style="display: flex; flex-direction: column; gap: 10px">
+<h3 id="tl-h" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Timeline</h3>
+<ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column">
+<li style="display: grid; grid-template-columns: 14px minmax(0, 1fr); column-gap: 10px">
+<div style="display: flex; flex-direction: column; align-items: center"><span style="width: 9px; height: 9px; margin-top: 4px; border-radius: 50%; background: #3A3A40"></span><span style="flex: 1; width: 1.5px; background: #D1D1D6; margin-top: 3px"></span></div>
+<div style="display: flex; flex-direction: column; padding-bottom: 12px"><span><span style="font-weight: 600">Applied</span> <span style="color: #5C5C63">· Wed, Oct 1</span></span><span style="font-size: 12px; line-height: 16px; color: #5C5C63">Sent resume “Bramblewood · Full”</span></div>
+</li>
+<li style="display: grid; grid-template-columns: 14px minmax(0, 1fr); column-gap: 10px">
+<div style="display: flex; flex-direction: column; align-items: center"><span style="width: 9px; height: 9px; margin-top: 4px; border-radius: 50%; background: #3A3A40"></span><span style="flex: 1; width: 1.5px; background: #D1D1D6; margin-top: 3px"></span></div>
+<div style="display: flex; flex-direction: column; padding-bottom: 12px"><span><span style="font-weight: 600">Recruiter screen</span> <span style="color: #5C5C63">· Mon, Oct 6</span></span><span style="font-size: 12px; line-height: 16px; color: #5C5C63">30 min with Priya Natarajan</span></div>
+</li>
+<li style="display: grid; grid-template-columns: 14px minmax(0, 1fr); column-gap: 10px">
+<div style="display: flex; flex-direction: column; align-items: center"><span style="width: 9px; height: 9px; margin-top: 4px; border-radius: 50%; background: #3A3A40"></span><span style="flex: 1; width: 1.5px; background: #D1D1D6; margin-top: 3px"></span></div>
+<div style="display: flex; flex-direction: column; padding-bottom: 12px"><span><span style="font-weight: 600">Technical interview</span> <span style="color: #5C5C63">· Tue, Oct 14</span></span><span style="font-size: 12px; line-height: 16px; color: #5C5C63">Go and SQL pair-coding, 60 min</span></div>
+</li>
+<li style="display: grid; grid-template-columns: 14px minmax(0, 1fr); column-gap: 10px">
+<div style="display: flex; flex-direction: column; align-items: center"><span style="width: 9px; height: 9px; box-sizing: border-box; margin-top: 4px; border-radius: 50%; border: 2px solid #0B63CE; background: #FFFFFF"></span></div>
+<div style="display: flex; flex-direction: column"><span><span style="font-weight: 600">System design</span> <span style="color: #5C5C63">· Tue, Oct 21</span></span><span style="font-size: 12px; line-height: 16px; color: #5C5C63">Upcoming · 10:00 AM ET, 45 min</span></div>
+</li>
+</ol>
+</section>
+
+<section aria-labelledby="rem-h" style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<h3 id="rem-h" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Follow-up reminders</h3>
+<button type="button" style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: #0B63CE; font: inherit; font-weight: 500; cursor: pointer"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#0B63CE" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"></path></svg>Add</button>
+</div>
+<div style="display: flex; flex-direction: column; border-radius: 12px; box-shadow: inset 0 0 0 1px #E3E3E8">
+<div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #EDEDF0">
+<input id="r1" type="checkbox" style="width: 16px; height: 16px; margin: 1px 0 0; accent-color: #0B63CE; flex: none">
+<label for="r1" style="display: flex; flex-direction: column; flex: 1; min-width: 0"><span>Send a thank-you note to Priya</span><span style="font-size: 12px; line-height: 16px; font-weight: 600; color: #1D1D1F">Due today</span></label>
+</div>
+<div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #EDEDF0">
+<input id="r2" type="checkbox" style="width: 16px; height: 16px; margin: 1px 0 0; accent-color: #0B63CE; flex: none">
+<label for="r2" style="display: flex; flex-direction: column; flex: 1; min-width: 0"><span>Sketch an appointment-booking design to practise</span><span style="font-size: 12px; line-height: 16px; color: #5C5C63">Mon, Oct 20</span></label>
+</div>
+<div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px">
+<input id="r3" type="checkbox" style="width: 16px; height: 16px; margin: 1px 0 0; accent-color: #0B63CE; flex: none">
+<label for="r3" style="display: flex; flex-direction: column; flex: 1; min-width: 0"><span>Follow up if no reply after system design</span><span style="font-size: 12px; line-height: 16px; color: #5C5C63">Fri, Oct 24</span></label>
+</div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 6px">
+<label for="notes" style="font-size: 13px; line-height: 18px; font-weight: 700">Notes</label>
+<textarea id="notes" rows="4" style="box-sizing: border-box; width: 100%; padding: 8px 10px; border: 1px solid #C9C9CF; border-radius: 8px; background: #FFFFFF; color: #1D1D1F; font: inherit; line-height: 18px; resize: vertical">Team is splitting a patient-records monolith into event-driven services. On-call is one week in six. Ask about the FHIR migration timeline and who owns the message bus.</textarea>
+</section>
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

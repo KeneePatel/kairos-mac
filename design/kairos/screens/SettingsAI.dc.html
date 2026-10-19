@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kairos · Settings, AI providers</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0B63CE}a:hover{color:#084C9E}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; background: #FFFFFF; color: #1D1D1F; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 18px; -webkit-font-smoothing: antialiased">
+
+<nav aria-label="Kairos sections" style="flex: 1 1 220px; box-sizing: border-box; margin: 8px; padding: 14px 10px 10px; border-radius: 18px; background: rgba(232, 232, 237, 0.74); backdrop-filter: blur(30px) saturate(1.6); -webkit-backdrop-filter: blur(30px) saturate(1.6); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 8px 28px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.7); display: flex; flex-direction: column; gap: 18px">
+<div aria-hidden="true" style="display: flex; gap: 8px; padding: 0 6px">
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #FF5F57; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18)"></span>
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #FEBC2E; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18)"></span>
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #28C840; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18)"></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5C5C63" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"></circle><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.06 1.06M11.54 11.54l1.06 1.06M3.4 12.6l1.06-1.06M11.54 4.46l1.06-1.06"></path></svg>
+<span style="flex: 1">Today</span>
+<span style="font-size: 12px; color: #5C5C63; font-variant-numeric: tabular-nums">12</span>
+</a>
+<a href="Build.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5C5C63" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.75h5.5l3 3v9.5H4z"></path><path d="M9.5 1.75v3h3M6.25 8.5h4M6.25 11h4"></path></svg>
+<span style="flex: 1">Build</span>
+<span style="font-size: 12px; color: #5C5C63">1 running</span>
+</a>
+<a href="Applications.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5C5C63" stroke-width="1.5" stroke-linejoin="round"><rect x="1.75" y="2.25" width="3.5" height="11.5" rx="1"></rect><rect x="6.25" y="2.25" width="3.5" height="8" rx="1"></rect><rect x="10.75" y="2.25" width="3.5" height="5.5" rx="1"></rect></svg>
+<span style="flex: 1">Applications</span>
+<span style="font-size: 12px; color: #5C5C63; font-variant-numeric: tabular-nums">9</span>
+</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 10px 4px; font-size: 11px; line-height: 14px; font-weight: 600; color: #5C5C63">Profile</div>
+<a href="MasterResume.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5C5C63" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.75"></rect><circle cx="5.75" cy="7" r="1.5"></circle><path d="M3.75 11c.4-1.2 1.2-1.75 2-1.75s1.6.55 2 1.75M9.5 6.5h3M9.5 9h3"></path></svg>
+<span style="flex: 1">Master resume</span>
+</a>
+<a href="Sources.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5C5C63" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="1.4"></circle><path d="M5.2 5.2a4 4 0 0 0 0 5.6M10.8 5.2a4 4 0 0 1 0 5.6M3.1 3.1a7 7 0 0 0 0 9.8M12.9 3.1a7 7 0 0 1 0 9.8"></path></svg>
+<span style="flex: 1">Sources</span>
+</a>
+</div>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 2px">
+<a href="SettingsAI.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; background: rgba(11, 99, 206, 0.13); color: #1D1D1F; font-weight: 600; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#0B63CE" stroke-width="1.5" stroke-linecap="round"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"></path><circle cx="10.5" cy="4.5" r="1.5"></circle><circle cx="5.5" cy="11.5" r="1.5"></circle></svg>
+<span style="flex: 1">Settings</span>
+</a>
+<div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 10px 10px 4px; border-top: 1px solid rgba(0, 0, 0, 0.08)">
+<span aria-hidden="true" style="width: 26px; height: 26px; flex: none; border-radius: 50%; background: #D3D3DA; color: #1D1D1F; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">JR</span>
+<div style="display: flex; flex-direction: column; min-width: 0">
+<span style="font-weight: 600">Jordan Rivera</span>
+<span style="font-size: 11px; line-height: 14px; color: #5C5C63">Synced 7:58 AM</span>
+</div>
+</div>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; min-height: 52px; padding: 10px 16px 8px 8px; box-sizing: border-box">
+<h1 style="margin: 0; font-size: 15px; line-height: 19px; font-weight: 700">Settings</h1>
+<div role="tablist" aria-label="Settings sections" style="display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.78); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06)">
+<button type="button" role="tab" aria-selected="false" style="height: 26px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: #1D1D1F; font: inherit; cursor: pointer">General</button>
+<button type="button" role="tab" aria-selected="false" style="height: 26px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: #1D1D1F; font: inherit; cursor: pointer">Schedule</button>
+<button type="button" role="tab" aria-selected="true" style="height: 26px; padding: 0 12px; border: 0; border-radius: 999px; background: #0B63CE; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">AI providers</button>
+<button type="button" role="tab" aria-selected="false" style="height: 26px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: #1D1D1F; font: inherit; cursor: pointer">Account</button>
+</div>
+</div>
+
+<div style="flex: 1 1 auto; padding: 4px 20px 20px 8px; display: flex; flex-direction: column; gap: 26px">
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 14px">
+<section aria-labelledby="gem-h" style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: 14px; box-shadow: inset 0 0 0 1px #E3E3E8">
+<div style="display: flex; align-items: flex-start; gap: 10px">
+<div style="display: flex; flex-direction: column; flex: 1; min-width: 0">
+<h2 id="gem-h" style="margin: 0; font-size: 15px; line-height: 20px; font-weight: 700">Gemini</h2>
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">Google AI Studio API keys</span>
+</div>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 20px"><svg aria-hidden="true" width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#1B7A3B"></circle></svg>Connected</span>
+</div>
+<div style="display: flex; flex-direction: column; border-radius: 10px; background: #F5F5F7">
+<div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 8px 6px 12px; border-bottom: 1px solid #E7E7EB">
+<div style="display: flex; flex-direction: column; flex: 1; min-width: 0"><span style="font-size: 12px; line-height: 16px; font-weight: 600">Primary</span><span style="font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; line-height: 16px; color: #3A3A40; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">AIza••••••••••••••••••••Q2xk</span></div>
+<button type="button" style="height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2); color: #1D1D1F; font: inherit; font-size: 12px; cursor: pointer">Replace</button>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 8px 6px 12px">
+<div style="display: flex; flex-direction: column; flex: 1; min-width: 0"><span style="font-size: 12px; line-height: 16px; font-weight: 600">Backup <span style="font-weight: 400; color: #5C5C63">· used when Primary hits a cap</span></span><span style="font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; line-height: 16px; color: #3A3A40; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">AIza••••••••••••••••••••7mPa</span></div>
+<button type="button" style="height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2); color: #1D1D1F; font: inherit; font-size: 12px; cursor: pointer">Remove</button>
+</div>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63; font-variant-numeric: tabular-nums">131 of 470 requests used today</span>
+<button type="button" style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: #0B63CE; font: inherit; font-weight: 500; cursor: pointer"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#0B63CE" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"></path></svg>Add key</button>
+</div>
+</section>
+
+<section aria-labelledby="oll-h" style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: 14px; box-shadow: inset 0 0 0 1px #E3E3E8">
+<div style="display: flex; align-items: flex-start; gap: 10px">
+<div style="display: flex; flex-direction: column; flex: 1; min-width: 0">
+<h2 id="oll-h" style="margin: 0; font-size: 15px; line-height: 20px; font-weight: 700">Ollama on this Mac</h2>
+<span style="font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; line-height: 16px; color: #5C5C63">localhost:11434</span>
+</div>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 20px"><svg aria-hidden="true" width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#1B7A3B"></circle></svg>Running</span>
+</div>
+<div style="display: flex; flex-direction: column; border-radius: 10px; background: #F5F5F7">
+<div style="display: flex; align-items: center; gap: 10px; min-height: 30px; padding: 4px 12px; border-bottom: 1px solid #E7E7EB"><span style="flex: 1; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px">qwen3:14b</span><span style="font-size: 12px; color: #5C5C63; font-variant-numeric: tabular-nums">9.3 GB</span></div>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 30px; padding: 4px 12px; border-bottom: 1px solid #E7E7EB"><span style="flex: 1; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px">nomic-embed-text</span><span style="font-size: 12px; color: #5C5C63; font-variant-numeric: tabular-nums">274 MB</span></div>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 30px; padding: 4px 12px"><span style="flex: 1; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px">llama3.2:3b</span><span style="font-size: 12px; color: #5C5C63; font-variant-numeric: tabular-nums">2.0 GB</span></div>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">3 models installed · nothing leaves this Mac</span>
+<button type="button" style="height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2); color: #1D1D1F; font: inherit; font-size: 12px; cursor: pointer">Refresh</button>
+</div>
+</section>
+</div>
+
+<section aria-labelledby="roles-h" style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px">
+<h2 id="roles-h" style="margin: 0; font-size: 15px; line-height: 20px; font-weight: 700">Which model does what</h2>
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">Caps reset at midnight. When one is hit, that task waits for the next run.</span>
+</div>
+<div style="overflow-x: auto; border-radius: 12px; box-shadow: inset 0 0 0 1px #E3E3E8">
+<table style="width: 100%; min-width: 660px; border-collapse: collapse; font-size: 13px; line-height: 18px">
+<thead>
+<tr style="text-align: left; font-size: 11px; line-height: 14px; color: #5C5C63">
+<th scope="col" style="padding: 8px 14px; font-weight: 600; border-bottom: 1px solid #E5E5EA">Task</th>
+<th scope="col" style="padding: 8px 10px; font-weight: 600; border-bottom: 1px solid #E5E5EA">Model</th>
+<th scope="col" style="padding: 8px 10px; font-weight: 600; border-bottom: 1px solid #E5E5EA">Runs on</th>
+<th scope="col" style="padding: 8px 10px; font-weight: 600; border-bottom: 1px solid #E5E5EA">Daily cap</th>
+<th scope="col" style="padding: 8px 14px 8px 10px; font-weight: 600; border-bottom: 1px solid #E5E5EA; text-align: right">Used today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row" style="padding: 8px 14px; text-align: left; font-weight: 600; border-bottom: 1px solid #EFEFF2">Filter postings</th>
+<td style="padding: 8px 10px; color: #3A3A40; border-bottom: 1px solid #EFEFF2">No AI · title, location and keyword rules</td>
+<td style="padding: 8px 10px; border-bottom: 1px solid #EFEFF2">This Mac</td>
+<td style="padding: 8px 10px; color: #5C5C63; border-bottom: 1px solid #EFEFF2">None</td>
+<td style="padding: 8px 14px 8px 10px; text-align: right; font-variant-numeric: tabular-nums; border-bottom: 1px solid #EFEFF2">312 checked</td>
+</tr>
+<tr>
+<th scope="row" style="padding: 8px 14px; text-align: left; font-weight: 600; border-bottom: 1px solid #EFEFF2">Spot duplicates</th>
+<td style="padding: 6px 10px; border-bottom: 1px solid #EFEFF2"><button type="button" aria-haspopup="listbox" aria-label="Model for Spot duplicates: nomic-embed-text" style="display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 6px 0 10px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.06); color: #1D1D1F; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; cursor: pointer">nomic-embed-text<svg aria-hidden="true" width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="#3A3A40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5L5 2l2.5 2.5M2.5 7.5L5 10l2.5-2.5"></path></svg></button></td>
+<td style="padding: 8px 10px; border-bottom: 1px solid #EFEFF2">This Mac</td>
+<td style="padding: 8px 10px; color: #5C5C63; border-bottom: 1px solid #EFEFF2">None</td>
+<td style="padding: 8px 14px 8px 10px; text-align: right; font-variant-numeric: tabular-nums; border-bottom: 1px solid #EFEFF2">122</td>
+</tr>
+<tr>
+<th scope="row" style="padding: 8px 14px; text-align: left; font-weight: 600; border-bottom: 1px solid #EFEFF2">Score match</th>
+<td style="padding: 6px 10px; border-bottom: 1px solid #EFEFF2"><button type="button" aria-haspopup="listbox" aria-label="Model for Score match: gemini-2.5-flash-lite" style="display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 6px 0 10px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.06); color: #1D1D1F; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; cursor: pointer">gemini-2.5-flash-lite<svg aria-hidden="true" width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="#3A3A40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5L5 2l2.5 2.5M2.5 7.5L5 10l2.5-2.5"></path></svg></button></td>
+<td style="padding: 8px 10px; border-bottom: 1px solid #EFEFF2">Google</td>
+<td style="padding: 6px 10px; border-bottom: 1px solid #EFEFF2"><label for="cap-score" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Daily cap for Score match</label><input id="cap-score" type="text" inputmode="numeric" value="400" style="width: 64px; height: 26px; box-sizing: border-box; padding: 0 8px; border: 1px solid #C9C9CF; border-radius: 7px; background: #FFFFFF; color: #1D1D1F; font: inherit; font-variant-numeric: tabular-nums; text-align: right"></td>
+<td style="padding: 8px 14px 8px 10px; text-align: right; font-variant-numeric: tabular-nums; border-bottom: 1px solid #EFEFF2">122</td>
+</tr>
+<tr>
+<th scope="row" style="padding: 8px 14px; text-align: left; font-weight: 600; border-bottom: 1px solid #EFEFF2">Write sections</th>
+<td style="padding: 6px 10px; border-bottom: 1px solid #EFEFF2"><button type="button" aria-haspopup="listbox" aria-label="Model for Write sections: gemini-2.5-flash" style="display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 6px 0 10px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.06); color: #1D1D1F; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; cursor: pointer">gemini-2.5-flash<svg aria-hidden="true" width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="#3A3A40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5L5 2l2.5 2.5M2.5 7.5L5 10l2.5-2.5"></path></svg></button></td>
+<td style="padding: 8px 10px; border-bottom: 1px solid #EFEFF2">Google</td>
+<td style="padding: 6px 10px; border-bottom: 1px solid #EFEFF2"><label for="cap-write" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Daily cap for Write sections</label><input id="cap-write" type="text" inputmode="numeric" value="60" style="width: 64px; height: 26px; box-sizing: border-box; padding: 0 8px; border: 1px solid #C9C9CF; border-radius: 7px; background: #FFFFFF; color: #1D1D1F; font: inherit; font-variant-numeric: tabular-nums; text-align: right"></td>
+<td style="padding: 8px 14px 8px 10px; text-align: right; font-variant-numeric: tabular-nums; border-bottom: 1px solid #EFEFF2">7</td>
+</tr>
+<tr>
+<th scope="row" style="padding: 8px 14px; text-align: left; font-weight: 600; border-bottom: 1px solid #EFEFF2">Check every claim</th>
+<td style="padding: 6px 10px; border-bottom: 1px solid #EFEFF2"><button type="button" aria-haspopup="listbox" aria-label="Model for Check every claim: qwen3:14b" style="display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 6px 0 10px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.06); color: #1D1D1F; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; cursor: pointer">qwen3:14b<svg aria-hidden="true" width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="#3A3A40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5L5 2l2.5 2.5M2.5 7.5L5 10l2.5-2.5"></path></svg></button></td>
+<td style="padding: 8px 10px; border-bottom: 1px solid #EFEFF2">This Mac</td>
+<td style="padding: 8px 10px; color: #5C5C63; border-bottom: 1px solid #EFEFF2">None</td>
+<td style="padding: 8px 14px 8px 10px; text-align: right; font-variant-numeric: tabular-nums; border-bottom: 1px solid #EFEFF2">48 claims</td>
+</tr>
+<tr>
+<th scope="row" style="padding: 8px 14px; text-align: left; font-weight: 600">Polish wording</th>
+<td style="padding: 6px 10px"><button type="button" aria-haspopup="listbox" aria-label="Model for Polish wording: gemini-2.5-pro" style="display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 6px 0 10px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.06); color: #1D1D1F; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; cursor: pointer">gemini-2.5-pro<svg aria-hidden="true" width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="#3A3A40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5L5 2l2.5 2.5M2.5 7.5L5 10l2.5-2.5"></path></svg></button></td>
+<td style="padding: 8px 10px">Google</td>
+<td style="padding: 6px 10px"><label for="cap-polish" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Daily cap for Polish wording</label><input id="cap-polish" type="text" inputmode="numeric" value="10" style="width: 64px; height: 26px; box-sizing: border-box; padding: 0 8px; border: 1px solid #C9C9CF; border-radius: 7px; background: #FFFFFF; color: #1D1D1F; font: inherit; font-variant-numeric: tabular-nums; text-align: right"></td>
+<td style="padding: 8px 14px 8px 10px; text-align: right; font-variant-numeric: tabular-nums">2</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p style="margin: 0; padding: 0 2px; font-size: 12px; line-height: 16px; color: #5C5C63">Lite mode skips Polish wording and writes sections with gemini-2.5-flash-lite.</p>
+</section>
+</div>
+</main>
+
+<aside aria-label="Privacy" style="flex: 1 1 340px; min-width: 0; box-sizing: border-box; border-left: 1px solid #E5E5EA; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 18px; background: #FFFFFF">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<h2 style="margin: 0; font-size: 17px; line-height: 22px; font-weight: 700">Privacy</h2>
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">Exactly what Kairos sends, and where.</span>
+</div>
+
+<section aria-labelledby="leaves-h" style="display: flex; flex-direction: column; gap: 8px">
+<h3 id="leaves-h" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Leaves this Mac, to Google</h3>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px">
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3A3A40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 1px"><path d="M3 8h9M8.5 4.5L12 8l-3.5 3.5"></path></svg><span>Job posting text, to score and tailor</span></li>
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3A3A40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 1px"><path d="M3 8h9M8.5 4.5L12 8l-3.5 3.5"></path></svg><span>The master resume bullets picked for that job</span></li>
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3A3A40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 1px"><path d="M3 8h9M8.5 4.5L12 8l-3.5 3.5"></path></svg><span>Your skill names and whether each is Proven</span></li>
+</ul>
+</section>
+
+<section aria-labelledby="never-h" style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 12px; background: #F5F5F7">
+<div style="display: flex; align-items: center; gap: 8px">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#1D1D1F" stroke-width="1.5" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5.25 7V5a2.75 2.75 0 0 1 5.5 0v2"></path></svg>
+<h3 id="never-h" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Never sent</h3>
+</div>
+<p style="margin: 0; color: #3A3A40">Your name, email, phone, LinkedIn, GitHub and portfolio links. Kairos adds them on this Mac when it renders the PDF.</p>
+</section>
+
+<section aria-labelledby="local-h" style="display: flex; flex-direction: column; gap: 8px">
+<h3 id="local-h" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Stays on this Mac</h3>
+<p style="margin: 0; color: #3A3A40">Filtering, duplicate checks and every claim check run locally in Ollama. Builds, notes and applications are stored here and synced to your account only.</p>
+</section>
+
+<div style="display: flex; align-items: flex-start; gap: 12px; padding-top: 16px; border-top: 1px solid #E5E5EA">
+<div style="display: flex; flex-direction: column; flex: 1; min-width: 0"><span id="local-only" style="font-weight: 600">Keep everything on this Mac</span><span style="font-size: 12px; line-height: 16px; color: #5C5C63">Use Ollama for every task. Slower builds, no daily caps.</span></div>
+<button type="button" role="switch" aria-checked="false" aria-labelledby="local-only" style="position: relative; flex: none; width: 38px; height: 22px; padding: 0; border: 0; border-radius: 999px; background: #D1D1D6; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12); cursor: pointer"><span style="position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25)"></span></button>
+</div>
+<button type="button" style="align-self: flex-start; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #EDEDF0; color: #1D1D1F; font: inherit; font-weight: 500; cursor: pointer">Show the last request sent</button>
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

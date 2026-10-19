@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kairos · Today, dark</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#5AA2FF}a:hover{color:#8CBDFF}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; background: #1C1C1E; color: #F2F2F5; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 18px; -webkit-font-smoothing: antialiased">
+
+<nav aria-label="Kairos sections" style="flex: 1 1 220px; box-sizing: border-box; margin: 8px; padding: 14px 10px 10px; border-radius: 18px; background: rgba(50, 50, 54, 0.74); backdrop-filter: blur(30px) saturate(1.6); -webkit-backdrop-filter: blur(30px) saturate(1.6); box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 8px 28px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 18px">
+<div aria-hidden="true" style="display: flex; gap: 8px; padding: 0 6px">
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #FF5F57; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.3)"></span>
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #FEBC2E; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.3)"></span>
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #28C840; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.3)"></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="TodayDark.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; background: rgba(90, 162, 255, 0.2); color: #F2F2F5; font-weight: 600; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5AA2FF" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"></circle><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.06 1.06M11.54 11.54l1.06 1.06M3.4 12.6l1.06-1.06M11.54 4.46l1.06-1.06"></path></svg>
+<span style="flex: 1">Today</span>
+<span style="font-size: 12px; color: #D0D0D6; font-variant-numeric: tabular-nums">12</span>
+</a>
+<a href="Build.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #F2F2F5; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#A7A7AE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.75h5.5l3 3v9.5H4z"></path><path d="M9.5 1.75v3h3M6.25 8.5h4M6.25 11h4"></path></svg>
+<span style="flex: 1">Build</span>
+<span style="font-size: 12px; color: #A7A7AE">1 running</span>
+</a>
+<a href="Applications.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #F2F2F5; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#A7A7AE" stroke-width="1.5" stroke-linejoin="round"><rect x="1.75" y="2.25" width="3.5" height="11.5" rx="1"></rect><rect x="6.25" y="2.25" width="3.5" height="8" rx="1"></rect><rect x="10.75" y="2.25" width="3.5" height="5.5" rx="1"></rect></svg>
+<span style="flex: 1">Applications</span>
+<span style="font-size: 12px; color: #A7A7AE; font-variant-numeric: tabular-nums">9</span>
+</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 10px 4px; font-size: 11px; line-height: 14px; font-weight: 600; color: #A7A7AE">Profile</div>
+<a href="MasterResume.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #F2F2F5; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#A7A7AE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.75"></rect><circle cx="5.75" cy="7" r="1.5"></circle><path d="M3.75 11c.4-1.2 1.2-1.75 2-1.75s1.6.55 2 1.75M9.5 6.5h3M9.5 9h3"></path></svg>
+<span style="flex: 1">Master resume</span>
+</a>
+<a href="Sources.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #F2F2F5; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#A7A7AE" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="1.4"></circle><path d="M5.2 5.2a4 4 0 0 0 0 5.6M10.8 5.2a4 4 0 0 1 0 5.6M3.1 3.1a7 7 0 0 0 0 9.8M12.9 3.1a7 7 0 0 1 0 9.8"></path></svg>
+<span style="flex: 1">Sources</span>
+</a>
+</div>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 2px">
+<a href="SettingsAI.dc.html" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 9px; color: #F2F2F5; text-decoration: none">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#A7A7AE" stroke-width="1.5" stroke-linecap="round"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"></path><circle cx="10.5" cy="4.5" r="1.5"></circle><circle cx="5.5" cy="11.5" r="1.5"></circle></svg>
+<span style="flex: 1">Settings</span>
+</a>
+<div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 10px 10px 4px; border-top: 1px solid rgba(255, 255, 255, 0.08)">
+<span aria-hidden="true" style="width: 26px; height: 26px; flex: none; border-radius: 50%; background: #4A4A50; color: #F2F2F5; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">JR</span>
+<div style="display: flex; flex-direction: column; min-width: 0">
+<span style="font-weight: 600">Jordan Rivera</span>
+<span style="font-size: 11px; line-height: 14px; color: #A7A7AE">Synced 7:58 AM</span>
+</div>
+</div>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 52px; padding: 10px 16px 8px 8px; box-sizing: border-box">
+<div style="display: flex; flex-direction: column; margin-right: 8px">
+<h1 style="margin: 0; font-size: 15px; line-height: 19px; font-weight: 700">Today</h1>
+<span style="font-size: 11px; line-height: 14px; color: #A7A7AE">Sunday, October 18</span>
+</div>
+<div role="group" aria-label="Filter by verdict" style="display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(58, 58, 62, 0.8); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6); box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3)">
+<button type="button" aria-pressed="true" style="display: flex; align-items: center; gap: 5px; height: 26px; padding: 0 12px; border: 0; border-radius: 999px; background: #1C6FD8; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">All <span style="font-variant-numeric: tabular-nums">12</span></button>
+<button type="button" aria-pressed="false" style="display: flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px; border: 0; border-radius: 999px; background: transparent; color: #F2F2F5; font: inherit; cursor: pointer"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5FD38A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8.25l1.9 1.9 3.6-3.9"></path></svg>Yes <span style="color: #A7A7AE; font-variant-numeric: tabular-nums">5</span></button>
+<button type="button" aria-pressed="false" style="display: flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px; border: 0; border-radius: 999px; background: transparent; color: #F2F2F5; font: inherit; cursor: pointer"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#F5B451" stroke-width="1.6"><circle cx="8" cy="8" r="6.25"></circle><path d="M8 1.75a6.25 6.25 0 0 0 0 12.5z" fill="#F5B451" stroke="none"></path></svg>Maybe <span style="color: #A7A7AE; font-variant-numeric: tabular-nums">4</span></button>
+<button type="button" aria-pressed="false" style="display: flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px; border: 0; border-radius: 999px; background: transparent; color: #F2F2F5; font: inherit; cursor: pointer"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#A0A0A7" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8h5.5"></path></svg>No <span style="color: #A7A7AE; font-variant-numeric: tabular-nums">3</span></button>
+</div>
+<div style="flex: 1 1 0"></div>
+<span style="font-size: 12px; line-height: 16px; color: #A7A7AE; font-variant-numeric: tabular-nums">Last run 7:58 AM · 312 fetched · 61% filtered before AI</span>
+<button type="button" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px 0 12px; border: 0; border-radius: 999px; background: rgba(58, 58, 62, 0.8); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6); box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3); color: #F2F2F5; font: inherit; font-weight: 500; cursor: pointer"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#F2F2F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.25 8a5.25 5.25 0 1 1-1.54-3.71"></path><path d="M12.25 1.75v2.75H9.5"></path></svg>Run now</button>
+</div>
+
+<div style="flex: 1 1 auto; overflow-x: auto; padding: 0 8px 16px 0">
+<div style="min-width: 720px">
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; height: 28px; padding: 0 12px; font-size: 11px; line-height: 14px; font-weight: 600; color: #A7A7AE; border-bottom: 1px solid #38383C">
+<span>Verdict</span><span>Role</span><span>Location</span><span>Remote</span><span>Source</span><span style="text-align: right">Match</span>
+</div>
+
+<div style="display: flex; align-items: baseline; gap: 8px; padding: 14px 12px 6px">
+<h2 style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Canada</h2>
+<span style="font-size: 12px; color: #A7A7AE">7 jobs</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; border-radius: 10px; background: #1E3A5F">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #1C4A30; color: #6FE09A; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#6FE09A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8.25l1.9 1.9 3.6-3.9"></path></svg>Yes</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Backend Developer II</span><span style="font-size: 12px; line-height: 16px; color: #C2C8D2">Northline Freight</span></div>
+<span>Toronto, ON</span>
+<span>Hybrid · 2 days</span>
+<span style="color: #C2C8D2">Greenhouse</span>
+<span style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums">92</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; box-shadow: inset 0 -1px 0 #2C2C2F">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #173A25; color: #5FD38A; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5FD38A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8.25l1.9 1.9 3.6-3.9"></path></svg>Yes</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Senior Software Engineer, Payments</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Maplepay</span></div>
+<span>Toronto, ON</span>
+<span>Remote · Canada</span>
+<span style="color: #A7A7AE">Ashby</span>
+<span style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums">88</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; box-shadow: inset 0 -1px 0 #2C2C2F">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #173A25; color: #5FD38A; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5FD38A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8.25l1.9 1.9 3.6-3.9"></path></svg>Yes</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Backend Engineer, Data Ingestion</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Tidewater Health</span></div>
+<span>Halifax, NS</span>
+<span>Remote · Canada</span>
+<span style="color: #A7A7AE">Lever</span>
+<span style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums">84</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; box-shadow: inset 0 -1px 0 #2C2C2F">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #3D2C10; color: #F5B451; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#F5B451" stroke-width="1.6"><circle cx="8" cy="8" r="6.25"></circle><path d="M8 1.75a6.25 6.25 0 0 0 0 12.5z" fill="#F5B451" stroke="none"></path></svg>Maybe</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Software Developer, Platform</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Cobalt Ledger · Wants Java, you list Go</span></div>
+<span>Waterloo, ON</span>
+<span>Hybrid · 3 days</span>
+<span style="color: #A7A7AE">Workday</span>
+<span style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums">76</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; box-shadow: inset 0 -1px 0 #2C2C2F">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #3D2C10; color: #F5B451; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#F5B451" stroke-width="1.6"><circle cx="8" cy="8" r="6.25"></circle><path d="M8 1.75a6.25 6.25 0 0 0 0 12.5z" fill="#F5B451" stroke="none"></path></svg>Maybe</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Site Reliability Engineer</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Aurora Grid · On-site, outside your cities</span></div>
+<span>Calgary, AB</span>
+<span>On-site</span>
+<span style="color: #A7A7AE">Greenhouse</span>
+<span style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums">68</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; box-shadow: inset 0 -1px 0 #2C2C2F; color: #A7A7AE">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #2C2C30; color: #A0A0A7; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#A0A0A7" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8h5.5"></path></svg>No</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Développeur back-end</span><span style="font-size: 12px; line-height: 16px; color: #8E8E95">Quillstone Média · Needs fluent French</span></div>
+<span>Montréal, QC</span>
+<span>Remote · Quebec</span>
+<span style="color: #8E8E95">Lever</span>
+<span style="text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: #8E8E95">44</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; color: #A7A7AE">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #2C2C30; color: #A0A0A7; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#A0A0A7" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8h5.5"></path></svg>No</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Staff Engineer, Infrastructure</span><span style="font-size: 12px; line-height: 16px; color: #8E8E95">Pinecrest Logistics · Asks for 10+ years</span></div>
+<span>Vancouver, BC</span>
+<span>On-site</span>
+<span style="color: #8E8E95">Ashby</span>
+<span style="text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: #8E8E95">39</span>
+</div>
+
+<div style="display: flex; align-items: baseline; gap: 8px; padding: 18px 12px 6px; border-top: 1px solid #38383C; margin-top: 4px">
+<h2 style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">United States</h2>
+<span style="font-size: 12px; color: #A7A7AE">5 jobs · remote roles that hire in Canada first</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; box-shadow: inset 0 -1px 0 #2C2C2F">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #173A25; color: #5FD38A; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5FD38A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8.25l1.9 1.9 3.6-3.9"></path></svg>Yes</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Backend Engineer, Integrations</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Fernhill Robotics</span></div>
+<span>Boston, MA</span>
+<span>Remote · US &amp; Canada</span>
+<span style="color: #A7A7AE">Ashby</span>
+<span style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums">86</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; box-shadow: inset 0 -1px 0 #2C2C2F">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #173A25; color: #5FD38A; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5FD38A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8.25l1.9 1.9 3.6-3.9"></path></svg>Yes</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Software Engineer II, API Platform</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Brightwater Labs</span></div>
+<span>Seattle, WA</span>
+<span>Remote · N. America</span>
+<span style="color: #A7A7AE">Greenhouse</span>
+<span style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums">81</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; box-shadow: inset 0 -1px 0 #2C2C2F">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #3D2C10; color: #F5B451; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#F5B451" stroke-width="1.6"><circle cx="8" cy="8" r="6.25"></circle><path d="M8 1.75a6.25 6.25 0 0 0 0 12.5z" fill="#F5B451" stroke="none"></path></svg>Maybe</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Backend Engineer, Search</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Larkspur Commerce · Elasticsearch is new to you</span></div>
+<span>Chicago, IL</span>
+<span>Remote · Americas</span>
+<span style="color: #A7A7AE">Lever</span>
+<span style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums">71</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; box-shadow: inset 0 -1px 0 #2C2C2F">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #3D2C10; color: #F5B451; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#F5B451" stroke-width="1.6"><circle cx="8" cy="8" r="6.25"></circle><path d="M8 1.75a6.25 6.25 0 0 0 0 12.5z" fill="#F5B451" stroke="none"></path></svg>Maybe</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Python Developer, Claims</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Halcyon Mutual · Insurance domain is new</span></div>
+<span>Austin, TX</span>
+<span>Remote · US &amp; Canada</span>
+<span style="color: #A7A7AE">Workday</span>
+<span style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums">63</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 120px 128px 84px 44px; gap: 12px; align-items: center; min-height: 48px; padding: 6px 12px; box-sizing: border-box; color: #A7A7AE">
+<span style="display: inline-flex; align-items: center; justify-self: start; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #2C2C30; color: #A0A0A7; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#A0A0A7" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8h5.5"></path></svg>No</span>
+<div style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Senior Backend Engineer</span><span style="font-size: 12px; line-height: 16px; color: #8E8E95">Kestrel Analytics · US work authorization only</span></div>
+<span>New York, NY</span>
+<span>On-site</span>
+<span style="color: #8E8E95">Greenhouse</span>
+<span style="text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: #8E8E95">35</span>
+</div>
+</div>
+</div>
+</main>
+
+<aside aria-label="Selected job" style="flex: 1 1 348px; min-width: 0; box-sizing: border-box; border-left: 1px solid #38383C; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 18px; background: #1C1C1E">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Northline Freight · via Greenhouse</span>
+<h2 style="margin: 0; font-size: 17px; line-height: 22px; font-weight: 700">Backend Developer II</h2>
+<span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Toronto, ON · Hybrid, 2 days a week · Posted 2 days ago</span>
+<span style="font-size: 12px; line-height: 16px; color: #A7A7AE">CA$105,000–125,000 posted range</span>
+</div>
+
+<div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px; background: #2A2A2D">
+<div style="display: flex; flex-direction: column; align-items: center; flex: none">
+<span style="font-size: 28px; line-height: 32px; font-weight: 700; font-variant-numeric: tabular-nums">92</span>
+<span style="font-size: 11px; line-height: 14px; color: #A7A7AE">Match</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0">
+<span style="display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px 0 6px; border-radius: 999px; background: #173A25; color: #5FD38A; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5FD38A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8.25l1.9 1.9 3.6-3.9"></path></svg>Yes, apply</span>
+<span style="font-size: 12px; line-height: 16px; color: #D0D0D6">Covers all 5 must-haves. Hybrid in Toronto fits where you live.</span>
+</div>
+</div>
+
+<section style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+<h3 style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Must-haves</h3>
+<span style="font-size: 12px; color: #A7A7AE">5 of 5 covered</span>
+</div>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px">
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" style="flex: none; margin-top: 1px"><circle cx="8" cy="8" r="7" fill="#34A35A"></circle><path d="M5 8.2l2 2 4-4.3" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg><div style="display: flex; flex-direction: column; min-width: 0"><span>3+ years building services in Go or Java</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Covered · Matched: Go, 4 years</span></div></li>
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" style="flex: none; margin-top: 1px"><circle cx="8" cy="8" r="7" fill="#34A35A"></circle><path d="M5 8.2l2 2 4-4.3" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg><div style="display: flex; flex-direction: column; min-width: 0"><span>PostgreSQL in production</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Covered · Matched: PostgreSQL</span></div></li>
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" style="flex: none; margin-top: 1px"><circle cx="8" cy="8" r="7" fill="#34A35A"></circle><path d="M5 8.2l2 2 4-4.3" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg><div style="display: flex; flex-direction: column; min-width: 0"><span>Event streaming with Kafka</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Covered · Matched: RabbitMQ, an equivalent</span></div></li>
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" style="flex: none; margin-top: 1px"><circle cx="8" cy="8" r="7" fill="#34A35A"></circle><path d="M5 8.2l2 2 4-4.3" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg><div style="display: flex; flex-direction: column; min-width: 0"><span>Designing REST or gRPC APIs</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Covered · Matched: gRPC, REST APIs</span></div></li>
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" style="flex: none; margin-top: 1px"><circle cx="8" cy="8" r="7" fill="#34A35A"></circle><path d="M5 8.2l2 2 4-4.3" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg><div style="display: flex; flex-direction: column; min-width: 0"><span>Legally able to work in Canada</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Covered · From your profile</span></div></li>
+</ul>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+<h3 style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Nice-to-haves</h3>
+<span style="font-size: 12px; color: #A7A7AE">2 of 4 covered</span>
+</div>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px">
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" style="flex: none; margin-top: 1px"><circle cx="8" cy="8" r="7" fill="#34A35A"></circle><path d="M5 8.2l2 2 4-4.3" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg><div style="display: flex; flex-direction: column; min-width: 0"><span>Kubernetes</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Covered · Matched: Kubernetes</span></div></li>
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" style="flex: none; margin-top: 1px"><circle cx="8" cy="8" r="7" fill="#34A35A"></circle><path d="M5 8.2l2 2 4-4.3" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg><div style="display: flex; flex-direction: column; min-width: 0"><span>Logistics or freight experience</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Covered · Matched: Harbourline Logistics</span></div></li>
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#8E8E95" stroke-width="1.5" stroke-dasharray="2.2 2" style="flex: none; margin-top: 1px"><circle cx="8" cy="8" r="6.4"></circle></svg><div style="display: flex; flex-direction: column; min-width: 0"><span>Terraform</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Missing · You list it as Can discuss</span></div></li>
+<li style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#8E8E95" stroke-width="1.5" stroke-dasharray="2.2 2" style="flex: none; margin-top: 1px"><circle cx="8" cy="8" r="6.4"></circle></svg><div style="display: flex; flex-direction: column; min-width: 0"><span>Datadog monitoring</span><span style="font-size: 12px; line-height: 16px; color: #A7A7AE">Missing</span></div></li>
+</ul>
+</section>
+
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px">
+<a href="Build.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 34px; border-radius: 999px; background: #1C6FD8; color: #FFFFFF; font-weight: 600; text-decoration: none"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.75h5.5l3 3v9.5H4z"></path><path d="M9.5 1.75v3h3M6.25 8.5h4M6.25 11h4"></path></svg>Build resume</a>
+<div style="display: flex; gap: 8px">
+<button type="button" style="flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 6px; height: 32px; border: 0; border-radius: 999px; background: #3A3A3E; color: #F2F2F5; font: inherit; font-weight: 500; cursor: pointer"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#F2F2F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2.5h4v4M13.5 2.5l-6 6M12 9.5v3.75H2.75V4H6.5"></path></svg>Open posting</button>
+<button type="button" style="flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 6px; height: 32px; border: 0; border-radius: 999px; background: #3A3A3E; color: #F2F2F5; font: inherit; font-weight: 500; cursor: pointer"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#F2F2F5" stroke-width="1.5" stroke-linecap="round"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"></path></svg>Not for me</button>
+</div>
+</div>
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

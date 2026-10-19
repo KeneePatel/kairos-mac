@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# Xcode and SwiftPM build output
+build/
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcarchive
+App/Kairos.xcodeproj/
+
+# Bundled binaries are fetched by scripts, never committed
+Vendor/
+
+# Secrets and signing material
+.env
+.env.*
+*.p12
+*.cer
+*.mobileprovision
+
+# Local agent settings
+.claude/settings.local.json
