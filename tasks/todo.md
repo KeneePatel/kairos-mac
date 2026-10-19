@@ -115,13 +115,14 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Sources/Store/Database.swift`, `Sources/Store/Statement.swift`, `Sources/Store/Migrator.swift`, `Sources/Store/AccountStore.swift`, `Tests/StoreTests/DatabaseTests.swift`
   - **Done 2026-10-19:** 38 Store tests pass (plus `MigratorTests`, `AccountStoreTests`). System SQLite 3.54.0 has JSON1, STRICT and FTS5. Changed-line coverage 94.7%; project 87.2%.
 
-- [ ] **T10 · Jobs schema and repositories** (M) · deps: T09
+- [x] **T10 · Jobs schema and repositories** (M) · deps: T09
   - **Acceptance:**
-    - [ ] `001_sources_jobs.sql` creates `source`, `search`, `job` and `run` as STRICT tables, with `updated_hlc` and `deleted` on the synced ones (SPEC §6.2).
-    - [ ] Repositories upsert jobs by id, tombstone instead of deleting, stamp HLC on every write, and query by state, verdict and country.
-    - [ ] A job id is the hash of the canonical URL (the same input gives the same id).
+    - [x] `001_sources_jobs.sql` creates `source`, `search`, `job` and `run` as STRICT tables, with `updated_hlc` and `deleted` on the synced ones (SPEC §6.2).
+    - [x] Repositories upsert jobs by id, tombstone instead of deleting, stamp HLC on every write, and query by state, verdict and country.
+    - [x] A job id is the hash of the canonical URL (the same input gives the same id).
   - **Verify:** `core-test StoreTests`
   - **Files:** `Sources/Store/Schema/001_sources_jobs.sql`, `Sources/Store/JobRepository.swift`, `Sources/Store/SourceRepository.swift`, `Tests/StoreTests/JobRepositoryTests.swift`
+  - **Done 2026-10-19:** 63 Store tests pass. The HLC clock lives in the `Database` actor, so stamps follow commit order. Also added: `city` on `job` and `empty_runs` on `source` (SPEC §6.2 updated), the degraded-after-3-empty-runs rule, and `knownIDs` for the fetch de-duplication step.
 
 - [ ] **T11 · HTTP client and Greenhouse source** (M) · deps: T02
   - **Acceptance:**

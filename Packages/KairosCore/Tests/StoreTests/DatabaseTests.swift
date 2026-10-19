@@ -138,6 +138,26 @@ struct DatabaseTests {
         #expect(values == [1, 3])
     }
 
+    @Test func eachWriteGetsANewerStampFromThisDevicesClock() async throws {
+        let db = try Database(path: ":memory:", device: "0000abcd", now: { 42 })
+        let first = try await db.write { _, stamp in stamp }
+        let second = try await db.write { _, stamp in stamp }
+        #expect(first.hlc < second.hlc)
+        #expect(first.hlc.device == "0000abcd" && first.milliseconds == 42)
+    }
+
+    @Test func aMalformedDeviceIDIsRejected() {
+        #expect(throws: StoreError.invalidDevice("Mac")) { try Database(path: ":memory:", device: "Mac") }
+    }
+
+    @Test func newIDsAreVersion7AndSortInCreationOrder() async throws {
+        let db = try memory()
+        var ids: [UUID] = []
+        for _ in 0..<5 { ids.append(await db.newID()) }
+        #expect(ids.allSatisfy { $0.uuid.6 >> 4 == 7 })
+        #expect(ids.map(\.lowercased) == ids.map(\.lowercased).sorted())
+    }
+
     @Test func aFileDatabaseUsesWriteAheadLogging() async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("kairos-db-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

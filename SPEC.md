@@ -540,7 +540,8 @@ One per user. It's the complete record of everything they've done, longer than a
 ### 6.1 Principles
 - One SQLite file per account, WAL mode, STRICT tables.
 - **Synced tables** carry `updated_hlc TEXT NOT NULL` (hybrid logical clock, compares as a string) and `deleted INTEGER NOT NULL DEFAULT 0` (a tombstone). **Local-only tables** never leave the Mac.
-- Ids: `job.id` = hash of the canonical URL; everything else UUIDv7.
+- Ids: `job.id` = the first 16 bytes of SHA-256 over the canonical URL, as lowercase hex; everything else UUIDv7.
+- Times are INTEGER milliseconds since 1970 (UTC). Enum-like columns have no `CHECK` list, because a `CHECK` can't change without rebuilding the table; the Swift types hold the allowed values, and an unknown value is reported as a damaged row rather than guessed.
 - No `FOREIGN KEY` constraints in synced tables (rows can arrive out of order). Integrity is enforced in repositories and checked by `kairos doctor`.
 - Local migrations are append-only (`Schema/NNN_*.sql`). The server has its own migrations in `Backend/supabase/migrations/`, and they rarely change because the remote store is generic.
 
@@ -552,9 +553,9 @@ One per user. It's the complete record of everything they've done, longer than a
 | `resume_entry` | yes | Master resume entries | kind (experience, project, education, certification, award, volunteering, publication, language, custom), fields JSON (per kind), start, end, sort |
 | `resume_bullet` | yes | A bullet under an entry; its id is what tailored bullets cite | entry_id, text, metrics JSON, skills JSON, sort |
 | `skill` | yes | Skills to draw from | name, category, level (proven, can_discuss), sort |
-| `source` | yes | Configured sources | kind, config JSON, enabled, last_run_at, health |
+| `source` | yes | Configured sources | kind, config JSON, enabled, last_run_at, health, empty_runs (runs in a row with no results) |
 | `search` | yes | Saved searches | terms JSON, location, countries JSON (ordered), remote, max_age_hours |
-| `job` | yes* | Postings | source_id, url, canonical_url, dedup_key, company, title, location, country, region, remote_scope, currency, posted_at, salary JSON, description, state, verdict, verdict_source, rank, first_seen_at |
+| `job` | yes* | Postings | source_id, url, canonical_url, dedup_key, company, title, location, city, country, region, remote_scope, currency, posted_at, salary JSON, description, state, verdict, verdict_source, rank, first_seen_at |
 | `job_analysis` | yes | Requirements | job_id, requirements JSON, flags JSON (sponsorship, clearance, language, remote scope), domains JSON, model, prompt_version |
 | `screening` | yes | Verdict trail | job_id, stage, verdict, rule_id, coverage JSON, reasons |
 | `build` | yes | One tailoring run | job_id, mode (strict, stretch, lite), master_version, status, template_id, content JSON (bullets carry `source_ids` and `verified`), match_score, breakdown JSON, iterations, cover_letter JSON, error, timestamps |

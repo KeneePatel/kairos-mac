@@ -77,7 +77,7 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 ### Phase 1: R1 Local MVP
 **Slice 1: Jobs in**
 - [x] T09 SQLite wrapper and migrator
-- [ ] T10 Jobs schema and repositories
+- [x] T10 Jobs schema and repositories
 - [ ] T11 HTTP client and Greenhouse source
 - [ ] T12 Lever and Ashby sources, ATS detection
 - [ ] T13 Normalization, geography, de-duplication

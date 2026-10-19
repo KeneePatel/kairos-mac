@@ -9,6 +9,11 @@ public enum StoreError: Error, Equatable, Sendable {
     case migrationOrder(String)
     case invalidAccount(String)
     case directory(String)
+    case invalidDevice(String)
+    /// A value that can't be stored, such as a pay range of infinity.
+    case invalidValue(String)
+    /// A stored value this version can't read, such as an unknown enum value.
+    case corruptRow(table: String, id: String, column: String)
 
     static func message(_ db: OpaquePointer) -> String { String(cString: sqlite3_errmsg(db)) }
 }
@@ -89,13 +94,31 @@ public final class Connection {
     }
 }
 
+/// One clock reading for a write. Every synced row the write touches gets `hlc` (SPEC §6.4).
+public struct WriteStamp: Sendable, Equatable {
+    public let hlc: HLCTimestamp
+    public let milliseconds: Int64
+}
+
 /// The app's SQLite database. An actor, so every statement runs one at a time on one connection.
+/// It also owns the device's hybrid logical clock, so stamps are taken in commit order.
 public actor Database {
     public let path: String
     private let connection: Connection
+    private var clock: HybridLogicalClock
+    private var ids = UUIDv7Generator()
+    private let now: @Sendable () -> Int64
 
     /// Opens (or creates) the database at `path`. Use ":memory:" for tests.
-    public init(path: String) throws(StoreError) {
+    /// `device` is the 8-hex-digit id in this device's HLC stamps; random when nil. The sync task
+    /// stores a stable one in `sync_state` and passes it here. `now` is the wall clock in milliseconds.
+    public init(
+        path: String, device: String? = nil, now: @escaping @Sendable () -> Int64 = Database.wallClockMilliseconds
+    ) throws(StoreError) {
+        let device = device ?? String(format: "%08x", UInt32.random(in: .min ... .max))
+        guard let clock = try? HybridLogicalClock(device: device) else { throw .invalidDevice(device) }
+        self.clock = clock
+        self.now = now
         self.path = path
         let connection = try Connection(path: path)
         try connection.executeScript("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;")
@@ -117,6 +140,22 @@ public actor Database {
     /// Runs `body` in one transaction: all of it commits, or none of it does.
     public func transaction<T: Sendable>(_ body: @Sendable (Connection) throws -> T) throws -> T {
         try connection.transaction(body)
+    }
+
+    /// Like `transaction`, and hands `body` a fresh stamp for the synced rows it writes.
+    public func write<T: Sendable>(_ body: @Sendable (Connection, WriteStamp) throws -> T) throws -> T {
+        let milliseconds = now()
+        let stamp = WriteStamp(hlc: clock.tick(now: milliseconds), milliseconds: milliseconds)
+        return try connection.transaction { try body($0, stamp) }
+    }
+
+    /// A new UUIDv7 for a row that isn't a job (SPEC §6.1).
+    public func newID() -> UUID {
+        ids.next(now: UInt64(clamping: now()))
+    }
+
+    public static let wallClockMilliseconds: @Sendable () -> Int64 = {
+        Int64((Date().timeIntervalSince1970 * 1000).rounded(.down))
     }
 
     public func journalMode() throws(StoreError) -> String {
