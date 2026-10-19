@@ -50,4 +50,11 @@ public struct UUIDv7Generator: Sendable {
 extension UUID {
     /// The lowercase form stored in `id` columns.
     public var lowercased: String { uuidString.lowercased() }
+
+    /// A fresh UUIDv7 for a row created outside the store, such as a bullet added in the editor.
+    /// Ordering between separate calls isn't guaranteed; rows are ordered by their `sort` column.
+    public static func v7(at date: Date = Date()) -> UUID {
+        var generator = UUIDv7Generator()
+        return generator.next(now: UInt64(clamping: Int64((date.timeIntervalSince1970 * 1000).rounded(.down))))
+    }
 }

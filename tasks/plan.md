@@ -86,7 +86,7 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 #### Checkpoint B: add 3 real companies, fetch, see de-duplicated jobs with countries (passed 2026-10-19)
 
 **Slice 2: Master resume, plus the LLM layer**
-- [ ] T15 Master resume schema, model, versioning
+- [x] T15 Master resume schema, model, versioning
 - [ ] T16 Master resume validation
 - [ ] T17 Editor: contact, skills, additional sections
 - [ ] T18 Editor: experience, projects, education

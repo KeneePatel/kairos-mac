@@ -169,13 +169,14 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
 
 ### Slice 2: Master resume, plus the LLM layer
 
-- [ ] **T15 · Master resume schema, model, versioning** (M) · deps: T09
+- [x] **T15 · Master resume schema, model, versioning** (M) · deps: T09
   - **Acceptance:**
-    - [ ] `002_master_resume.sql` creates `resume_contact`, `resume_entry`, `resume_bullet` and `skill` (SPEC §6.2).
-    - [ ] Swift model types for the contact block, every entry kind, bullets and skills (Proven or Can discuss).
-    - [ ] Every save increments `master_version` in the same transaction; entry and bullet ids stay stable across edits.
+    - [x] `002_master_resume.sql` creates `resume_contact`, `resume_entry`, `resume_bullet` and `skill` (SPEC §6.2).
+    - [x] Swift model types for the contact block, every entry kind, bullets and skills (Proven or Can discuss).
+    - [x] Every save increments `master_version` in the same transaction; entry and bullet ids stay stable across edits.
   - **Verify:** `core-test MasterResumeTests`
   - **Files:** `Sources/Store/Schema/002_master_resume.sql`, `Sources/MasterResume/Model.swift`, `Sources/MasterResume/MasterResumeRepository.swift`, `Tests/MasterResumeTests/RepositoryTests.swift`
+  - **Done 2026-10-19:** 18 MasterResume tests. Edits are small operations (save header, save entries, delete, reorder, skills), each one transaction with its own version bump, rather than one whole-document save: that would delete rows another device added since the editor loaded, once sync exists. Bullets dropped from an entry are tombstoned, so builds that cited them can still say so. Dates are months (`YYYY-MM`); entry fields are typed per kind.
 
 - [ ] **T16 · Master resume validation** (S, test-first) · deps: T15
   - **Acceptance:**

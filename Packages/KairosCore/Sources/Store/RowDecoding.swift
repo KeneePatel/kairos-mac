@@ -2,64 +2,69 @@ import Foundation
 
 /// Reads typed columns for a repository, throwing `corruptRow` instead of guessing when a stored
 /// value doesn't fit (a missing NOT NULL value, or an enum value this version doesn't know).
-struct RowReader {
-    let row: Row
-    let table: String
+public struct RowReader {
+    public let row: Row
+    public let table: String
+
+    public init(row: Row, table: String) {
+        self.row = row
+        self.table = table
+    }
 
     private var id: String { row.string("id") ?? "?" }
 
-    private func corrupt(_ column: String) -> StoreError {
+    public func corrupt(_ column: String) -> StoreError {
         .corruptRow(table: table, id: id, column: column)
     }
 
-    func string(_ column: String) throws(StoreError) -> String {
+    public func string(_ column: String) throws(StoreError) -> String {
         guard let value = row.string(column) else { throw corrupt(column) }
         return value
     }
 
-    func int(_ column: String) throws(StoreError) -> Int {
+    public func int(_ column: String) throws(StoreError) -> Int {
         guard let value = row.int(column) else { throw corrupt(column) }
         return value
     }
 
-    func bool(_ column: String) throws(StoreError) -> Bool {
+    public func bool(_ column: String) throws(StoreError) -> Bool {
         guard let value = row.bool(column) else { throw corrupt(column) }
         return value
     }
 
-    func date(_ column: String) throws(StoreError) -> Date {
+    public func date(_ column: String) throws(StoreError) -> Date {
         guard let value = row.int64(column) else { throw corrupt(column) }
         return Date(milliseconds: value)
     }
 
-    func optionalDate(_ column: String) -> Date? {
+    public func optionalDate(_ column: String) -> Date? {
         row.int64(column).map(Date.init(milliseconds:))
     }
 
-    func uuid(_ column: String) throws(StoreError) -> UUID {
+    public func uuid(_ column: String) throws(StoreError) -> UUID {
         guard let text = row.string(column), let value = UUID(uuidString: text) else { throw corrupt(column) }
         return value
     }
 
-    func hlc(_ column: String) throws(StoreError) -> HLCTimestamp {
+    public func hlc(_ column: String) throws(StoreError) -> HLCTimestamp {
         guard let text = row.string(column), let value = try? HLCTimestamp(text) else { throw corrupt(column) }
         return value
     }
 
-    func value<E: RawRepresentable>(_ column: String, as type: E.Type) throws(StoreError) -> E
+    public func value<E: RawRepresentable>(_ column: String, as type: E.Type) throws(StoreError) -> E
     where E.RawValue == String {
         guard let text = row.string(column), let value = E(rawValue: text) else { throw corrupt(column) }
         return value
     }
 
-    func optionalValue<E: RawRepresentable>(_ column: String, as type: E.Type) throws(StoreError) -> E?
+    public func optionalValue<E: RawRepresentable>(_ column: String, as type: E.Type) throws(StoreError) -> E?
     where E.RawValue == String {
         guard let text = row.string(column) else { return nil }
         guard let value = E(rawValue: text) else { throw corrupt(column) }
         return value
     }
 
-    func json<T: Decodable>(_ column: String, as type: T.Type) throws(StoreError) -> T? {
+    public func json<T: Decodable>(_ column: String, as type: T.Type) throws(StoreError) -> T? {
         guard let text = row.string(column) else { return nil }
         guard let value = try? JSONDecoder().decode(T.self, from: Data(text.utf8)) else { throw corrupt(column) }
         return value
@@ -67,19 +72,19 @@ struct RowReader {
 }
 
 extension Date {
-    init(milliseconds: Int64) {
+    public init(milliseconds: Int64) {
         self.init(timeIntervalSince1970: Double(milliseconds) / 1000)
     }
 
-    var milliseconds: Int64 { Int64((timeIntervalSince1970 * 1000).rounded(.down)) }
+    public var milliseconds: Int64 { Int64((timeIntervalSince1970 * 1000).rounded(.down)) }
 }
 
 extension SQLValue {
-    init(_ date: Date?) { self = date.map { .integer($0.milliseconds) } ?? .null }
+    public init(_ date: Date?) { self = date.map { .integer($0.milliseconds) } ?? .null }
 
-    init<E: RawRepresentable>(_ value: E?) where E.RawValue == String { self = SQLValue(value?.rawValue) }
+    public init<E: RawRepresentable>(_ value: E?) where E.RawValue == String { self = SQLValue(value?.rawValue) }
 
-    init<T: Encodable>(json value: T?) throws(StoreError) {
+    public init<T: Encodable>(json value: T?) throws(StoreError) {
         guard let value else {
             self = .null
             return
