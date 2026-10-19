@@ -216,20 +216,21 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
   - **Files:** `Sources/LLM/LLMTask.swift`, `Sources/LLM/JSONSchema.swift`, `Sources/LLM/SchemaValidator.swift`, `Sources/LLM/FakeProvider.swift`, `Tests/LLMTests/SchemaValidatorTests.swift`
   - **Done 2026-10-19:** written test-first; 19 LLM tests. The validator reports every issue in document order (up to 20), so the single repair call can quote them all. Unknown extra properties are ignored when validating but the exported schema says `additionalProperties: false`, which strict provider modes need. `LLMProvider` (one model call, nothing more) is the seam T21's adapters implement.
 
-- [ ] **T20 · Spike: live structured output** (S) · deps: T19 · your step: a Gemini key (and optionally local Ollama)
+- [x] **T20 · Spike: live structured output** (S) · deps: T19 · your step: a Gemini key (and optionally local Ollama)
   - **Acceptance:**
-    - [ ] Opt-in live tests send a sample schema to Gemini's OpenAI-compatible endpoint (`response_format` with a JSON schema) and to Ollama `/v1` (JSON mode, and a schema attempt).
-    - [ ] Real replies are captured as fixtures, with keys and personal data removed.
-    - [ ] The write-up states each preset's capability flag.
+    - [x] Opt-in live tests send a sample schema to Gemini's OpenAI-compatible endpoint (`response_format` with a JSON schema) and to Ollama `/v1` (JSON mode, and a schema attempt).
+    - [x] Real replies are captured as fixtures, with keys and personal data removed.
+    - [x] The write-up states each preset's capability flag.
   - **Verify:** `KAIROS_LIVE_LLM=1 core-test LiveStructuredOutput`; `docs/spikes/structured-output.md`
   - **Files:** `Tests/LLMTests/LiveStructuredOutputTests.swift`, `Tests/Fixtures/llm/*.json`, `docs/spikes/structured-output.md`
-  - **Prepared 2026-10-19 (waiting on your key):** the harness is in `LiveStructuredOutputTests.swift`. It asks Gemini's `GET /models` for the newest Flash and Flash-Lite, then sends a sample posting in schema mode and in JSON mode, prints one line per request (valid or the schema issues, fences, tokens, latency) and saves each reply to `Tests/Fixtures/llm/`. Ollama runs too once a model is installed (`ollama pull <model>`; `OLLAMA_MODEL` picks one). Run it in your own terminal so the key stays out of any transcript: `KAIROS_LIVE_LLM=1 GEMINI_API_KEY=… swift test --package-path Packages/KairosCore --filter LiveStructuredOutput`.
+  - **Done 2026-10-19** (you ran Gemini; I ran Ollama `qwen3.5:4B`): see `docs/spikes/structured-output.md`. Gemini Flash-Lite passes in strict schema mode (half the tokens of JSON mode). Ollama refuses every `response_format` for this model with HTTP 501 but answers correctly with the schema in the prompt; with thinking on it takes about 100 s per posting. `RecordedRepliesTests` checks every saved reply offline: schema, precision and recall against hand labels, error shapes, and no keys. One follow-up run with your key measures Gemini Flash (not Lite); the first run's picker chose a variant with no free-tier quota and has been fixed.
 
 - [ ] **T21 · OpenAI-compatible adapter and presets** (M) · deps: T20
   - **Acceptance:**
     - [ ] Presets for Gemini, Ollama local, Ollama Cloud, Groq, OpenRouter and OpenAI, each with its base URL and capability flags (from T20).
     - [ ] Builds `chat/completions` requests (with `response_format` mode and `reasoning_effort` where supported), parses `usage`, and lists models with `GET /models`.
     - [ ] Maps 400, 401, 403, 404, 429 (with `Retry-After`) and 5xx to typed errors.
+    - [ ] From T20: capability is per (provider, model). HTTP 501 "structured output is unavailable" (Ollama) resends once without `response_format` and remembers the model as prompt-only. Gemini errors arrive as an array (`[{"error":…}]`); both shapes parse. A 429 whose quota limit is 0 maps to "model not on your plan", not a rate limit. Model defaults use Google's `gemini-flash-latest` / `gemini-flash-lite-latest` aliases.
   - **Verify:** `core-test LLMTests` (recorded fixtures)
   - **Files:** `Sources/LLM/OpenAICompatibleProvider.swift`, `Sources/LLM/ProviderPreset.swift`, `Tests/LLMTests/OpenAICompatibleProviderTests.swift`
 
@@ -238,6 +239,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - [ ] Token-bucket limiter (requests per minute) and a concurrency cap per provider. Retries: 3 with backoff and jitter for network errors and 5xx. 429 rotates keys and honors `Retry-After`. 4xx are never retried.
     - [ ] The output pipeline decodes (stripping code fences), validates against the schema, runs the task's check, and makes one repair call that includes the error.
     - [ ] Cancellation stops in-flight requests. All timing is tested with a fake clock.
+    - [ ] From T20: 501 is never retried; no wait exceeds 60 s (a free-tier 429 asked for 14 hours); local providers get a longer timeout (180 s) and run extraction with thinking off by default.
   - **Verify:** `core-test LLMTests`
   - **Files:** `Sources/LLM/LLMClient.swift`, `Sources/LLM/RateLimiter.swift`, `Sources/LLM/OutputPipeline.swift`, `Tests/LLMTests/LLMClientTests.swift`
 

@@ -1,0 +1,8 @@
+{
+  "error" : {
+    "code" : null,
+    "message" : "structured output is unavailable",
+    "param" : null,
+    "type" : "api_error"
+  }
+}

@@ -91,7 +91,7 @@ R4: T57 release workflow · T58–T60 PWA                         needs R3
 - [x] T17 Editor: contact, skills, additional sections
 - [x] T18 Editor: experience, projects, education
 - [x] T19 LLM core: tasks, schema validator, fake provider
-- [ ] T20 Spike: live structured output (Gemini, Ollama)
+- [x] T20 Spike: live structured output (Gemini, Ollama)
 - [ ] T21 OpenAI-compatible adapter and presets
 - [ ] T22 LLM client: rate limits, retries, key rotation, repair
 - [ ] T23 Router, budget, cache, call log

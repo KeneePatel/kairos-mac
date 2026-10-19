@@ -48,10 +48,11 @@ struct LiveStructuredOutputTests {
         let base = "https://generativelanguage.googleapis.com/v1beta/openai"
         let models = try await Self.listModels(base: base, key: key)
         print("live: Gemini lists \(models.count) models; flash ones:", models.filter { $0.contains("flash") })
-        for model in [Self.pick(models, containing: "flash-lite"), Self.pick(models, containing: "flash")].compactMap({
-            $0
-        }) {
-            for mode in Mode.allCases {
+        Self.save(
+            Data(JSONValue.array(models.sorted().map(JSONValue.string)).jsonString.utf8), as: "gemini-models.json")
+        // Free-tier quota is small, so Gemini gets the two modes the preset would use.
+        for model in [Self.newest(models, lite: true), Self.newest(models, lite: false)].compactMap({ $0 }) {
+            for mode in [Mode.schema, .json] {
                 await Self.probe(preset: "gemini", base: base, key: key, model: model, mode: mode)
             }
         }
@@ -77,20 +78,29 @@ struct LiveStructuredOutputTests {
         case schema
         /// `response_format: json_object`, with the shape described in the prompt.
         case json
+        /// No `response_format`: the shape only in the prompt. The fallback when a model refuses
+        /// structured output (Ollama's qwen3.5 build did on 2026-10-19).
+        case plain
+        /// `plain` with thinking off (`reasoning_effort: none`), for thinking models.
+        case plainNoThinking = "plain-no-thinking"
     }
 
     /// One request; prints a result line and saves the reply. Never fails the test on a model's
     /// answer: the spike's job is to record what each preset does.
     static func probe(preset: String, base: String, key: String?, model: String, mode: Mode) async {
-        let format =
+        let options =
             switch mode {
             case .schema:
-                #"{"type":"json_schema","json_schema":{"name":"analysis","strict":true,"schema":\#(schema.jsonString)}}"#
+                #","response_format":{"type":"json_schema","json_schema":{"name":"analysis","strict":true,"schema":\#(schema.jsonString)}}"#
             case .json:
-                #"{"type":"json_object"}"#
+                #","response_format":{"type":"json_object"}"#
+            case .plain:
+                ""
+            case .plainNoThinking:
+                #","reasoning_effort":"none""#
             }
         let body = """
-            {"model":\(quote(model)),"temperature":0,"response_format":\(format),"messages":[\
+            {"model":\(quote(model)),"temperature":0\(options),"messages":[\
             {"role":"system","content":\(quote(system))},\
             {"role":"user","content":\(quote("<job_posting>\n\(posting)\n</job_posting>"))}]}
             """
@@ -119,7 +129,7 @@ struct LiveStructuredOutputTests {
                 verdict += " · " + String(text.prefix(200))
             }
             print("live: \(preset) \(model) [\(mode.rawValue)] \(verdict) · \(elapsed)")
-            save(data, as: "\(preset)-\(mode.rawValue)-\(model.replacing("/", with: "_")).json")
+            save(data, as: "\(preset)-\(mode.rawValue)-\(model.replacing(/[\/:]/, with: "_")).json")
         } catch {
             print("live: \(preset) \(model) [\(mode.rawValue)] request failed: \(error)")
         }
@@ -146,15 +156,23 @@ struct LiveStructuredOutputTests {
         }
     }
 
-    /// The newest-looking id containing `fragment` (ids sort roughly by version), skipping previews.
-    static func pick(_ models: [String], containing fragment: String) -> String? {
-        let matches = models.filter { $0.contains(fragment) && !$0.contains("preview") && !$0.contains("tts") }
-        let others = fragment == "flash" ? matches.filter { !$0.contains("lite") } : matches
-        return others.sorted().last
+    /// Google's own `gemini-flash(-lite)-latest` alias when listed, else the highest-numbered plain
+    /// `gemini-<version>-flash(-lite)`. Variants (omni, preview, tts, image, live) never qualify: the
+    /// first run picked `gemini-omni-1.1-flash` by sorting names, and its free-tier limit is 0.
+    static func newest(_ models: [String], lite: Bool) -> String? {
+        let alias = lite ? "gemini-flash-lite-latest" : "gemini-flash-latest"
+        if models.contains(alias) { return alias }
+        let pattern = lite ? /gemini-(\d+(?:\.\d+)?)-flash-lite/ : /gemini-(\d+(?:\.\d+)?)-flash/
+        let numbered = models.compactMap { id -> (Double, String)? in
+            guard let match = id.wholeMatch(of: pattern), let version = Double(match.1) else { return nil }
+            return (version, id)
+        }
+        return numbered.max { $0.0 < $1.0 }?.1
     }
 
     static func send(_ url: String, key: String?, body: Data) async throws -> (Int, Data) {
-        var request = URLRequest(url: URL(string: url)!, timeoutInterval: 120)
+        // A thinking model on a laptop took 92 s on 2026-10-19, so local runs get room.
+        var request = URLRequest(url: URL(string: url)!, timeoutInterval: 300)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let key { request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization") }
@@ -167,14 +185,30 @@ struct LiveStructuredOutputTests {
         let folder = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .appending(path: "Fixtures/llm")
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        // Pretty-printed so a reviewer can read it; responses carry no key.
+        // Pretty-printed so a reviewer can read it. Responses carry no key; Gemini's opaque
+        // thought signatures are dropped all the same, since nothing needs them.
         let pretty = (try? JSONValue(parsing: String(decoding: data, as: UTF8.self)))
+            .map(redacted)
             .flatMap { value -> Data? in
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
                 return try? encoder.encode(value)
             }
         try? (pretty ?? data).write(to: folder.appending(path: name))
+    }
+
+    static func redacted(_ value: JSONValue) -> JSONValue {
+        switch value {
+        case .object(let fields):
+            .object(
+                fields.reduce(into: [:]) {
+                    $0[$1.key] = $1.key == "thought_signature" ? .string("redacted") : redacted($1.value)
+                })
+        case .array(let items):
+            .array(items.map(redacted))
+        default:
+            value
+        }
     }
 
     static func quote(_ text: String) -> String { JSONValue.string(text).jsonString }

@@ -386,7 +386,7 @@ let result = try await llm.run(AnalyzeJobTask(), input: job)
 | Provider preset | How JSON is requested | Notes |
 |---|---|---|
 | Gemini (OpenAI-compatible endpoint) | `response_format` with a JSON schema | Google labels the compatibility layer beta. `reasoning_effort` maps to Gemini thinking levels, and thinking tokens count against output, so budgets include headroom |
-| Ollama local (`localhost:11434/v1`) and Ollama Cloud (`ollama.com/v1`) | `response_format` JSON mode, with the schema in the prompt | Ollama's native API accepts a schema; switch the preset to schema mode once that's verified on `/v1` |
+| Ollama local (`localhost:11434/v1`) and Ollama Cloud (`ollama.com/v1`) | Learned per model: `response_format` where the model supports it, else the schema in the prompt only | Spike T20: `qwen3.5:4B` on Ollama 0.40 refuses every `response_format` (and the native `format`) with HTTP 501; the adapter resends once without it and remembers the model as prompt-only |
 | Groq, OpenRouter, OpenAI | Schema where the model supports it, else JSON mode | Capability flag per preset |
 | Anthropic (optional) | A forced tool call whose input schema is the output schema | — |
 | Foundation Models | `@Generable` Swift types (guided generation) | No JSON parsing at all |
@@ -403,6 +403,8 @@ Whatever the provider promises, every reply goes through the same checks:
   - Network errors and 5xx: 3 attempts with exponential backoff and jitter.
   - 429: rotate to the next key in the pool and honor `Retry-After`. When every key is limited, wait (≤ 60 s) or move to the next provider in the task's fallback chain (default: Gemini → local Ollama, if it's running).
   - 400, 401, 403 and 404: never retried; shown as "key rejected" or "model not found".
+  - 501 "structured output is unavailable": never retried; resent once without `response_format` (T20).
+  - A 429 whose quota limit is 0 means the model isn't on the user's plan: skip to the next model rather than wait (T20 saw a 14-hour retry delay).
 - **Client-side rate limiter** per provider: requests per minute (default 10 for free tiers) and at most 2 concurrent calls, so runs don't trigger 429 storms.
 - **Idempotent steps:** results are cached by (task, input hash, prompt version, model) in `llm_cache`. A crashed or cancelled build resumes from its last completed step instead of paying again.
 
