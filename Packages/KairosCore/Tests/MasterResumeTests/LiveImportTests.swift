@@ -68,6 +68,16 @@ struct LiveImportTests {
         await Self.run(LLMClient(keys: [provider], policy: ClientPolicy(preset: .gemini)), model: "gemini-flash-latest")
     }
 
+    @Test func geminiFlashLite() async throws {
+        guard let key = ProcessInfo.processInfo.environment["GEMINI_API_KEY"], !key.isEmpty else {
+            print("live: GEMINI_API_KEY not set; skipping Gemini")
+            return
+        }
+        let provider = OpenAICompatibleProvider(preset: .gemini, key: key)
+        await Self.run(
+            LLMClient(keys: [provider], policy: ClientPolicy(preset: .gemini)), model: "gemini-flash-lite-latest")
+    }
+
     @Test func ollama() async throws {
         let model = ProcessInfo.processInfo.environment["OLLAMA_MODEL"] ?? "qwen3.5:4B"
         let provider = OpenAICompatibleProvider(preset: .ollamaLocal, key: nil)

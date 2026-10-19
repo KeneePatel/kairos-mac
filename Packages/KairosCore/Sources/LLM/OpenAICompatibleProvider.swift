@@ -118,8 +118,9 @@ public struct OpenAICompatibleProvider: LLMProvider {
         ]
         switch (mode, request.schema) {
         case (.schema, let schema?):
+            // Item counts stay out of strict schemas (Gemini refuses them); they're checked on the reply.
             fields.append(
-                #""response_format":{"type":"json_schema","json_schema":{"name":"\#(request.task.rawValue)","strict":true,"schema":\#(schema.jsonString)}}"#
+                #""response_format":{"type":"json_schema","json_schema":{"name":"\#(request.task.rawValue)","strict":true,"schema":\#(schema.withoutItemCounts.jsonString)}}"#
             )
         case (.jsonMode, _?):
             fields.append(#""response_format":{"type":"json_object"}"#)

@@ -166,6 +166,34 @@ struct OpenAICompatibleProviderTests {
         #expect(noSchema["reasoning_effort"] == nil)  // Groq's preset doesn't take it
     }
 
+    /// Gemini answers a strict schema whose lists carry item counts with a bare "Request contains an
+    /// invalid argument" (`importResume`, 2026-10-19). The counts are checked on the reply instead.
+    @Test func strictSchemasLeaveItemCountsToLocalChecks() async throws {
+        let lists = JSONSchema.object([.required("bullets", .array(of: .string(maxLength: 600), maxItems: 40))])
+        let ok = try fixture("gemini-json-gemini-flash-latest.json")
+        let transport = FakeTransport([.init(body: ok), .init(body: ok)])
+        _ = try await OpenAICompatibleProvider(preset: .gemini, key: "k", transport: transport)
+            .complete(request(schema: lists))
+        _ = try await OpenAICompatibleProvider(preset: .ollamaLocal, key: nil, transport: transport)
+            .complete(request(model: "llama", schema: lists))
+
+        let strict = try sentBody(transport.sent[0])
+        let prompted = try sentBody(transport.sent[1])
+        guard case .object(let format)? = strict["response_format"],
+            case .object(let jsonSchema)? = format["json_schema"],
+            case .array(let messages)? = prompted["messages"], case .object(let system)? = messages.first,
+            case .string(let content)? = system["content"]
+        else {
+            Issue.record("unexpected request bodies")
+            return
+        }
+        let expected = try JSONValue(
+            parsing: #"{"type":"object","additionalProperties":false,"required":["bullets"],"#
+                + #""properties":{"bullets":{"type":"array","items":{"type":"string","maxLength":600}}}}"#)
+        #expect(jsonSchema["schema"] == expected)
+        #expect(content.contains(#""maxItems":40"#))  // a prompt still tells the model the limit
+    }
+
     @Test func cloudCallsUseTheTasksTimeoutAndLocalOnesTheirOwn() async throws {
         let ok = try fixture("gemini-json-gemini-flash-latest.json")
         let transport = FakeTransport([.init(body: ok), .init(body: ok)])

@@ -51,6 +51,22 @@ public indirect enum JSONSchema: Equatable, Sendable {
         }
     }
 
+    /// The same schema with no `maxItems` anywhere, for strict schema modes. Gemini refuses a strict
+    /// schema whose lists carry item counts once it grows past a few small lists, saying only "Request
+    /// contains an invalid argument" (`importResume`, 2026-10-19). `SchemaValidator` still checks the
+    /// counts on every reply.
+    public var withoutItemCounts: JSONSchema {
+        switch self {
+        case .object(let properties):
+            .object(
+                properties.map {
+                    Property(name: $0.name, schema: $0.schema.withoutItemCounts, isRequired: $0.isRequired)
+                })
+        case .array(let items, _): .array(of: items.withoutItemCounts)
+        case .string, .enumeration, .integer, .number, .boolean: self
+        }
+    }
+
     private func field(_ name: String, _ value: Int?) -> String {
         value.map { ",\"\(name)\":\($0)" } ?? ""
     }

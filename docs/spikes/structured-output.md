@@ -31,11 +31,29 @@
 
 That fills the last cell: Gemini Flash does strict schema mode. The client counted hidden thinking as output, as designed. The run's output doesn't say why Flash's first try failed; a temporary 503 (seen in T20) and a rate limit are both handled.
 
+**Larger schemas (T25 follow-up, 2026-10-19, `importResume`):** Gemini refused the resume-import request in strict mode with a bare HTTP 400 "Request contains an invalid argument", with no mention of the schema. Bisected live on `gemini-flash-latest`, one change at a time:
+
+| Request | Result |
+|---|---|
+| full schema, strict | 400 (also with 1,500 output tokens) |
+| full schema, `json_object` | 200 |
+| full schema without `maxItems`, strict | 200 |
+| full schema without `maxLength`, strict | 400 |
+| no limits at all, strict | 200 |
+| header fields only (string lengths, a number range, no lists), strict | 200 |
+| experience only; education only; skills and education; the optional lists only, strict | 400 each |
+
+`gemini-flash-lite-latest` refuses the same request the same way. The cause is item counts on lists: Gemini's strict mode turns them into a grammar that grows with the count, and it rejects the result without saying why. The small `analyzeJob` and `importGitHubRepo` schemas (counts of 12 and 4) were under that limit.
+
+**Fix:** strict schema requests leave out `maxItems` (`JSONSchema.withoutItemCounts`), for every provider. `SchemaValidator` still checks counts on every reply, and the repair call handles a reply that breaks them. JSON and prompt-only modes still show the full schema in the prompt. After the fix, the whole import on Flash-Lite was valid on the first call (4.3 s, 1,205 output tokens).
+
+The bisection used about 14 of Flash's 20 free requests a day: the free tier's daily cap (`limit: 20`, "retry in 8h") is a real constraint on live testing.
+
 ## Capability flags for T21
 
 | Preset | Structured output | Notes |
 |---|---|---|
-| Gemini (OpenAI-compatible) | **schema** | Strict `json_schema` works. It also uses half the tokens of `json_object`, which pretty-prints. |
+| Gemini (OpenAI-compatible) | **schema** | Strict `json_schema` works, without `maxItems` (larger schemas with item counts are refused). It also uses half the tokens of `json_object`, which pretty-prints. |
 | Ollama local | **learned per model**, default **prompt-only** | Some builds refuse every `response_format` with HTTP 501. The adapter must resend without it and remember the model's answer. |
 | Ollama Cloud, Groq, OpenRouter, OpenAI | unmeasured | Start as schema; same 501/400 downgrade path. |
 

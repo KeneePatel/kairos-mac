@@ -133,6 +133,25 @@ struct SchemaExportTests {
         #expect(exported == expected)
     }
 
+    @Test func strictCopiesLeaveItemCountsOutAtEveryDepth() throws {
+        let exported = try JSONValue(parsing: analysis.withoutItemCounts.jsonString)
+        let expected = try JSONValue(
+            parsing: """
+                {"type":"object","additionalProperties":false,"required":["requirements","years"],
+                 "properties":{
+                   "requirements":{"type":"array","items":{"type":"object","additionalProperties":false,
+                     "required":["text","kind"],
+                     "properties":{"text":{"type":"string","maxLength":200},"kind":{"type":"string","enum":["must","nice"]},
+                                   "matched_skill":{"type":"string"}}}},
+                   "years":{"type":"integer","minimum":0,"maximum":40},
+                   "remote":{"type":"boolean"},
+                   "score":{"type":"number","minimum":0,"maximum":1}}}
+                """)
+        #expect(exported == expected)
+        let nested = JSONSchema.array(of: .array(of: .string(maxLength: 5), maxItems: 2), maxItems: 3)
+        #expect(nested.withoutItemCounts == .array(of: .array(of: .string(maxLength: 5))))
+    }
+
     @Test func keepsPropertiesInDeclaredOrder() {
         let json = analysis.jsonString
         let order = ["requirements", "years", "remote", "score"].compactMap {
