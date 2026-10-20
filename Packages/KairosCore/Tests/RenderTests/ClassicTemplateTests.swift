@@ -77,6 +77,7 @@ struct ClassicTemplateTests {
     @Test func theSampleResumeRendersOnOnePageInOrder() async throws {
         let rendered = try await renderer().render(jordan())
         #expect(rendered.pageCount == 1)
+        let text = normalized(try #require(PDFDocument(data: rendered.data)?.string))
         let document = try #require(PDFDocument(data: rendered.data))
         let page = try #require(document.page(at: 0))
         let golden = try String(
@@ -90,6 +91,7 @@ struct ClassicTemplateTests {
             let found = document.findString(line, withOptions: []).map { $0.bounds(for: page).midY }
                 .first { anywhere || $0 <= cursor + 2 }
             #expect(found != nil, "“\(line)” is missing or out of order")
+            #expect(text.contains(normalized(line)), "“\(line)” isn't in the PDF's text")
             if let found, !anywhere { cursor = found }
         }
     }
