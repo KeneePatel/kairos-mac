@@ -18,7 +18,7 @@ public struct JobID: Hashable, Sendable, CustomStringConvertible {
     public var description: String { rawValue }
 }
 
-public enum Country: String, Sendable, CaseIterable {
+public enum Country: String, Sendable, CaseIterable, Codable {
     case canada = "CA"
     case unitedStates = "US"
 }

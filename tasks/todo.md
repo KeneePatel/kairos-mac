@@ -311,13 +311,22 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
 
 ### Slice 3: Screening
 
-- [ ] **T27 · Prefilter rules** (M, test-first) · deps: T10, T13, T15
+- [x] **T27 · Prefilter rules** (M, test-first) · deps: T10, T13, T15
   - **Acceptance:**
-    - [ ] Rules, in order: title include/exclude, seniority, years-required regex against your maximum, location and country policy, remote scope, work authorization, clearance, French, blacklist, posting age, already applied. The first failure is recorded with its rule id.
-    - [ ] `005_private_settings.sql` creates the local-only `private_setting` table (work authorization, clearance). It's excluded from sync by design.
-    - [ ] Table-driven tests: at least 5 cases per rule, including French-language postings and "Remote (US only)".
+    - [x] Rules, in order: title include/exclude, seniority, years-required regex against your maximum, location and country policy, remote scope, work authorization, clearance, French, blacklist, posting age, already applied. The first failure is recorded with its rule id.
+    - [x] `005_private_settings.sql` creates the local-only `private_setting` table (work authorization, clearance). It's excluded from sync by design.
+    - [x] Table-driven tests: at least 5 cases per rule, including French-language postings and "Remote (US only)".
   - **Verify:** `core-test ScreeningTests`
   - **Files:** `Sources/Screening/Prefilter.swift`, `Sources/Screening/Rules.swift`, `Sources/Screening/YearsParser.swift`, `Sources/Store/Schema/005_private_settings.sql`, `Tests/ScreeningTests/PrefilterTests.swift`
+  - **Done 2026-10-19:** test-first. 22 tests, 5 to 15 cases per rule (about 140 in all), with French-language postings, "bilingual", "Remote (US only)" and US-only residency, plus 3 tests for `private_setting`. `Prefilter.rejection(for:)` returns the first rule failed (`PrefilterRule` raw values are the stored ids) and a sentence for the job's "why". It records nothing yet: the `screening` table arrives in T28 (`006_screening.sql`). New module `Screening` (store, llm, master-resume, as SPEC §4 maps it). Your preferences are the synced "screening" setting (`SearchPreferences`); work authorization and clearance are `WorkProfile` in the new local-only `private_setting`; French comes from your master resume's languages. T31 adds the screens to edit them.
+  - **Decided here (tell me if any should change):**
+    - **Nothing is filtered until you set it.** Defaults: no title phrases, every level, no years limit, Canada and the US, remote allowed, no blocked companies, no age limit. A country whose authorization you haven't set never rejects a job.
+    - **When a rule can't tell, the job stays in** (an AI call costs less than a missed job): no description, an unknown country or region, or years that aren't clearly about experience.
+    - **Years:** the largest minimum among required mentions ("2+ years of Python. 6+ years overall" is 6), English and French. Sentences or sections marked preferred, nice to have, bonus or asset don't count, nor do "founded 12 years ago" or "after 1 year of service".
+    - **Seniority** comes from title words: Staff, Principal, Lead, Senior/Sr, II and III, Intern and Co-op, Junior/Jr, New grad, Associate, Manager (not "Product manager", which is a role), Director/VP/Head of. A title naming no level passes.
+    - **French:** "bilingual" counts as French in Canadian postings; French at conversational level or better in your master resume passes; a posting written mostly in French is out if you don't speak it.
+    - **Clearance:** "able to obtain" one passes if you're a citizen there (or a permanent resident, for Canada's Reliability Status).
+    - **Already applied:** same company (ignoring Inc, LLC and the like) and titles sharing at least 80% of their words, so "Senior Software Developer" isn't the "Software Developer" you applied to.
 
 - [ ] **T28 · Job analysis task** (M) · deps: T27, T23
   - **Acceptance:**

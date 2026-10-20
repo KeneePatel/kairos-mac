@@ -16,6 +16,7 @@ let package = Package(
         .library(name: "Pipeline", targets: ["Pipeline"]),
         .library(name: "MasterResume", targets: ["MasterResume"]),
         .library(name: "LLM", targets: ["LLM"]),
+        .library(name: "Screening", targets: ["Screening"]),
     ],
     targets: [
         .target(name: "Store", resources: [.copy("Schema")], swiftSettings: strict),
@@ -29,6 +30,9 @@ let package = Package(
         .target(name: "TestSupport", path: "Tests/TestSupport", swiftSettings: strict),
         .target(name: "MasterResume", dependencies: ["Store", "LLM"], swiftSettings: strict),
         .testTarget(name: "MasterResumeTests", dependencies: ["MasterResume", "LLM"], swiftSettings: strict),
+        .target(name: "Screening", dependencies: ["Store", "LLM", "MasterResume"], swiftSettings: strict),
+        .testTarget(
+            name: "ScreeningTests", dependencies: ["Screening", "Store", "MasterResume"], swiftSettings: strict),
         .target(name: "Pipeline", dependencies: ["Store", "JobSources"], swiftSettings: strict),
         .testTarget(name: "PipelineTests", dependencies: ["Pipeline"], swiftSettings: strict),
         .target(name: "Render", resources: [.copy("Templates")], swiftSettings: strict),
