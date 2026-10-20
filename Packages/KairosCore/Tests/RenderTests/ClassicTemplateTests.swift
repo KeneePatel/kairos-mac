@@ -71,23 +71,26 @@ struct ClassicTemplateTests {
         ResumeRenderer(runner: TypstRunner(executable: try #require(TypstBinary.url)))
     }
 
-    /// The golden file lists the resume's lines in reading order; each must appear, in order. Lines
-    /// marked "~" (the right-aligned dates) only need to be there: PDFKit on macOS 26 reads them after
-    /// the lines beside them, while macOS 27 reads them in place.
+    /// The golden file lists the resume's lines in reading order; each must appear, in order. Order is
+    /// where each line sits on the page, not where PDFKit's text stream puts it: macOS 26 and 27
+    /// order that stream differently. Lines marked "~" (the right-aligned dates) only need to be there.
     @Test func theSampleResumeRendersOnOnePageInOrder() async throws {
         let rendered = try await renderer().render(jordan())
         #expect(rendered.pageCount == 1)
-        let text = normalized(try #require(PDFDocument(data: rendered.data)?.string))
+        let document = try #require(PDFDocument(data: rendered.data))
+        let page = try #require(document.page(at: 0))
         let golden = try String(
             contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
                 .appending(path: "Fixtures/render/classic-golden.txt"), encoding: .utf8)
-        var cursor = text.startIndex
+        // Reading goes down the page, so each line's height on it may only fall (PDF y grows upward).
+        var cursor = CGFloat.infinity
         for raw in golden.split(separator: "\n").map(String.init) {
             let anywhere = raw.hasPrefix("~ ")
-            let line = normalized(anywhere ? String(raw.dropFirst(2)) : raw)
-            let found = anywhere ? text.range(of: line) : text.range(of: line, range: cursor..<text.endIndex)
+            let line = anywhere ? String(raw.dropFirst(2)) : raw
+            let found = document.findString(line, withOptions: []).map { $0.bounds(for: page).midY }
+                .first { anywhere || $0 <= cursor + 2 }
             #expect(found != nil, "“\(line)” is missing or out of order")
-            if let found, !anywhere { cursor = found.upperBound }
+            if let found, !anywhere { cursor = found }
         }
     }
 
