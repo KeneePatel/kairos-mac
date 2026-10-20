@@ -117,6 +117,18 @@ struct PrefilterTests {
         }
     }
 
+    /// A team or product area called "Management" doesn't make a role a manager's (found in a real
+    /// run: Ramp's "Senior Backend Engineer | Token Spend Management" read as Manager level).
+    @Test func aTeamCalledManagementIsntAManagerLevel() {
+        let cases: [(String, Seniority?)] = [
+            ("Software Engineer, Spend Management", nil), ("Senior Backend Engineer | Token Spend Management", .senior),
+            ("Identity & Access Management Engineer II", .mid), ("Engineering Manager, Revenue Management", .manager),
+        ]
+        for (title, level) in cases {
+            #expect(Seniority.of(title: title) == level, "\(title)")
+        }
+    }
+
     @Test func askingForMoreYearsThanYourMaximumIsOut() {
         let filter = prefilter { preferences, _ in preferences.maxYearsRequired = 5 }
         check(

@@ -9,6 +9,7 @@ struct KairosApp: App {
     init() {
         #if DEBUG
             DebugSnapshots.runIfRequested()
+            DebugReport.runIfRequested()
         #endif
     }
 

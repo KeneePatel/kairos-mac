@@ -45,9 +45,10 @@ public enum Seniority: String, Codable, Sendable, CaseIterable {
         func has(_ phrases: String...) -> Bool { phrases.contains { TextScan.containsPhrase(text, $0) } }
         let words = TextScan.words(text)
         if has("director", "vp", "vice president", "head of", "chief") { return .director }
-        // "Product manager" and the like are roles, not a people-manager level.
+        // "Product manager" and the like are roles, not a people-manager level. "Management" names a
+        // team or a product area ("Software Engineer, Spend Management"), never a level.
         let roles = ["product", "project", "program", "account", "marketing", "sales", "office", "community"]
-        if has("manager", "management"), !roles.contains(where: { has("\($0) manager") }) { return .manager }
+        if has("manager"), !roles.contains(where: { has("\($0) manager") }) { return .manager }
         if has("principal") { return .principal }
         if has("staff") { return .staff }
         if has("lead", "tech lead", "team lead") { return .lead }
