@@ -21,7 +21,12 @@ public struct Prefilter: Sendable {
         self.profile = profile
         self.applied = applied
         self.now = now
-        speaksFrench = languages.contains { language in
+        speaksFrench = Self.speaksFrench(languages)
+    }
+
+    /// French at conversational level or better.
+    static func speaksFrench(_ languages: [EntryFields.Language]) -> Bool {
+        languages.contains { language in
             TextScan.containsAny(TextScan.fold(language.language), ["french", "francais"])
                 && language.proficiency != .basic
         }

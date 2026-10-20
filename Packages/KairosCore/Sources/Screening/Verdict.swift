@@ -1,0 +1,213 @@
+import Foundation
+import MasterResume
+import Store
+
+/// How much of a posting your skills must cover (SPEC §5.2, step 6, "your thresholds"). Part of
+/// your synced "screening" preferences.
+public struct VerdictThresholds: Codable, Sendable, Equatable {
+    /// Share of the must-haves your skills cover for a yes.
+    public var yesAt: Double
+    /// Below this share, a no; between the two, a maybe.
+    public var maybeAt: Double
+    /// Asking for up to this many years more than you have makes a maybe at best; more is a no.
+    public var yearsGrace: Int
+
+    public init(yesAt: Double = 0.75, maybeAt: Double = 0.5, yearsGrace: Int = 2) {
+        self.yesAt = yesAt
+        self.maybeAt = maybeAt
+        self.yearsGrace = yearsGrace
+    }
+
+    private enum CodingKeys: String, CodingKey { case yesAt, maybeAt, yearsGrace }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = VerdictThresholds()
+        yesAt = try container.decodeIfPresent(Double.self, forKey: .yesAt) ?? defaults.yesAt
+        maybeAt = try container.decodeIfPresent(Double.self, forKey: .maybeAt) ?? defaults.maybeAt
+        yearsGrace = try container.decodeIfPresent(Int.self, forKey: .yearsGrace) ?? defaults.yearsGrace
+    }
+}
+
+/// What decided a verdict. The raw value is stored in `screening.rule_id`, so it never changes.
+public enum VerdictRule: String, Sendable, CaseIterable, Codable {
+    case workAuthorization = "work_authorization"
+    case remoteScope = "remote_scope"
+    case clearance
+    case french
+    case seniority
+    case yearsRequired = "years_required"
+    case yearsAboveYours = "years_above_yours"
+    case strongMatch = "strong_match"
+    case partialMatch = "partial_match"
+    case weakMatch = "weak_match"
+    case noRequirements = "no_requirements"
+}
+
+/// How many of a posting's skill requirements yours cover. Conditions (work authorization,
+/// clearance, languages, degrees, travel) don't count here: the flags and your profile judge them.
+public struct Coverage: Codable, Sendable, Equatable {
+    public var mustCovered: Int
+    public var mustTotal: Int
+    public var niceCovered: Int
+    public var niceTotal: Int
+
+    public init(mustCovered: Int, mustTotal: Int, niceCovered: Int, niceTotal: Int) {
+        self.mustCovered = mustCovered
+        self.mustTotal = mustTotal
+        self.niceCovered = niceCovered
+        self.niceTotal = niceTotal
+    }
+
+    public init(_ analysis: JobAnalysis) {
+        let skills = analysis.requirements.filter { !Self.isCondition($0.text) }
+        let musts = skills.filter { $0.kind == .must }
+        let nices = skills.filter { $0.kind == .nice }
+        self.init(
+            mustCovered: musts.filter { $0.matchedSkill != nil }.count, mustTotal: musts.count,
+            niceCovered: nices.filter { $0.matchedSkill != nil }.count, niceTotal: nices.count)
+    }
+
+    public var must: Double { mustTotal == 0 ? 0 : Double(mustCovered) / Double(mustTotal) }
+    public var nice: Double { niceTotal == 0 ? 0 : Double(niceCovered) / Double(niceTotal) }
+
+    /// 0 to 1, for ranking: must-haves weigh 80%, nice-to-haves 20%.
+    public var match: Double {
+        switch (mustTotal, niceTotal) {
+        case (0, 0): 0
+        case (_, 0): must
+        case (0, _): nice
+        default: 0.8 * must + 0.2 * nice
+        }
+    }
+
+    var summary: String {
+        "Covers \(mustCovered) of \(mustTotal) must-haves and \(niceCovered) of \(niceTotal) nice-to-haves."
+    }
+
+    static func isCondition(_ text: String) -> Bool {
+        let folded = TextScan.fold(text)
+        return conditionWords.contains { folded.contains($0) }
+    }
+
+    private static let conditionWords = [
+        "authoriz", "authoris", "entitled to work", "eligible to work", "right to work", "sponsor", "citizen",
+        "permanent resident", "work permit", "visa", "clearance", "reliability status", "french", "english",
+        "bilingual", "francais", "anglais", "language", "degree", "bachelor", "master's", "masters", "phd",
+        "diploma", "travel", "driver", "licence", "license",
+    ]
+}
+
+public struct VerdictDecision: Sendable, Equatable {
+    public let verdict: Verdict
+    public let rule: VerdictRule
+    public let coverage: Coverage
+    /// For the job's "why": the deciding reason first, then coverage and notes.
+    public let reasons: [String]
+}
+
+/// Turns an analysis into a verdict (SPEC §5.2, step 6): code decides, not the model. Your profile
+/// against the posting's flags comes first, then your level and years policy, then how much of
+/// the posting your skills cover.
+public struct VerdictEngine: Sendable {
+    public let preferences: SearchPreferences
+    public let profile: WorkProfile
+    public let speaksFrench: Bool
+    /// From your master resume; nil skips the years-above-yours check.
+    public let totalYears: Double?
+
+    public init(
+        preferences: SearchPreferences, profile: WorkProfile, languages: [EntryFields.Language], totalYears: Double?
+    ) {
+        self.preferences = preferences
+        self.profile = profile
+        self.totalYears = totalYears
+        speaksFrench = Prefilter.speaksFrench(languages)
+    }
+
+    public func decide(_ analysis: JobAnalysis, for job: Job) -> VerdictDecision {
+        let coverage = Coverage(analysis)
+        let flags = analysis.flags
+        var notes = [coverage.summary]
+        if flags.french == .asset && !speaksFrench { notes.append("French is an asset.") }
+        let country = job.country
+        let status = country.flatMap { profile.authorization[$0] }
+        // SPEC §5.9: informational only.
+        if country == .unitedStates, status == .needsSponsorship, profile.authorization[.canada] == .citizen,
+            flags.sponsorship == .notOffered
+        {
+            notes.append("Possible TN route: as a Canadian citizen you may qualify for TN status for some professions.")
+        }
+        func decision(_ verdict: Verdict, _ rule: VerdictRule, _ reason: String? = nil) -> VerdictDecision {
+            VerdictDecision(
+                verdict: verdict, rule: rule, coverage: coverage, reasons: [reason].compactMap { $0 } + notes)
+        }
+
+        if let country, status == .needsSponsorship {
+            if flags.sponsorship == .notOffered {
+                return decision(.no, .workAuthorization, "Won't sponsor a visa, and you'd need one in \(country.name).")
+            }
+            if flags.remoteScope == .remoteCountry {
+                return decision(.no, .remoteScope, "Remote in \(country.name) only, where you'd need visa sponsorship.")
+            }
+        }
+        if !profile.hasClearance {
+            if flags.clearance == .required {
+                return decision(.no, .clearance, "Needs a security clearance you don't hold.")
+            }
+            if flags.clearance == .obtainable, let country, let status, status != .citizen,
+                !(country == .canada && status == .permanentResident)
+            {
+                return decision(
+                    .no, .clearance, "Needs a \(country.adjective) security clearance, which needs citizenship.")
+            }
+        }
+        if flags.french == .required && !speaksFrench {
+            return decision(.no, .french, "Asks for French, which isn't among your languages.")
+        }
+        if let level = analysis.seniority, !preferences.seniority.contains(level) {
+            return decision(.no, .seniority, "\(level.rawValue.capitalized) level, which you've turned off.")
+        }
+        var yearsNote: String?
+        if let required = analysis.yearsRequired {
+            if let limit = preferences.maxYearsRequired, required > limit {
+                return decision(.no, .yearsRequired, "Asks for \(required)+ years; your limit is \(limit).")
+            }
+            if let yours = totalYears, Double(required) > yours {
+                let note =
+                    "Asks for \(required)+ years; you have \(yours.formatted(.number.precision(.fractionLength(0...1))))."
+                if Double(required) > yours + Double(preferences.thresholds.yearsGrace) {
+                    return decision(.no, .yearsAboveYours, note)
+                }
+                yearsNote = note
+            }
+        }
+
+        if coverage.mustTotal + coverage.niceTotal == 0 {
+            return decision(.maybe, .noRequirements, "The posting lists no skills to compare with yours.")
+        }
+        let share = coverage.mustTotal > 0 ? coverage.must : coverage.nice
+        let thresholds = preferences.thresholds
+        if share >= thresholds.yesAt {
+            if let yearsNote { return decision(.maybe, .yearsAboveYours, yearsNote) }
+            return decision(.yes, .strongMatch)
+        }
+        return share >= thresholds.maybeAt ? decision(.maybe, .partialMatch) : decision(.no, .weakMatch)
+    }
+}
+
+/// The order of Today's list (SPEC §5.2, step 7): verdict first, then your country priority
+/// (Canada before the US by default), then match. Stored in `job.rank`; higher lists first.
+public enum Ranking {
+    public static func rank(_ verdict: Verdict, country: Country?, match: Double, countries: [Country]) -> Double {
+        let verdictWeight: Double =
+            switch verdict {
+            case .yes: 2
+            case .maybe: 1
+            case .no: 0
+            }
+        // Your first country weighs most; one you didn't list, or an unknown one, weighs nothing.
+        let countryWeight = country.flatMap { countries.firstIndex(of: $0) }.map { Double(countries.count - $0) } ?? 0
+        return verdictWeight * 100 + countryWeight * 10 + min(max(match, 0), 1)
+    }
+}

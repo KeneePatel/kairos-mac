@@ -348,12 +348,22 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - **T20's known-issue marker stays, reworded:** its fixture was recorded with the spike's one-line prompt, which still merges at temperature 0. The fix is shown by `analyzeJob-qwen3.5_4B-thinking-on.json`.
     - The full prompt evals (30 labelled postings) come with their own task (`PromptEvals`).
 
-- [ ] **T29 · Verdict and ranking** (S, test-first) · deps: T28
+- [x] **T29 · Verdict and ranking** (S, test-first) · deps: T28
   - **Acceptance:**
-    - [ ] The verdict comes from must-have and nice-to-have coverage, the years and level policy, authorization flags and thresholds, and the rule id is stored.
-    - [ ] Ranking: verdict, then Canada before US, then match (success criterion S7).
+    - [x] The verdict comes from must-have and nice-to-have coverage, the years and level policy, authorization flags and thresholds, and the rule id is stored.
+    - [x] Ranking: verdict, then Canada before US, then match (success criterion S7).
   - **Verify:** `core-test ScreeningTests`
   - **Files:** `Sources/Screening/Verdict.swift`, `Sources/Screening/Ranking.swift`, `Tests/ScreeningTests/VerdictRankingTests.swift`
+  - **Done 2026-10-19:** test-first, 8 tests (`VerdictTests`, `RankingTests.rankingCanadaFirst` for S7, `ScreeningTrailTests`).
+    - **Rules, in order:** your profile against the posting's flags (won't sponsor, remote only in a country where you'd need a visa, clearance, French required), then your levels, then years, then coverage.
+    - **Storage:** `ScreeningRepository` stores each decision in `screening` with its stage, rule id, coverage and reasons, prefilter rejections included. Ranking sits in `Verdict.swift` rather than its own file, as it's one small function.
+  - **Decided here (tell me if any should change):**
+    - **Coverage** counts skill requirements only. Conditions (work authorization, clearance, languages, degrees, travel, licences) are judged by the flags and your profile, so "Must be entitled to work in Canada" never counts against your skills. A posting listing no skills at all is a maybe.
+    - **Thresholds** are in your "screening" preferences: yes at 75% of must-haves covered, maybe at 50%, no below.
+    - **Years:** more than your limit is a no. Up to 2 years more than your master resume's total is a maybe at most; more than that is a no. Without your total years, only the limit applies.
+    - **Match** (for ranking) weighs must-haves 80% and nice-to-haves 20%.
+    - **Rank** = verdict, then your country order (Canada first by default, a country you didn't list last), then match.
+    - **TN note:** a US job that won't sponsor shows "Possible TN route" for a Canadian citizen (SPEC §5.9). It never changes the verdict.
 
 - [ ] **T30 · Screening pipeline** (M) · deps: T29, T14
   - **Acceptance:**

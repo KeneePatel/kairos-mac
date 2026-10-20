@@ -81,6 +81,8 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
     public var blacklist: [String] = []
     /// Postings older than this many days are out.
     public var maxAgeDays: Int?
+    /// How much of a posting your skills must cover for a yes or a maybe (the verdict, T29).
+    public var thresholds = VerdictThresholds()
 
     public static let storageKey = "screening"
 
@@ -88,7 +90,7 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case titleInclude, titleExclude, seniority, maxYearsRequired, countries, regions, remoteAllowed, blacklist
-        case maxAgeDays
+        case maxAgeDays, thresholds
     }
 
     /// Missing fields keep their defaults, so older settings still load after a field is added.
@@ -104,6 +106,7 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
         remoteAllowed = try container.decodeIfPresent(Bool.self, forKey: .remoteAllowed) ?? defaults.remoteAllowed
         blacklist = try container.decodeIfPresent([String].self, forKey: .blacklist) ?? defaults.blacklist
         maxAgeDays = try container.decodeIfPresent(Int.self, forKey: .maxAgeDays)
+        thresholds = try container.decodeIfPresent(VerdictThresholds.self, forKey: .thresholds) ?? defaults.thresholds
     }
 }
 
