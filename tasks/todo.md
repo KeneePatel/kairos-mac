@@ -305,9 +305,9 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
 
 #### Checkpoint C
 - [x] T20a's re-check reported to you
-- [ ] Your real resume imported into a valid master resume
+- [x] Your real resume imported into a valid master resume (you, 2026-10-19, after the Gemini schema fix and prompt v2)
 - [x] A redaction test shows no contact values in the import prompt (`ImportTests.noContactDetailReachesThePrompt`, `GitHubImportTests.nothingPersonalFromTheReadmeIsSent`)
-- [ ] Provider test works with your key; reviewed with you
+- [x] Provider test works with your key; reviewed with you (you, 2026-10-19: "Test" listed 24 models)
 
 ### Slice 3: Screening
 
