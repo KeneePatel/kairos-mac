@@ -1,0 +1,30 @@
+{
+  "job": "Backend Developer II, Northline Freight (Toronto)",
+  "mode": "strict",
+  "hiringCompany": "Northline Freight",
+  "companyProducts": ["FreightOS"],
+  "resume": {
+    "totalYears": 5,
+    "skills": [
+      {"name": "Go", "level": "proven"}, {"name": "PostgreSQL", "level": "proven"}, {"name": "Kafka", "level": "proven"},
+      {"name": "Kubernetes", "level": "proven"}, {"name": "gRPC", "level": "proven"}, {"name": "Terraform", "level": "can_discuss"}
+    ],
+    "experience": [
+      {"employer": "Harbourline Logistics", "title": "Software Developer, Backend", "start": "2022-03", "end": null, "bullets": [
+        {"id": "pipeline", "text": "Built an event pipeline in Go handling 4.2M events a day with p99 under 120 ms.", "metrics": ["4.2M events a day"], "skills": ["Go", "Kafka"]},
+        {"id": "carriers", "text": "Onboarded 11 carriers in 4 days instead of 3 weeks by designing a gRPC integration kit.", "metrics": [], "skills": ["gRPC"]}
+      ]}
+    ],
+    "education": [{"institution": "University of Waterloo", "credential": "BMath", "field": "Computer Science"}],
+    "certifications": []
+  },
+  "bullets": [
+    {"text": "Built a Go and Kafka event pipeline that handles 4.2M events a day at p99 under 120 ms.", "sources": ["pipeline"], "expect": []},
+    {"text": "Cut carrier onboarding from 3 weeks to 4 days with a gRPC integration kit.", "sources": ["carriers"], "expect": []},
+    {"text": "Built an event pipeline in Go handling 6M events a day.", "sources": ["pipeline"], "expect": ["unsupported_number"]},
+    {"text": "Provisioned the event pipeline with Terraform.", "sources": ["pipeline"], "expect": ["unsupported_technology"]},
+    {"text": "Integrated 11 carriers with FreightOS.", "sources": ["carriers"], "expect": ["hiring_company_product"]},
+    {"text": "Built an event pipeline in Go.", "sources": [], "expect": ["missing_source"]},
+    {"text": "Built an event pipeline in Go.", "sources": ["nowhere"], "expect": ["unknown_source"]}
+  ]
+}

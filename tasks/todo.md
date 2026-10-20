@@ -431,13 +431,19 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - **Converting your master resume** (or a tailored build) into a `ResumeDocument` lives in Tailoring (T33 onwards), since SPEC §4 lets Render know only Tailoring's types.
   - **Visual differences from the resume in `Build.dc.html`:** an optional headline under the name (the mockup has none; it's omitted when empty); the contact line follows the order given (the mockup starts with the city); skills can be labelled groups as well as the mockup's single line; the mockup shows Toronto Metropolitan University sample data where the fixture uses Waterloo.
 
-- [ ] **T33 · Entry selection and strict verifier** (M, test-first) · deps: T29, T15
+- [x] **T33 · Entry selection and strict verifier** (M, test-first) · deps: T29, T15
   - **Acceptance:**
-    - [ ] The selector scores bullets and projects by requirement overlap (keywords, `Synonyms.json`, recency).
-    - [ ] The strict verifier enforces `source_ids` existence, technologies and numbers from the cited bullets, years, and every hard limit (SPEC §5.3).
-    - [ ] The 30-job fixture suite scaffold exists; violations are reported with the bullet and rule.
+    - [x] The selector scores bullets and projects by requirement overlap (keywords, `Synonyms.json`, recency).
+    - [x] The strict verifier enforces `source_ids` existence, technologies and numbers from the cited bullets, years, and every hard limit (SPEC §5.3).
+    - [x] The 30-job fixture suite scaffold exists; violations are reported with the bullet and rule.
   - **Verify:** `core-test VerifierSuite`
   - **Files:** `Sources/Tailoring/Selector.swift`, `Sources/Tailoring/Verifier.swift`, `Sources/Tailoring/Synonyms.json`, `Tests/TailoringTests/VerifierSuite.swift`, `Tests/Fixtures/tailoring/`
+  - **Done 2026-10-20:** test-first: 5 selector tests, 11 verifier tests, and `VerifierSuite` over 3 fixture jobs (16 bullets, each breaking exactly the rules it expects). New module `Tailoring` (store, llm, master-resume, per SPEC §4). Job requirements come in as plain text (`JobRequirements`); the pipeline converts screening's analysis, since tailoring doesn't depend on screening.
+    - **`Synonyms.json`** has 97 technologies with their other spellings ("Postgres", "k8s", "golang"), plus concepts for selection only ("message queues" means Kafka, RabbitMQ…). Names that are also ordinary words count only as written ("Go", "React", "REST"), so "go live" isn't a claim of Go. C and R aren't listed: one letter is too ambiguous.
+    - **Selector:** a requirement counts once per bullet: fully (must 2, nice 1) for a shared technology, half for a shared keyword; numbers add 0.25. Roles run most recent first, keeping 5, 4, 3, then 2 bullets, and never fewer than one. Projects are ranked by relevance and recency (two at most, or the most recent if none is relevant). Skills are Proven only, the ones the posting names first.
+    - **Verifier, strict:** every bullet cites existing master-resume bullets and names only technologies in them or in your Proven skills (a Can-discuss skill or a certification's subject isn't enough), and only numbers from them ("4.2 million" matches "4.2M"; digits in names like p99 and dates like 2022 don't count).
+    - **Verifier, every mode:** years claimed up to your total; employer, title and dates exactly as in an experience; degrees and certifications that exist; nothing naming the hiring company or its products unless your master resume does; no date of birth, SIN or SSN, marital status or attached photo. Stretch mode's gap bullets need no source, may use Can-discuss skills and estimate numbers (T37 completes them).
+    - **Fixtures:** the suite and its JSON format are in `Tests/Fixtures/tailoring/README.md`; T34 and T39 add writer output until it reaches 30 jobs (S9).
 
 - [ ] **T34 · Section writers and polish** (M) · deps: T33, T23
   - **Acceptance:**

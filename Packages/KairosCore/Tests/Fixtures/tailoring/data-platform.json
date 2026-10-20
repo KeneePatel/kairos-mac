@@ -1,0 +1,28 @@
+{
+  "job": "Data Platform Engineer, Tidewater Health (Halifax, remote in Canada)",
+  "mode": "strict",
+  "hiringCompany": "Tidewater Health",
+  "companyProducts": [],
+  "resume": {
+    "totalYears": 3,
+    "skills": [
+      {"name": "Python", "level": "proven"}, {"name": "Airflow", "level": "proven"}, {"name": "PostgreSQL", "level": "proven"},
+      {"name": "Spark", "level": "can_discuss"}
+    ],
+    "experience": [
+      {"employer": "Cobalt Ledger", "title": "Data Engineer", "start": "2023-01", "end": null, "bullets": [
+        {"id": "dags", "text": "Moved 40 nightly jobs to Airflow DAGs in Python, cutting failed runs by 70%.", "metrics": ["70% fewer failed runs"], "skills": ["Airflow", "Python"]},
+        {"id": "warehouse", "text": "Modelled billing data in PostgreSQL for 12 finance dashboards.", "metrics": [], "skills": ["PostgreSQL"]}
+      ]}
+    ],
+    "education": [],
+    "certifications": []
+  },
+  "bullets": [
+    {"text": "Moved 40 nightly Python jobs to Airflow and cut failed runs by 70%.", "sources": ["dags"], "expect": []},
+    {"text": "Modelled billing data in PostgreSQL behind 12 finance dashboards.", "sources": ["warehouse"], "expect": []},
+    {"text": "Rewrote 40 nightly jobs in Spark.", "sources": ["dags"], "expect": ["unsupported_technology"]},
+    {"text": "Cut failed runs by 90% across 40 jobs.", "sources": ["dags"], "expect": ["unsupported_number"]},
+    {"text": "Brought 6 years of data engineering experience to Airflow migrations.", "sources": ["dags"], "expect": ["years_overstated"]}
+  ]
+}
