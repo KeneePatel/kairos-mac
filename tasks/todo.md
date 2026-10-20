@@ -497,13 +497,27 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
       - The PDF pane can't be checked in `--render-snapshots`, because PDFView draws asynchronously; the PDF itself was checked by page count.
     - **Undrawn cases, decided here:** no builds yet (an empty state pointing to Today); a running build (a spinner where the PDF goes); a failed build (the step it stopped at in error colour with the message, and the message where the PDF goes; after a relaunch only the latter, since steps aren't stored); a source bullet since deleted (a sentence saying so); dark mode reuses the tokens.
 
-- [ ] **T37 · Stretch mode** (M) · deps: T36
+- [x] **T37 · Stretch mode** (M) · deps: T36
   - **Acceptance:**
-    - [ ] Settings toggle, off by default, with an explanation of what changes.
-    - [ ] The `gapBullets` task is limited to Can-discuss skills and a per-role count of 0–2. Stretch verifier rules apply, and hard limits still hold.
-    - [ ] Gap bullets are stored `verified: false`, highlighted in the trace, and listed under "Be ready to discuss"; nothing marks them in the PDF.
+    - [x] Settings toggle, off by default, with an explanation of what changes.
+    - [x] The `gapBullets` task is limited to Can-discuss skills and a per-role count of 0–2. Stretch verifier rules apply, and hard limits still hold.
+    - [x] Gap bullets are stored `verified: false`, highlighted in the trace, and listed under "Be ready to discuss"; nothing marks them in the PDF.
   - **Verify:** `core-test VerifierSuite` (stretch cases: 0 hard-limit violations, 100% flagged)
   - **Files:** `Sources/Tailoring/GapBulletsTask.swift`, `Sources/Tailoring/Verifier.swift`, `App/Kairos/Settings/StretchModeView.swift`, `App/Kairos/Screens/ReadyToDiscussView.swift`
+  - **Done 2026-10-20:** 15 new tests: stretch mode 6 (one runs 9 problem cases) and stretch verifier 2 in TailoringTests, 4 stretch build-loop tests, the stretch half of `VerifierSuite` with a new 13-case fixture job, a queue test and a render test; plus an opt-in live test.
+    - **Setting:** `StretchSettings` (synced key `stretch_mode`): off, up to 1 extra line per role. Settings, General shows the switch, "Up to 1 / Up to 2", and what changes: off means every line comes from your master resume; on adds lines for uncovered requirements using only Can-discuss skills, with estimated numbers allowed; each one goes on "Be ready to discuss"; and what never changes in any mode. With the switch on and no Can-discuss skills, it says builds won't stretch.
+    - **`gapBullets` (prompt v1):** it gets only the requirements no bullet shows that one of your Can-discuss skills answers (conditions such as work authorization never count). It also gets the role headings with their written bullets, your skill names, your total years and the cap; never contact details or UUIDs (roles "e1", requirements "r1"). Its check: roles and requirements given, at most the cap per role, each requirement once, 260 characters, naming a Can-discuss skill that answers the requirement, and the stretch verifier. One repair call; if it still fails, the build goes on without gap bullets. An empty reply is fine.
+    - **Hard limits in a gap bullet's words:** a gap bullet cites nothing, so the verifier now rejects one claiming a degree, certification or licence (unless it names one of yours exactly as written) or a title or promotion ("Promoted…", "as tech lead"). Years, the hiring company and personal fields were already checked. Bullets your master resume backs keep the strict rules unchanged.
+    - **Build loop:** gap bullets come after the rewrites, so they only cover what rewriting couldn't, and before page fitting. They go after the role's own bullets, polished with them, and rank lowest, so a full page drops them first.
+    - **Flagging:** stored bullets now carry `verified` (false for a gap bullet) and `covers` (the requirement it answers). The PDF lays them out like any other line (tested).
+    - **Queue and app:** a stretch build doesn't run while the setting is off (it fails with a message in words). With the setting on, Build resume in Today starts a Stretch build, and the Build screen's picker shows Full, Stretch and Lite. Stretch builds show an "Added gap bullets" step. In the trace, gap lines have the Can-discuss dashed outline and the word "Stretch". Their trace explains that they aren't from your master resume, shows the Can-discuss skill chips, and lists five checks for the hard limits. "Be ready to discuss" lists each one with "Covers: …", and choosing one selects it.
+    - **Live on Flash-Lite** (`scripts/live-llm.sh gapBulletsOnGemini`, sample resume, cap 2): one call, 1.2 s. Both bullets passed on the first try: Terraform and Rust, each with an estimated percentage. Recorded in `Tests/Fixtures/writers/` for the offline check.
+    - **Visual differences from `Build.dc.html`:**
+      - The mockup shows "Be ready to discuss" only empty (Stretch off). The filled list is undrawn: each line is a row with the Can-discuss dashed outline, its requirement and its skill chips, reusing the design's chip rule.
+      - The section's Stretch switch is there as drawn and changes the same setting as Settings. Its empty text names your first Can-discuss skill where the mockup says "Terraform".
+      - The switch's track draws grey in snapshots because offscreen windows are inactive; it's tinted in the app.
+    - **Undrawn cases, decided here:** Settings, General (only Stretch mode for now) reuses the form section pattern of Settings, Search; gap lines in the trace use the dashed outline plus the word "Stretch", so the dashes are never the only signal; a finished build whose PDF is missing now says so instead of showing a spinner.
+    - **Your step:** turn Stretch on, mark a skill or two Can discuss, and build a job that asks for them. Check the lines read as something you could defend.
 
 - [ ] **T38 · Lite mode and cover letter** (M) · deps: T36
   - **Acceptance:**

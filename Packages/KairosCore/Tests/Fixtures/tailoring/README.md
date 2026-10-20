@@ -22,4 +22,6 @@ Success criterion S9 needs 30 jobs with 0 unsupported claims in strict mode and 
 }
 ```
 
+Stretch-mode files (`"mode": "stretch"`, T37) mark gap bullets `"gap": true` with no sources, and their skills may be `"can_discuss"`. `VerifierSuite` also checks S9's stretch half on them: no gap bullet breaking a hard limit gets through, and every one that passes is stored `verified: false`.
+
 Bullet ids are short names local to the file; a source that names no bullet stands for an id the master resume doesn't have. Fixtures use fictional people and companies only.

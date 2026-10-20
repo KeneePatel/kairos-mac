@@ -43,8 +43,9 @@ private func loop(_ scripts: [TaskID: [FakeProvider.Reply]]) throws -> (BuildLoo
     let db = try Database(path: ":memory:")
     let client = LLMClient(keys: [fake], policy: ClientPolicy(requestsPerMinute: 6_000), jitter: { 1 })
     let routes = Dictionary(
-        uniqueKeysWithValues: [TaskID.writeExperience, .writeProjects, .writeSummary, .writeSkills, .rewriteSection].map
-        {
+        uniqueKeysWithValues: [
+            TaskID.writeExperience, .writeProjects, .writeSummary, .writeSkills, .rewriteSection, .gapBullets,
+        ].map {
             ($0, [ModelRef(provider: "fake", model: "flash")])
         })
     let router = LLMRouter(clients: ["fake": client], routes: routes, budget: Budget(), log: CallLog(db), cache: nil)
@@ -155,6 +156,72 @@ struct BuildLoopTests {
             .writeSummary: [.failure(.budgetReached)], .writeSkills: [.reply(skills)],
         ])
         await #expect(throws: LLMError.budgetReached) { try await loop.run(request) }
+    }
+
+    // MARK: - Stretch mode
+
+    private static let writers: [TaskID: [FakeProvider.Reply]] = [
+        .writeExperience: [.reply(goodExperience)], .writeProjects: [.reply(projects)],
+        .writeSummary: [.reply(summary)], .writeSkills: [.reply(skills)],
+    ]
+    private static let gaps = """
+        {"bullets":[
+          {"role":"e1","covers":"r1","text":"Wrote Terraform modules for the event pipeline's three environments."},
+          {"role":"e2","covers":"r2","text":"Prototyped a Rust service that rate-limited client API calls."}]}
+        """
+
+    private var stretch: BuildRequest {
+        var stretch = request
+        stretch.requirements = WriterFixtures.stretchRequirements
+        stretch.mode = .stretch
+        return stretch
+    }
+
+    /// After the rewrites, gap bullets cover what's still missing with Can-discuss skills, flagged.
+    @Test func stretchModeAddsFlaggedGapBulletsForWhatsStillUncovered() async throws {
+        var scripts = Self.writers
+        scripts[.gapBullets] = [.reply(Self.gaps)]
+        let (loop, fake) = try loop(scripts)
+        let outcome = try await loop.run(stretch)
+        #expect(fake.requests.map(\.task).last == .gapBullets)
+        let harbourline = try #require(outcome.resume.experience.first)
+        let added = try #require(harbourline.bullets.last)
+        #expect(added.gap && !added.verified && added.covers == "Infrastructure as code with Terraform")
+        #expect(harbourline.bullets.dropLast().allSatisfy { $0.verified })
+        #expect(outcome.resume.experience[1].bullets.last?.covers == "Rust")
+        #expect(outcome.resume.allBullets.count { $0.gap } == 2)
+        #expect(outcome.score.breakdown.niceToHaves == 10)  // Kubernetes, gRPC, Terraform, Rust
+    }
+
+    /// A reply still failing after its repair is dropped: the build goes on without gap bullets.
+    @Test func gapBulletsThatFailTheirChecksAreDropped() async throws {
+        let claimed = Self.gaps.replacing("Wrote Terraform modules", with: "Earned a Terraform certification")
+        var scripts = Self.writers
+        scripts[.gapBullets] = [.reply(claimed), .reply(claimed)]
+        let (loop, fake) = try loop(scripts)
+        let outcome = try await loop.run(stretch)
+        #expect(fake.requests.count { $0.task == .gapBullets } == 2)
+        #expect(outcome.resume.allBullets.allSatisfy { $0.verified })
+    }
+
+    @Test func strictModeNeverAsksForGapBullets() async throws {
+        let (loop, fake) = try loop(Self.writers)
+        var strict = stretch
+        strict.mode = .strict
+        let outcome = try await loop.run(strict)
+        #expect(!fake.requests.contains { $0.task == .gapBullets })
+        #expect(outcome.resume.allBullets.allSatisfy { $0.verified })
+    }
+
+    /// Over the page budget, gap bullets go before any bullet your master resume backs.
+    @Test func pageFittingDropsGapBulletsFirst() async throws {
+        var scripts = Self.writers
+        scripts[.gapBullets] = [.reply(Self.gaps)]
+        let (loop, _) = try loop(scripts)
+        let outcome = try await loop.run(stretch) { resume in resume.allBullets.count > 7 ? 2 : 1 }
+        #expect(outcome.dropped == 2 && outcome.pages == 1)
+        #expect(outcome.resume.allBullets.allSatisfy { $0.verified })
+        #expect(outcome.resume.allBullets.count == 7)
     }
 }
 

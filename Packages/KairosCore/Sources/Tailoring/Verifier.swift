@@ -9,15 +9,22 @@ public struct TailoredBullet: Codable, Sendable, Equatable {
     public var gap: Bool
     /// How well its sources matched the job (the selector's score): page fitting drops the lowest.
     public var rank: Double
+    /// The requirement a gap bullet answers, for "Be ready to discuss".
+    public var covers: String?
 
-    public init(text: String, sourceIDs: [UUID], gap: Bool = false, rank: Double = 0) {
+    /// Backed by your master resume. A gap bullet isn't, so it's stored `verified: false` and listed
+    /// to prepare (SPEC §5.3, Flagging); the PDF never marks it.
+    public var verified: Bool { !gap }
+
+    public init(text: String, sourceIDs: [UUID], gap: Bool = false, rank: Double = 0, covers: String? = nil) {
         self.text = text
         self.sourceIDs = sourceIDs
         self.gap = gap
         self.rank = rank
+        self.covers = covers
     }
 
-    private enum CodingKeys: String, CodingKey { case text, sourceIDs, gap, rank }
+    private enum CodingKeys: String, CodingKey { case text, sourceIDs, gap, rank, covers, verified }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -25,6 +32,17 @@ public struct TailoredBullet: Codable, Sendable, Equatable {
         sourceIDs = try container.decodeIfPresent([UUID].self, forKey: .sourceIDs) ?? []
         gap = try container.decodeIfPresent(Bool.self, forKey: .gap) ?? false
         rank = try container.decodeIfPresent(Double.self, forKey: .rank) ?? 0
+        covers = try container.decodeIfPresent(String.self, forKey: .covers)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(text, forKey: .text)
+        try container.encode(sourceIDs, forKey: .sourceIDs)
+        try container.encode(gap, forKey: .gap)
+        try container.encode(rank, forKey: .rank)
+        try container.encodeIfPresent(covers, forKey: .covers)
+        try container.encode(verified, forKey: .verified)
     }
 }
 
@@ -56,7 +74,8 @@ public struct Violation: Sendable, Equatable {
 ///
 /// - Strict mode: a bullet cites existing master-resume bullets; it names only technologies in
 ///   those bullets or your Proven skills, and only numbers from those bullets.
-/// - Stretch mode: a gap bullet needs no source, may use a Can-discuss skill and estimate a number.
+/// - Stretch mode: a gap bullet needs no source, may use a Can-discuss skill and estimate a number,
+///   but claims no degree, certification, licence, title or promotion your master resume lacks.
 /// - Every mode: employers, titles and dates match an experience exactly; degrees and
 ///   certifications exist; no claim exceeds your total years; nothing names the hiring company or
 ///   its products unless your master resume does; no personal fields.
@@ -76,6 +95,8 @@ public struct Verifier: Sendable {
     private let resumeNumbers: [Double]
     /// Everything your master resume says, for the hiring-company rule.
     private let resumeText: String
+    /// Your degrees and certifications as they may be written, normalized.
+    private let credentials: Set<String>
 
     public init(
         resume: MasterResume, mode: Mode = .strict, hiringCompany: String? = nil, companyProducts: [String] = []
@@ -94,6 +115,21 @@ public struct Verifier: Sendable {
         resumeTechnologies = Set(all.flatMap { Self.technologies(of: $0) })
         resumeNumbers = all.flatMap { Numbers.values(in: ([$0.text] + $0.metrics).joined(separator: " ")) }
         resumeText = (all.map(\.text) + resume.entries.compactMap(Self.employer)).joined(separator: "\n")
+        var credentials: Set<String> = []
+        for entry in resume.entries {
+            switch entry.fields {
+            case .education(let education):
+                credentials.formUnion([
+                    education.credential, "\(education.credential), \(education.field)",
+                    "\(education.credential) in \(education.field)", "\(education.credential) \(education.field)",
+                ])
+            case .certification(let certification):
+                credentials.insert(certification.name)
+            default:
+                continue
+            }
+        }
+        self.credentials = Set(credentials.map(Self.normalized).filter { !$0.isEmpty })
     }
 
     // MARK: - Bullets
@@ -120,7 +156,9 @@ public struct Verifier: Sendable {
         }
         var allowed = provenTechnologies.union(sources.flatMap { Self.technologies(of: $0) })
         if gapInStretch { allowed.formUnion(canDiscussTechnologies) }
-        violations += technologies(in: text, allowed: allowed, source: "the cited bullets or your Proven skills")
+        violations += technologies(
+            in: text, allowed: allowed,
+            source: gapInStretch ? "your Proven or Can-discuss skills" : "the cited bullets or your Proven skills")
         let years = Numbers.yearsClaims(in: text)
         violations += overstated(years.map(\.value), in: text)
         if !gapInStretch {
@@ -128,6 +166,7 @@ public struct Verifier: Sendable {
             violations += numbers(in: text, excluding: years.map(\.range), known: known, source: "the cited bullets")
         }
         violations += hiringCompany(in: text)
+        if gapInStretch { violations += inventedClaims(in: text) }
         return violations
     }
 
@@ -171,21 +210,7 @@ public struct Verifier: Sendable {
 
     /// A degree, certification or licence the build shows.
     public func check(credential: String) -> [Violation] {
-        var known: Set<String> = []
-        for entry in resume.entries {
-            switch entry.fields {
-            case .education(let education):
-                known.formUnion([
-                    education.credential, "\(education.credential), \(education.field)",
-                    "\(education.credential) in \(education.field)", "\(education.credential) \(education.field)",
-                ])
-            case .certification(let certification):
-                known.insert(certification.name)
-            default:
-                continue
-            }
-        }
-        guard !known.map(Self.normalized).contains(Self.normalized(credential)) else { return [] }
+        guard !credentials.contains(Self.normalized(credential)) else { return [] }
         return [
             Violation(rule: .credential, text: credential, detail: "“\(credential)” isn't in your master resume.")
         ]
@@ -231,6 +256,34 @@ public struct Verifier: Sendable {
                 rule: .hiringCompanyProduct, text: text,
                 detail: "“\(name)” belongs to the company you're applying to, and your master resume doesn't name it.")
         ]
+    }
+
+    /// A gap bullet cites nothing, so it may not claim a credential (unless it names one of yours
+    /// exactly), a title or a promotion: those are hard limits (SPEC §5.3).
+    private func inventedClaims(in text: String) -> [Violation] {
+        var violations: [Violation] = []
+        let normalizedText = Self.normalized(text)
+        if text.contains(Self.credentialClaim), !credentials.contains(where: { normalizedText.contains($0) }) {
+            violations.append(
+                Violation(
+                    rule: .credential, text: text,
+                    detail: "It claims a degree, certification or licence your master resume doesn't list."))
+        }
+        if text.contains(Self.titleClaim) {
+            violations.append(
+                Violation(
+                    rule: .employerOrTitle, text: text,
+                    detail: "It claims a title or promotion; titles stay as your master resume has them."))
+        }
+        return violations
+    }
+
+    private static var credentialClaim: Regex<Substring> {
+        /(?i)\b(?:certified|certifications?|degree in|diploma|bachelor'?s?|master'?s|msc|bsc|beng|meng|mba|ph\.?d|doctorate|licen[cs]ed|p\.?\s?eng)\b/
+    }
+
+    private static var titleClaim: Regex<Substring> {
+        /(?i)\bpromoted\b|\bas (?:a |an |the )?(?:senior|lead|staff|principal|team lead|tech lead|technical lead|head of|engineering manager|manager|director)\b/
     }
 
     /// North American resumes leave these out (SPEC §5.3, hard limits).

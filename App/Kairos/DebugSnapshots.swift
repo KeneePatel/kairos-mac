@@ -80,13 +80,33 @@
             }
             let build = sampleBuild(resume: resume.resume, job: today.selected)
             let pdf = renderNow(ResumeDocument(build.content ?? TailoredResume(header: .init(name: ""))), in: folder)
+            let stretched = sampleBuild(resume: resume.resume, job: today.selected, stretch: true)
+            let stretchedPDF = renderNow(
+                ResumeDocument(stretched.content ?? TailoredResume(header: .init(name: ""))), in: folder,
+                name: "build-stretch")
+            let stretchModel = AppModel(
+                preview: today.model.jobs, screenings: [:], sources: today.model.sources,
+                stretch: StretchSettings(enabled: true, perRole: 2), resume: resume)
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 render(
                     BuildView(
                         build: build, job: today.selected, pdf: pdf, step: nil, master: resume.resume, selected: 0
                     )
+                    .environment(today.model)
                     .frame(width: 1_340, height: 860),
                     to: folder.appending(path: "build-\(name).png"), appearance: appearance)
+                render(
+                    BuildView(
+                        build: stretched, job: today.selected, pdf: stretchedPDF, step: nil, master: resume.resume,
+                        selected: 3
+                    )
+                    .environment(stretchModel)
+                    .frame(width: 1_340, height: 900),
+                    to: folder.appending(path: "build-stretch-\(name).png"), appearance: appearance)
+                render(
+                    ScrollView { StretchModeView().padding(Spacing.space6) }.environment(stretchModel)
+                        .frame(width: 820, height: 560).background(Color(.surface)),
+                    to: folder.appending(path: "general-settings-\(name).png"), appearance: appearance)
             }
             print("snapshots: \(folder.path)")
             exit(0)
@@ -203,8 +223,9 @@
             return (model, jobs[0], analysis)
         }
 
-        /// A finished strict build of the sample resume for Northline's posting (fictional).
-        private static func sampleBuild(resume: MasterResume, job: Job) -> BuildRecord {
+        /// A finished build of the sample resume for Northline's posting (fictional): strict, or
+        /// Stretch with one gap bullet for Terraform.
+        private static func sampleBuild(resume: MasterResume, job: Job, stretch: Bool = false) -> BuildRecord {
             let role = resume.entries(.experience)[0]
             let project = resume.entries(.project)[0]
             let texts = [
@@ -223,7 +244,14 @@
                     TailoredResume.Entry(
                         entryID: role.id, title: "Software Developer, Backend", organization: "Harbourline Logistics",
                         location: "Toronto, ON", dates: "Mar 2022 – Present",
-                        bullets: zip(texts, role.bullets).map { TailoredBullet(text: $0, sourceIDs: [$1.id]) })
+                        bullets: zip(texts, role.bullets).map { TailoredBullet(text: $0, sourceIDs: [$1.id]) }
+                            + (stretch
+                                ? [
+                                    TailoredBullet(
+                                        text:
+                                            "Wrote Terraform modules for the event pipeline's three environments, cutting setup time by about 30%.",
+                                        sourceIDs: [], gap: true, covers: "Terraform")
+                                ] : []))
                 ],
                 projects: [
                     TailoredResume.Entry(
@@ -244,17 +272,19 @@
                 ],
                 nices: ["Kubernetes", "Terraform"], domains: ["logistics"])
             return BuildRecord(
-                id: UUID(), jobID: job.id.rawValue, mode: .strict, masterVersion: 11, status: .done, content: content,
+                id: UUID(), jobID: job.id.rawValue, mode: stretch ? .stretch : .strict, masterVersion: 11,
+                status: .done,
+                content: content,
                 score: MatchScore.score(content, for: requirements, pages: 1), iterations: 1, error: nil,
                 createdAt: Date(), finishedAt: Date())
         }
 
         /// Renders with the bundled typst, blocking: fine for a debug snapshot, never for the app.
-        private static func renderNow(_ document: ResumeDocument, in folder: URL) -> URL? {
+        private static func renderNow(_ document: ResumeDocument, in folder: URL, name: String = "build") -> URL? {
             guard let typst = Bundle.main.url(forAuxiliaryExecutable: "typst"), let fonts = TypstRunner.bundledFonts,
                 let template = try? ResumeTemplate.classic.source(), let data = try? JSONEncoder().encode(document)
             else { return nil }
-            let work = folder.appending(path: "build-render")
+            let work = folder.appending(path: "\(name)-render")
             try? FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
             try? Data(template.utf8).write(to: work.appending(path: "template.typ"))
             try? data.write(to: work.appending(path: "data.json"))

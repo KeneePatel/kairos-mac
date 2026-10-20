@@ -161,4 +161,17 @@ struct TailoredDocumentTests {
         #expect(document.sections[1].items[0].bullets == ["Built an event pipeline in Go."])
         #expect(document.sections[2].groups == [ResumeDocument.Group(label: "Languages", items: ["Go", "Java"])])
     }
+
+    /// SPEC §5.3, Flagging: a Stretch-mode gap bullet reads like any other in the PDF.
+    @Test func theResumeNeverMarksAGapBullet() {
+        let bullets = [
+            TailoredBullet(text: "Built an event pipeline in Go.", sourceIDs: [UUID()]),
+            TailoredBullet(text: "Wrote Terraform modules.", sourceIDs: [], gap: true, covers: "Terraform"),
+        ]
+        let resume = TailoredResume(
+            header: .init(name: "Jordan Rivera"), summary: nil, skills: [],
+            experience: [.init(entryID: UUID(), title: "Software Developer, Backend", bullets: bullets)],
+            projects: [], education: [], certifications: [], languages: nil)
+        #expect(ResumeDocument(resume).sections.first?.items.first?.bullets == bullets.map(\.text))
+    }
 }

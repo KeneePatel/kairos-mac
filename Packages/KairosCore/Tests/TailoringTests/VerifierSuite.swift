@@ -114,4 +114,48 @@ struct VerifierSuite {
         }
         #expect(checked >= 15)
     }
+
+    /// S9's stretch half: no gap bullet breaking a hard limit gets through, and every gap bullet
+    /// that passes is stored flagged (`verified: false`).
+    @Test func stretchModeLetsNoHardLimitThroughAndFlagsEveryGapBullet() throws {
+        let hardLimits: Set<VerificationRule> = [
+            .yearsOverstated, .employerOrTitle, .dates, .credential, .hiringCompanyProduct, .personalField,
+        ]
+        var gaps = 0
+        var limitCases = 0
+        for file in try FileManager.default.contentsOfDirectory(atPath: Self.folder.path())
+        where file.hasSuffix(".json") {
+            let fixture = try JSONDecoder().decode(
+                Fixture.self, from: Data(contentsOf: Self.folder.appending(path: file)))
+            guard fixture.mode == "stretch" else { continue }
+            var header = ResumeHeader()
+            header.totalYears = fixture.resume.totalYears
+            let resume = MasterResume(
+                header: header,
+                entries: fixture.resume.education.map {
+                    ResumeEntry(
+                        fields: .education(
+                            .init(institution: $0.institution, credential: $0.credential, field: $0.field)))
+                },
+                skills: fixture.resume.skills.map { Skill(name: $0.name, level: $0.level) })
+            let verifier = Verifier(
+                resume: resume, mode: .stretch, hiringCompany: fixture.hiringCompany,
+                companyProducts: fixture.companyProducts)
+            for item in fixture.bullets where item.gap == true {
+                gaps += 1
+                let bullet = TailoredBullet(text: item.text, sourceIDs: [], gap: true)
+                let found = Set(verifier.check(bullet).map(\.rule))
+                let expected = Set(item.expect.compactMap(VerificationRule.init(rawValue:)))
+                if !expected.isDisjoint(with: hardLimits) {
+                    limitCases += 1
+                    #expect(!found.isDisjoint(with: hardLimits), "\(file): a hard limit got through: “\(item.text)”")
+                }
+                if found.isEmpty {
+                    let stored = try JSONSerialization.jsonObject(with: JSONEncoder().encode(bullet)) as? [String: Any]
+                    #expect(stored?["verified"] as? Bool == false, "\(file): “\(item.text)” isn't flagged")
+                }
+            }
+        }
+        #expect(gaps >= 10 && limitCases >= 6)
+    }
 }

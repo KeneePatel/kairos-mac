@@ -40,6 +40,23 @@ struct LiveWriterTests {
         }
     }
 
+    /// Stretch mode's gap bullets for the two requirements only Can-discuss skills answer.
+    /// `scripts/live-llm.sh gapBulletsOnGemini`
+    @Test func gapBulletsOnGemini() async throws {
+        guard let key = ProcessInfo.processInfo.environment["GEMINI_API_KEY"], !key.isEmpty else {
+            print("live: GEMINI_API_KEY not set; skipping")
+            return
+        }
+        let client = LLMClient(
+            keys: [OpenAICompatibleProvider(preset: .gemini, key: key)], policy: ClientPolicy(preset: .gemini))
+        let input = WriterFixtures.gapInput(perRole: 2)
+        let result = try await run(client, GapBulletsTask(), input)
+        for (entry, bullets) in GapBulletsTask.written(result.output, input: input) {
+            let role = input.roles.first { $0.entryID == entry }?.organization ?? "?"
+            for bullet in bullets { print("live:   • [\(role) · \(bullet.covers ?? "")] \(bullet.text)") }
+        }
+    }
+
     private func run<T: LLMTask>(_ client: LLMClient, _ task: T, _ input: T.Input) async throws -> LLMResult<T.Output> {
         let defaults = TaskDefaults.catalog[T.id]!
         let result = try await client.run(
@@ -80,6 +97,34 @@ enum WriterFixtures {
             WriteSkillsInput(brief: brief, skills: selection.skills)
         )
     }
+
+    /// The writer fixtures' posting plus two requirements only Can-discuss skills answer.
+    static let stretchRequirements = JobRequirements(
+        musts: requirements.musts, nices: requirements.nices + ["Infrastructure as code with Terraform", "Rust"],
+        domains: requirements.domains)
+
+    /// A written resume: the sample's first two roles with one bullet each.
+    static func written() -> TailoredResume {
+        TailoredResume(
+            header: .init(name: "Jordan Rivera"), summary: nil, skills: [],
+            experience: [
+                .init(
+                    entryID: Sample.harbourline.id, title: "Software Developer, Backend",
+                    organization: "Harbourline Logistics", dates: "Mar 2022 – Present",
+                    bullets: [TailoredBullet(text: Sample.pipeline.text, sourceIDs: [Sample.pipeline.id])]),
+                .init(
+                    entryID: Sample.rivet.id, title: "Junior Developer", organization: "Rivet Studio",
+                    dates: "Jun 2020 – Feb 2022",
+                    bullets: [TailoredBullet(text: Sample.apis.text, sourceIDs: [Sample.apis.id])]),
+            ], projects: [], education: [], certifications: [], languages: nil)
+    }
+
+    static func gapInput(perRole: Int = 1, requirements: JobRequirements = stretchRequirements) -> GapBulletsInput {
+        GapBulletsInput(
+            brief: WriterBrief(jobTitle: "Backend Developer II", requirements: requirements, locale: .canada),
+            written: written(), master: Sample.resume, perRole: perRole,
+            verifier: Verifier(resume: Sample.resume, mode: .stretch, hiringCompany: "Northline Freight"))
+    }
 }
 
 /// Offline: every recorded writer reply still passes its task's checks, the strict verifier included.
@@ -107,6 +152,9 @@ struct RecordedWriterTests {
                 try WriteSummaryTask().check(try decoder.decode(SummaryOutput.self, from: data), for: inputs.summary)
             } else if file.hasPrefix("writeSkills-") {
                 try WriteSkillsTask().check(try decoder.decode(SkillsOutput.self, from: data), for: inputs.skills)
+            } else if file.hasPrefix("gapBullets-") {
+                try GapBulletsTask().check(
+                    try decoder.decode(GapBulletsOutput.self, from: data), for: WriterFixtures.gapInput(perRole: 2))
             } else {
                 Issue.record("\(file) isn't a writer reply")
             }

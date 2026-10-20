@@ -4,7 +4,8 @@ import SwiftUI
 import Tailoring
 
 /// Every line of a build, and the selected one traced to the master-resume bullets it came from,
-/// with the checks it passes (design `Build.dc.html`, right column).
+/// with the checks it passes (design `Build.dc.html`, right column). Lines Stretch mode added have
+/// the Can-discuss dashed outline and the word "Stretch".
 struct BulletTraceView: View {
     let build: BuildRecord
     let master: MasterResume?
@@ -25,13 +26,21 @@ struct BulletTraceView: View {
                         Button {
                             selected = index
                         } label: {
-                            Text(line.bullet.text).font(TypeStyle.callout).lineLimit(2).multilineTextAlignment(.leading)
-                                .foregroundStyle(Color(selected == index ? .ink : .ink2))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, Spacing.space2).padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: Radius.row)
-                                        .fill(selected == index ? Color(.accentTint) : .clear))
+                            HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
+                                Text(line.bullet.text).font(TypeStyle.callout).lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                                    .foregroundStyle(Color(selected == index ? .ink : .ink2))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                if line.bullet.gap {
+                                    Text("Stretch").font(TypeStyle.caption).foregroundStyle(Color(.inkSecondary))
+                                }
+                            }
+                            .padding(.horizontal, Spacing.space2).padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: Radius.row)
+                                    .fill(selected == index ? Color(.accentTint) : .clear)
+                            )
+                            .overlay { if line.bullet.gap { GapOutline() } }
                         }
                         .buttonStyle(.plain)
                     }
@@ -48,7 +57,7 @@ struct BulletTraceView: View {
                         Text("Choose a line, or select text in the resume, to see where it came from.")
                             .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
                     }
-                    readyToDiscuss
+                    ReadyToDiscussView(build: build, lines: lines.map(\.bullet), master: master, selected: $selected)
                 }
                 .padding(Spacing.space4)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -63,9 +72,29 @@ struct BulletTraceView: View {
             Text(bullet.text).font(TypeStyle.body).foregroundStyle(Color(.ink)).fixedSize(
                 horizontal: false, vertical: true)
         }
-        VStack(alignment: .leading, spacing: Spacing.space3) {
-            Text("Traced to your master resume").font(TypeStyle.headline).foregroundStyle(Color(.ink))
-            ForEach(bullet.sourceIDs, id: \.self) { id in source(id) }
+        if bullet.gap {
+            VStack(alignment: .leading, spacing: Spacing.space2) {
+                Text("Not from your master resume").font(TypeStyle.headline).foregroundStyle(Color(.ink))
+                Text(
+                    "Stretch mode added this line"
+                        + (bullet.covers.map { " to cover “\($0)”" } ?? "")
+                        + ". It cites nothing in your master resume and any number in it is an estimate, so be ready to discuss it."
+                )
+                .font(TypeStyle.callout).foregroundStyle(Color(.ink2)).fixedSize(horizontal: false, vertical: true)
+                let named = ReadyToDiscussView.skills(
+                    in: bullet.text, from: master?.skills.filter { $0.level == .canDiscuss } ?? [])
+                if !named.isEmpty {
+                    FlowLayout(spacing: 6) { ForEach(named, id: \.id) { SkillChip(skill: $0) } }
+                }
+            }
+            .padding(Spacing.space3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(GapOutline())
+        } else {
+            VStack(alignment: .leading, spacing: Spacing.space3) {
+                Text("Traced to your master resume").font(TypeStyle.headline).foregroundStyle(Color(.ink))
+                ForEach(bullet.sourceIDs, id: \.self) { id in source(id) }
+            }
         }
         checks(bullet)
     }
@@ -104,23 +133,28 @@ struct BulletTraceView: View {
         }
     }
 
-    /// The strict verifier's rules, run again on this line against your master resume as it is now.
+    /// The verifier's rules, run again on this line against your master resume as it is now:
+    /// strict for a line it backs, the hard limits for a Stretch line.
     @ViewBuilder private func checks(_ bullet: TailoredBullet) -> some View {
         if let master {
-            let violations = Verifier(resume: master, hiringCompany: company).check(bullet).map(\.rule)
-            let rows: [(String, Bool)] = [
-                (
-                    "Cites bullets from your master resume",
-                    !violations.contains { [.missingSource, .unknownSource].contains($0) }
-                ),
-                ("Every number is in the source", !violations.contains(.unsupportedNumber)),
-                (
-                    "Every technology is in the source or your Proven skills",
-                    !violations.contains(.unsupportedTechnology)
-                ),
-                ("Nothing about the company you're applying to", !violations.contains(.hiringCompanyProduct)),
-                ("Fits the length", bullet.text.count <= Polish.maxBulletLength),
-            ]
+            let violations = Verifier(resume: master, mode: bullet.gap ? .stretch : .strict, hiringCompany: company)
+                .check(bullet).map(\.rule)
+            let rows: [(String, Bool)] =
+                bullet.gap
+                ? stretchRows(bullet, violations)
+                : [
+                    (
+                        "Cites bullets from your master resume",
+                        !violations.contains { [.missingSource, .unknownSource].contains($0) }
+                    ),
+                    ("Every number is in the source", !violations.contains(.unsupportedNumber)),
+                    (
+                        "Every technology is in the source or your Proven skills",
+                        !violations.contains(.unsupportedTechnology)
+                    ),
+                    ("Nothing about the company you're applying to", !violations.contains(.hiringCompanyProduct)),
+                    ("Fits the length", bullet.text.count <= Polish.maxBulletLength),
+                ]
             VStack(alignment: .leading, spacing: Spacing.space2) {
                 HStack {
                     Text("Checks").font(TypeStyle.headline).foregroundStyle(Color(.ink))
@@ -140,17 +174,18 @@ struct BulletTraceView: View {
         }
     }
 
-    /// Stretch mode's gap bullets go here to prepare (T37). Off, there are none.
-    private var readyToDiscuss: some View {
-        VStack(alignment: .leading, spacing: Spacing.space2) {
-            Text("Be ready to discuss").font(TypeStyle.headline).foregroundStyle(Color(.ink))
-            Text(
-                build.mode == .stretch
-                    ? "Lines this build added beyond your master resume appear here."
-                    : "Nothing here. Stretch mode is off, so this resume only claims your Proven skills."
-            )
-            .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).fixedSize(horizontal: false, vertical: true)
-        }
+    /// The hard limits a Stretch line must still keep (SPEC §5.3).
+    private func stretchRows(_ bullet: TailoredBullet, _ violations: [VerificationRule]) -> [(String, Bool)] {
+        [
+            ("Only your Proven or Can-discuss skills", !violations.contains(.unsupportedTechnology)),
+            ("No more years than yours", !violations.contains(.yearsOverstated)),
+            (
+                "No degree, certification, title or promotion you don't have",
+                !violations.contains { [.credential, .employerOrTitle].contains($0) }
+            ),
+            ("Nothing about the company you're applying to", !violations.contains(.hiringCompanyProduct)),
+            ("Fits the length", bullet.text.count <= Polish.maxBulletLength),
+        ]
     }
 
     private func name(_ entry: ResumeEntry) -> String {

@@ -14,6 +14,7 @@ public enum BuildError: Error, Equatable, Sendable {
     case jobNotFound
     case notAnalysed
     case resumeNotReady([String])
+    case stretchOff
 
     public var message: String {
         switch self {
@@ -22,6 +23,7 @@ public enum BuildError: Error, Equatable, Sendable {
         case .jobNotFound: "The job for this build is gone."
         case .notAnalysed: "This job hasn't been analysed yet. Run screening first."
         case .resumeNotReady(let missing): "Your master resume isn't ready: \(missing.joined(separator: " "))"
+        case .stretchOff: "Stretch mode is off. Turn it on in Settings, General, or build in Full mode."
         }
     }
 }
@@ -124,13 +126,18 @@ public actor BuildQueue {
         let master = try await MasterResumeRepository(db).load()
         let readiness = Validator.readiness(master, now: YearMonth.containing(Date()))
         guard readiness.isReady else { throw BuildError.resumeNotReady(readiness.missing.map(\.message)) }
+        let stretch =
+            try await SettingsRepository(db).value(StretchSettings.storageKey, as: StretchSettings.self)
+            ?? StretchSettings()
+        // Stretch is opt-in: a stretch build waiting from before you turned it off doesn't run.
+        if record.mode == .stretch, !stretch.enabled { throw BuildError.stretchOff }
 
         let request = BuildRequest(
             jobTitle: job.title, company: job.company,
             requirements: JobRequirements(
                 musts: analysis.requirements.filter { $0.kind == .must }.map(\.text),
                 nices: analysis.requirements.filter { $0.kind == .nice }.map(\.text), domains: analysis.domains),
-            locale: SpellingLocale(country: job.country), mode: record.mode)
+            locale: SpellingLocale(country: job.country), mode: record.mode, gapBulletsPerRole: stretch.limit)
         let loop = BuildLoop(
             router: router, master: master, context: CallContext(jobID: job.id.rawValue, buildID: id.lowercased))
         let render = self.render

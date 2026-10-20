@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Settings, in the design's tabs. Search and AI providers are built; the others arrive with their tasks.
+/// Settings, in the design's tabs. General (Stretch mode), Search and AI providers are built; the
+/// others arrive with their tasks.
 struct SettingsView: View {
     enum Tab: String, CaseIterable, Identifiable {
         case general = "General"
@@ -29,7 +30,14 @@ struct SettingsView: View {
                 ProvidersView()
             case .search:
                 SearchPreferencesView()
-            case .general, .schedule, .account:
+            case .general:
+                ScrollView {
+                    StretchModeView()
+                        .padding(Spacing.space6)
+                        .frame(maxWidth: 760, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            case .schedule, .account:
                 ContentUnavailableView(
                     tab.rawValue, systemImage: "gearshape",
                     description: Text("This part of Settings isn't built yet.").foregroundStyle(Color(.inkSecondary)))

@@ -41,6 +41,8 @@ final class AppModel {
     /// What you're looking for (synced) and where you may work (this Mac only).
     private(set) var searchPreferences = SearchPreferences()
     private(set) var workProfile = WorkProfile()
+    /// Off until you turn it on (SPEC §5.3).
+    private(set) var stretch = StretchSettings()
     /// Every job's builds, newest first, and where each running one is.
     private(set) var builds: [BuildRecord] = []
     private(set) var buildSteps: [UUID: BuildStep] = [:]
@@ -57,13 +59,16 @@ final class AppModel {
         /// For snapshots: an open model with sample jobs and their screening.
         init(
             preview jobs: [Job], screenings: [String: ScreeningRecord], sources: [Source],
-            preferences: SearchPreferences = SearchPreferences(), profile: WorkProfile = WorkProfile()
+            preferences: SearchPreferences = SearchPreferences(), profile: WorkProfile = WorkProfile(),
+            stretch: StretchSettings = StretchSettings(), resume: ResumeModel? = nil
         ) {
+            self.resume = resume
             self.jobs = jobs
             self.screenings = screenings
             self.sources = sources
             searchPreferences = preferences
             workProfile = profile
+            self.stretch = stretch
             phase = .ready
         }
     #endif
@@ -117,6 +122,9 @@ final class AppModel {
             workProfile =
                 try await PrivateSettingsRepository(db).value(WorkProfile.storageKey, as: WorkProfile.self)
                 ?? WorkProfile()
+            stretch =
+                try await SettingsRepository(db).value(StretchSettings.storageKey, as: StretchSettings.self)
+                ?? StretchSettings()
         } catch {
             log.error("Reloading failed: \(String(describing: error), privacy: .public)")
         }
@@ -293,8 +301,12 @@ final class AppModel {
 
     // MARK: - Builds
 
+    /// Stretch when you've turned it on, otherwise strict.
+    var defaultBuildMode: BuildMode { stretch.enabled ? .stretch : .strict }
+
     /// Starts a build for `job`, once your master resume is ready (S14), and shows it.
-    func startBuild(for job: Job, mode: BuildMode = .strict) async -> String? {
+    func startBuild(for job: Job, mode: BuildMode? = nil) async -> String? {
+        let mode = mode ?? defaultBuildMode
         guard let db else { return "The database isn't open." }
         guard let resume, resume.readiness.isReady else {
             return
@@ -376,6 +388,12 @@ final class AppModel {
         guard let db else { return }
         searchPreferences = preferences
         try? await SettingsRepository(db).save(preferences, for: SearchPreferences.storageKey)
+    }
+
+    func save(_ stretch: StretchSettings) async {
+        guard let db else { return }
+        self.stretch = stretch
+        try? await SettingsRepository(db).save(stretch, for: StretchSettings.storageKey)
     }
 
     func save(_ profile: WorkProfile) async {

@@ -73,8 +73,9 @@ private let replies: [TaskID: [FakeProvider.Reply]] = [
 private func router(_ db: Database, _ fake: FakeProvider) -> LLMRouter {
     let client = LLMClient(keys: [fake], policy: ClientPolicy(requestsPerMinute: 6_000), jitter: { 1 })
     let routes = Dictionary(
-        uniqueKeysWithValues: [TaskID.writeExperience, .writeProjects, .writeSummary, .writeSkills, .rewriteSection].map
-        {
+        uniqueKeysWithValues: [
+            TaskID.writeExperience, .writeProjects, .writeSummary, .writeSkills, .rewriteSection, .gapBullets,
+        ].map {
             ($0, [ModelRef(provider: "fake", model: "flash")])
         })
     return LLMRouter(
@@ -178,5 +179,45 @@ struct BuildQueueTests {
         try await analyse(job, in: db)
         let without = try await noAI.enqueue(job: job.id)
         #expect(await outcome(of: without, in: noAI) == .failed(without, BuildError.noAI.message))
+    }
+
+    /// Stretch is opt-in: off, a stretch build doesn't run. On, its gap bullets are stored flagged.
+    @Test func aStretchBuildNeedsStretchModeAndStoresItsGapBulletsFlagged() async throws {
+        let (db, job) = try await database()
+        _ = try await MasterResumeRepository(db).save([Skill(name: "Terraform", level: .canDiscuss)])
+        let analysis = JobAnalysis(
+            requirements: [
+                .init(text: "3+ years building services in Go", kind: .must, matchedSkill: "Go"),
+                .init(text: "Terraform", kind: .nice, matchedSkill: nil),
+            ], yearsRequired: 3, seniority: .mid, domains: [],
+            flags: .init(
+                sponsorship: .notMentioned, clearance: .notMentioned, french: .notMentioned, remoteScope: .hybrid))
+        try await AnalysisRepository(db).save(
+            analysis, for: job.id, model: "flash-lite", promptVersion: AnalyzeJobTask.promptVersion)
+        var scripts = replies
+        scripts[.gapBullets] = [
+            .reply(
+                #"{"bullets":[{"role":"e1","covers":"r1","text":"Wrote Terraform modules for the pipeline's three environments."}]}"#
+            )
+        ]
+        let fake = FakeProvider(scripts)
+        let queue = BuildQueue(db: db, router: router(db, fake), folder: folder(), render: render)
+
+        let off = try await queue.enqueue(job: job.id, mode: .stretch)
+        #expect(await outcome(of: off, in: queue) == .failed(off, BuildError.stretchOff.message))
+        #expect(fake.requests.isEmpty)
+
+        try await SettingsRepository(db).save(StretchSettings(enabled: true), for: StretchSettings.storageKey)
+        let on = try await queue.enqueue(job: job.id, mode: .stretch)
+        guard case .finished? = await outcome(of: on, in: queue) else {
+            Issue.record("the stretch build didn't finish")
+            return
+        }
+        let row = try #require(
+            try await db.query("SELECT content FROM build WHERE id = ?", [.text(on.lowercased)]).first)
+        let content = try #require(row.string("content"))
+        #expect(content.contains(#""verified":false"#) && content.contains(#""covers":"Terraform""#))
+        let stored = try #require(try await BuildRepository(db).build(on)?.content)
+        #expect(stored.experience.first?.bullets.last?.gap == true)
     }
 }

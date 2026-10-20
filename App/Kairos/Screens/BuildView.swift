@@ -11,6 +11,8 @@ import Tailoring
 struct BuildsView: View {
     @Environment(AppModel.self) private var model
     @State private var pdf: URL?
+    /// The finished build's PDF was looked for and isn't there.
+    @State private var pdfMissing = false
     @State private var mode = BuildMode.strict
     @State private var problem: String?
 
@@ -22,7 +24,7 @@ struct BuildsView: View {
             if let build {
                 BuildView(
                     build: build, job: job, pdf: pdf, step: model.buildSteps[build.id],
-                    master: model.resume?.resume)
+                    master: model.resume?.resume, pdfMissing: pdfMissing)
             } else {
                 ContentUnavailableView {
                     Label("No builds yet", systemImage: "doc.text")
@@ -36,8 +38,15 @@ struct BuildsView: View {
         .toolbar { toolbar }
         .task(id: "\(build?.id.uuidString ?? "")-\(build?.status.rawValue ?? "")") {
             pdf = nil
-            if let build, build.status == .done { pdf = await model.pdf(of: build) }
-            if let build { mode = build.mode == .lite ? .lite : .strict }
+            pdfMissing = false
+            if let build, build.status == .done {
+                pdf = await model.pdf(of: build).flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
+                pdfMissing = pdf == nil
+            }
+            if let build { mode = build.mode == .stretch && !model.stretch.enabled ? .strict : build.mode }
+        }
+        .onChange(of: model.stretch.enabled) { _, on in
+            if !on, mode == .stretch { mode = .strict }
         }
         .alert("Can't build", isPresented: Binding(get: { problem != nil }, set: { if !$0 { problem = nil } })) {
             Button("OK", role: .cancel) {}
@@ -83,11 +92,14 @@ struct BuildsView: View {
         ToolbarItemGroup(placement: .primaryAction) {
             Picker("Mode", selection: $mode) {
                 Text("Full").tag(BuildMode.strict)
+                if model.stretch.enabled { Text("Stretch").tag(BuildMode.stretch) }
                 Text("Lite").tag(BuildMode.lite)
             }
             .pickerStyle(.segmented)
             .help(
-                "Full rewrites your bullets for the job; Lite copies them word for word and writes only the summary and skills."
+                "Full rewrites your bullets for the job"
+                    + (model.stretch.enabled ? "; Stretch also adds gap bullets for your Can-discuss skills" : "")
+                    + "; Lite copies them word for word and writes only the summary and skills."
             )
             Button {
                 Task { if let job { problem = await model.startBuild(for: job, mode: mode) } }
@@ -134,6 +146,7 @@ struct BuildsView: View {
         case .writing: "writing sections"
         case .scoring: "scoring"
         case .rewriting(let section, let pass): "rewriting \(section.rawValue), pass \(pass)"
+        case .gapBullets: "adding gap bullets"
         case .fitting(let pages): "fitting \(pages) pages onto one"
         }
     }
@@ -146,14 +159,19 @@ struct BuildView: View {
     let pdf: URL?
     let step: BuildStep?
     let master: MasterResume?
+    let pdfMissing: Bool
     @State private var selected: Int?
 
-    init(build: BuildRecord, job: Job?, pdf: URL?, step: BuildStep?, master: MasterResume?, selected: Int? = nil) {
+    init(
+        build: BuildRecord, job: Job?, pdf: URL?, step: BuildStep?, master: MasterResume?, pdfMissing: Bool = false,
+        selected: Int? = nil
+    ) {
         self.build = build
         self.job = job
         self.pdf = pdf
         self.step = step
         self.master = master
+        self.pdfMissing = pdfMissing
         _selected = State(initialValue: selected)
     }
 
@@ -168,6 +186,12 @@ struct BuildView: View {
                     ContentUnavailableView(
                         "This build didn't finish", systemImage: "exclamationmark.triangle",
                         description: Text(build.error ?? "Something went wrong."))
+                } else if pdfMissing {
+                    ContentUnavailableView(
+                        "The PDF isn't there", systemImage: "doc.questionmark",
+                        description: Text("It was moved or deleted. Build again to make a new one."))
+                } else if build.status == .done {
+                    Color.clear
                 } else {
                     VStack(spacing: Spacing.space3) {
                         ProgressView()
@@ -230,9 +254,22 @@ private struct BuildStepsColumn: View {
 
     private var steps: [(title: String, detail: String)] {
         let bullets = content.map { ($0.experience + $0.projects).flatMap(\.bullets).count } ?? 0
+        let gaps = content.map { ($0.experience + $0.projects).flatMap(\.bullets).count { $0.gap } } ?? 0
         let roles = content?.experience.count ?? 0
         let projects = content?.projects.count ?? 0
         let pages = pdf.flatMap { PDFDocument(url: $0)?.pageCount }
+        let checked =
+            gaps == 0
+            ? "\(bullets) bullets, all traced to your master resume"
+            : "\(bullets - gaps) traced to your master resume; \(gaps) gap bullet\(gaps == 1 ? "" : "s") within the hard limits"
+        let stretch: [(title: String, detail: String)] =
+            build.mode == .stretch
+            ? [
+                (
+                    "Added gap bullets",
+                    gaps == 0 ? "None needed" : "\(gaps) for Can-discuss skills, listed to prepare"
+                )
+            ] : []
         return [
             (
                 "Picked entries",
@@ -243,13 +280,14 @@ private struct BuildStepsColumn: View {
                 build.mode == .lite
                     ? "Summary and skills; bullets copied word for word" : "Summary, experience, projects, skills"
             ),
-            ("Checked every claim", "\(bullets) bullets, all traced to your master resume"),
+            ("Checked every claim", checked),
             (
                 "Polished",
                 job?.country == .unitedStates ? "Phrasing, verbs, US spelling" : "Phrasing, verbs, Canadian spelling"
             ),
             ("Scored", build.score.map { "\(Int($0.total.rounded())) of 100" } ?? ""),
-            ("Rendered", pages.map { "Letter PDF, \($0) page\($0 == 1 ? "" : "s")" } ?? "Letter PDF"),
+        ] + stretch + [
+            ("Rendered", pages.map { "Letter PDF, \($0) page\($0 == 1 ? "" : "s")" } ?? "Letter PDF")
         ]
     }
 
@@ -263,7 +301,8 @@ private struct BuildStepsColumn: View {
             case .selecting?, nil: 0
             case .writing?: 1
             case .scoring?, .rewriting?: 4
-            case .fitting?: 5
+            case .gapBullets?: 5
+            case .fitting?: steps.count - 1
             }
         switch build.status {
         case .done: return .done
