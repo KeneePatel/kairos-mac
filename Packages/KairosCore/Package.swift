@@ -38,7 +38,7 @@ let package = Package(
             name: "PipelineTests",
             dependencies: ["Pipeline", "Store", "JobSources", "Screening", "LLM", "MasterResume"],
             swiftSettings: strict),
-        .target(name: "Render", resources: [.copy("Templates")], swiftSettings: strict),
+        .target(name: "Render", resources: [.copy("Templates"), .copy("Fonts")], swiftSettings: strict),
         .testTarget(name: "RenderTests", dependencies: ["Render"], swiftSettings: strict),
         .target(name: "Secrets", swiftSettings: strict),
         .testTarget(name: "SecretsTests", dependencies: ["Secrets"], swiftSettings: strict),

@@ -6,15 +6,22 @@ import Foundation
 /// model writes is ever spliced into Typst source and nothing needs escaping (ADR-004).
 public struct TypstRunner: Sendable {
     public let executable: URL
+    /// The only text fonts typst may use besides its built-in ones (`Fonts/`, Source Serif 4).
+    public let fonts: URL?
     public let timeout: Duration
 
-    public init(executable: URL, timeout: Duration = .seconds(30)) {
+    public init(executable: URL, fonts: URL? = TypstRunner.bundledFonts, timeout: Duration = .seconds(30)) {
         self.executable = executable
+        self.fonts = fonts
         self.timeout = timeout
     }
 
+    /// The fonts shipped with this module.
+    public static let bundledFonts = Bundle.module.url(forResource: "Fonts", withExtension: nil)
+
     /// Compiles `template` (Typst source) with `data` (JSON bytes) and returns the PDF bytes.
-    public func compile(template: String, data: Data) async throws(RenderError) -> Data {
+    /// `createdAt` fixes the PDF's creation date, for reproducible output.
+    public func compile(template: String, data: Data, createdAt: Date? = nil) async throws(RenderError) -> Data {
         let fm = FileManager.default
         let work = fm.temporaryDirectory.appendingPathComponent("kairos-render-\(UUID().uuidString)")
         do {
@@ -27,17 +34,20 @@ public struct TypstRunner: Sendable {
         defer { try? fm.removeItem(at: work) }
 
         let output = work.appendingPathComponent("out.pdf")
-        let arguments = [
+        var arguments = [
             "compile",
             "--root", work.path,
             "--input", "data=data.json",
-            // Reproducible output: only the fonts embedded in typst (and later, bundled ones).
+            // Reproducible output: only typst's built-in fonts and the bundled ones, never this Mac's.
             "--ignore-system-fonts",
-            work.appendingPathComponent("template.typ").path,
-            output.path,
+            // One line per problem ("template.typ:3:9: error: …"), without colour codes.
+            "--diagnostic-format", "short",
         ]
-        let result = try await run(arguments)
-        guard result.status == 0 else { throw .compile(result.stderr) }
+        if let fonts { arguments += ["--font-path", fonts.path] }
+        if let createdAt { arguments += ["--creation-timestamp", String(Int(createdAt.timeIntervalSince1970))] }
+        arguments += [work.appendingPathComponent("template.typ").path, output.path]
+        let result = try await run(arguments, home: work)
+        guard result.status == 0 else { throw .compile(Self.summary(of: result.stderr)) }
         guard let pdf = fm.contents(atPath: output.path) else { throw .compile("typst wrote no PDF") }
         return pdf
     }
@@ -47,10 +57,21 @@ public struct TypstRunner: Sendable {
         let stderr: String
     }
 
-    private func run(_ arguments: [String]) async throws(RenderError) -> Result {
+    /// typst's errors, without its warnings, at most 2,000 characters.
+    static func summary(of stderr: String) -> String {
+        let lines = stderr.split(separator: "\n").map(String.init)
+        let errors = lines.filter { $0.contains("error") }
+        let text = (errors.isEmpty ? lines : errors).joined(separator: "\n")
+        return text.isEmpty ? "typst failed without saying why" : String(text.prefix(2_000))
+    }
+
+    private func run(_ arguments: [String], home: URL) async throws(RenderError) -> Result {
         let process = Process()
         process.executableURL = executable
         process.arguments = arguments
+        // A sealed environment: no TYPST_FONT_PATHS or similar from the user's shell changes the
+        // output, and any cache typst wants goes in the throwaway folder.
+        process.environment = ["HOME": home.path, "TMPDIR": home.path]
         let errors = Pipe()
         process.standardError = errors
         process.standardOutput = FileHandle.nullDevice

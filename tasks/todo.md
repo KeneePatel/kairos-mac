@@ -415,13 +415,21 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
 
 ### Slice 4: Tailoring and rendering
 
-- [ ] **T32 · Render pipeline and classic template** (M) · deps: T06, T15
+- [x] **T32 · Render pipeline and classic template** (M) · deps: T06, T15
   - **Acceptance:**
-    - [ ] `TypstRunner` is hardened: timeout, error capture, `--ignore-system-fonts`, bundled fonts.
-    - [ ] `classic.typ` reads resume JSON; the header comes from the contact block; section order and visibility are inputs.
-    - [ ] A golden test checks the PDF text and page count for a fixture resume.
+    - [x] `TypstRunner` is hardened: timeout, error capture, `--ignore-system-fonts`, bundled fonts.
+    - [x] `classic.typ` reads resume JSON; the header comes from the contact block; section order and visibility are inputs.
+    - [x] A golden test checks the PDF text and page count for a fixture resume.
   - **Verify:** `core-test RenderTests`
   - **Files:** `Sources/Render/TypstRunner.swift`, `Sources/Render/ResumeDocument.swift`, `Sources/Render/Templates/classic.typ`, `Sources/Render/Fonts/` (open-licensed), `Tests/RenderTests/ClassicTemplateTests.swift`
+  - **Done 2026-10-20:** 5 new tests, plus the 3 from T06.
+    - **Golden test:** the sample resume renders on one page, and its lines appear in reading order (`Fixtures/render/classic-golden.txt`). It checks order rather than exact text because CI's PDFKit differs from this Mac's.
+    - **Other tests:** section order and visibility come from the input; Typst markup in content (`#import`, `*`, `$`, `@`, `<…>`) prints literally; the same input gives the same bytes; the PDF uses the bundled serif; the fonts ship with the module.
+    - **`ResumeDocument`** is what templates read: header (name, optional headline, contact items with optional links), sections in order with `visible`, items (title, subtitle, location, dates, bullets), skill groups and style (paper, size, margin). `ResumeRenderer` renders one and counts pages with PDFKit, for T35's page fitting.
+    - **Runner hardening:** bundled fonts via `--font-path`, one-line errors (`--diagnostic-format short`, warnings dropped, at most 2,000 characters), a sealed environment (only HOME and TMPDIR, both the throwaway folder, so a shell's TYPST_* variables can't change the output), and `--creation-timestamp` for reproducible PDFs.
+    - **Fonts:** Source Serif 4 Regular, Italic, Semibold and Bold (SIL OFL 1.1, 0.9 MB) in `Sources/Render/Fonts/`, with their source and SHA-256 in its README. The debug app is now 55 MB, within the 80 MB budget.
+    - **Converting your master resume** (or a tailored build) into a `ResumeDocument` lives in Tailoring (T33 onwards), since SPEC §4 lets Render know only Tailoring's types.
+  - **Visual differences from the resume in `Build.dc.html`:** an optional headline under the name (the mockup has none; it's omitted when empty); the contact line follows the order given (the mockup starts with the city); skills can be labelled groups as well as the mockup's single line; the mockup shows Toronto Metropolitan University sample data where the fixture uses Waterloo.
 
 - [ ] **T33 · Entry selection and strict verifier** (M, test-first) · deps: T29, T15
   - **Acceptance:**
