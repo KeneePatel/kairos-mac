@@ -16,7 +16,11 @@
       "text": "Room or SQLite",
       "kind": "must",
       "category": "skill",
-      "match": "no"
+      "match": "partial",
+      "evidence": [
+        "s3",
+        "s4"
+      ]
     },
     {
       "text": "Unity",

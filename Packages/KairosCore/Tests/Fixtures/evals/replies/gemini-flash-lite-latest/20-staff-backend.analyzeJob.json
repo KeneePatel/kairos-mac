@@ -15,9 +15,10 @@
       "text": "Distributed systems design at scale",
       "kind": "must",
       "category": "experience",
-      "match": "partial",
+      "match": "yes",
       "evidence": [
         "x1b1",
+        "x1b2",
         "x1b3"
       ]
     },
@@ -61,10 +62,8 @@
   "years_required": 8,
   "seniority": "staff",
   "domains": [
-    "freight",
     "logistics",
-    "routing",
-    "backend"
+    "routing"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

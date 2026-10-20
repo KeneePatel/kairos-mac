@@ -4,7 +4,7 @@
       "text": "3+ years building services in Go or Java",
       "kind": "must",
       "category": "experience",
-      "match": "yes",
+      "match": "partial",
       "evidence": ["s1"]
     },
     {
@@ -17,23 +17,23 @@
     {
       "text": "Experience with message queues such as RabbitMQ or Kafka",
       "kind": "must",
-      "category": "skill",
+      "category": "experience",
       "match": "yes",
       "evidence": ["s3"]
     },
     {
-      "text": "Must be legally entitled to work in Canada; we can't sponsor visas.",
+      "text": "Must be legally entitled to work in Canada; we can't sponsor visas",
       "kind": "must",
       "category": "authorization",
-      "match": "no",
+      "match": "not_judged",
       "evidence": []
     },
     {
       "text": "Kubernetes",
       "kind": "nice",
       "category": "skill",
-      "match": "partial",
-      "evidence": ["c1"]
+      "match": "no",
+      "evidence": []
     },
     {
       "text": "gRPC",
@@ -51,8 +51,8 @@
     }
   ],
   "years_required": 3,
-  "seniority": "mid",
-  "domains": ["logistics", "freight"],
+  "seniority": "unspecified",
+  "domains": ["logistics"],
   "flags": {
     "sponsorship": "not_offered",
     "clearance": "not_mentioned",

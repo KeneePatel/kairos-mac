@@ -47,7 +47,7 @@ Every row names the command that produces its verdict. Gitleaks is the external 
 
 | ID | Rule | Path | Reason | Owner | Expires |
 |----|------|------|--------|-------|---------|
-| — | — | — | None | — | — |
+| E1 | Floor guard: assertion-removed (7 lines) | `Packages/KairosCore/Tests/ScreeningTests/AnalyzeJobTaskTests.swift`, `Packages/KairosCore/Tests/ScreeningTests/RecordedAnalysisTests.swift` | Approved by you 2026-10-20 (polish P1). Four assertions pinned `analyzeJob` prompt v1: its version, the "skill names only" message and `matched_skill` in a reply. Each is replaced by its v2 equivalent. The recorded replay's three must-have checks for the qwen3.5:4B thinking-off fixture become a known issue, so that model's gap stays visible instead of failing. | Kenee Patel | When `polish` merges into `main` |
 
 ## Where each check runs
 

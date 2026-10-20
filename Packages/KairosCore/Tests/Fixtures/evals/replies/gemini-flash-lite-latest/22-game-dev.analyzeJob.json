@@ -19,7 +19,7 @@
       "match": "no"
     },
     {
-      "text": "French is required",
+      "text": "French is required for this Montreal role",
       "kind": "must",
       "category": "language",
       "match": "not_judged"

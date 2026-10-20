@@ -1,28 +1,34 @@
 {
   "requirements": [
     {
-      "text": "building services in Go or Java",
+      "text": "3+ years building services in Go or Java",
       "kind": "must",
       "category": "experience",
-      "match": "yes",
-      "evidence": ["s1"]
+      "match": "partial",
+      "evidence": [
+        "s1"
+      ]
     },
     {
-      "text": "PostgreSQL",
+      "text": "Strong PostgreSQL",
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": ["s2"]
+      "evidence": [
+        "s2"
+      ]
     },
     {
       "text": "Experience with message queues such as RabbitMQ or Kafka",
       "kind": "must",
-      "category": "experience",
+      "category": "skill",
       "match": "yes",
-      "evidence": ["s3"]
+      "evidence": [
+        "s3"
+      ]
     },
     {
-      "text": "legally entitled to work in Canada",
+      "text": "Must be legally entitled to work in Canada",
       "kind": "must",
       "category": "authorization",
       "match": "not_judged"
@@ -48,7 +54,11 @@
   ],
   "years_required": 3,
   "seniority": "mid",
-  "domains": ["logistics"],
+  "domains": [
+    "logistics",
+    "shipping",
+    "freight"
+  ],
   "flags": {
     "sponsorship": "not_offered",
     "clearance": "not_mentioned",

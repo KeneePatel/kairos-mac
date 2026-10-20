@@ -4,10 +4,11 @@
       "text": "5+ years in SRE or infrastructure",
       "kind": "must",
       "category": "experience",
-      "match": "partial",
+      "match": "yes",
       "evidence": [
         "y1",
-        "x1b2"
+        "x1",
+        "x2"
       ]
     },
     {
@@ -28,7 +29,8 @@
       "category": "skill",
       "match": "yes",
       "evidence": [
-        "s5"
+        "s5",
+        "x1b2"
       ]
     },
     {
@@ -38,7 +40,9 @@
       "match": "yes",
       "evidence": [
         "s1",
-        "s2"
+        "s2",
+        "x1b1",
+        "x2b1"
       ]
     },
     {

@@ -3,7 +3,7 @@
     {
       "text": "3+ years of Elasticsearch or OpenSearch",
       "kind": "must",
-      "category": "experience",
+      "category": "skill",
       "match": "no"
     },
     {
@@ -11,9 +11,7 @@
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": [
-        "s2"
-      ]
+      "evidence": ["s2"]
     },
     {
       "text": "Relevance tuning and ranking",
@@ -32,17 +30,14 @@
       "kind": "nice",
       "category": "skill",
       "match": "yes",
-      "evidence": [
-        "s8",
-        "x1b3"
-      ]
+      "evidence": ["s8"]
     }
   ],
   "years_required": 3,
   "seniority": "unspecified",
   "domains": [
-    "search",
-    "education"
+    "education",
+    "search"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

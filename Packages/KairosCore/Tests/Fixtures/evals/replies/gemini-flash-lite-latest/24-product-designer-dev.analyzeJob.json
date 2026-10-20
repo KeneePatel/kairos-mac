@@ -4,10 +4,10 @@
       "text": "3+ years building UI with React",
       "kind": "must",
       "category": "experience",
-      "match": "partial",
+      "match": "yes",
       "evidence": [
         "y1",
-        "x2b2"
+        "x2"
       ]
     },
     {
@@ -28,7 +28,7 @@
       "category": "experience",
       "match": "partial",
       "evidence": [
-        "p1b1"
+        "p1"
       ]
     },
     {
@@ -39,9 +39,10 @@
     }
   ],
   "years_required": 3,
-  "seniority": "unspecified",
+  "seniority": "mid",
   "domains": [
     "retail",
+    "design",
     "storefront"
   ],
   "flags": {

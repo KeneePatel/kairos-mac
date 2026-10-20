@@ -139,4 +139,56 @@ struct ScreenerV2Tests {
         let coverage = try JSONDecoder().decode(Coverage.self, from: Data(stored.utf8))
         #expect(coverage == Coverage(mustCovered: 2, mustTotal: 3, niceCovered: 0, niceTotal: 1))
     }
+
+    /// Student-only postings follow your student status: graduated rules them out, student meets
+    /// them, and unset takes them as met with a note.
+    @Test(arguments: [
+        (
+            WorkProfile.Enrolment?.some(.graduated), Verdict.no,
+            "Asks for a current student, and you've said you've graduated."
+        ),
+        (WorkProfile.Enrolment?.some(.student), Verdict.yes, nil),
+        (
+            WorkProfile.Enrolment?.none, Verdict.yes,
+            "Asks for a current student; set whether you are in Settings, Search."
+        ),
+    ])
+    func studentOnlyPostingsFollowYourStatus(enrolment: WorkProfile.Enrolment?, verdict: Verdict, reason: String?) {
+        let analysis = JobAnalysis(
+            requirements: [
+                requirement("Python for back-end services", .skill, .yes, ["s1"]),
+                requirement("Currently enrolled in a post-secondary program", .enrolment, .notJudged),
+            ], yearsRequired: nil, seniority: .intern, domains: [], flags: plain)
+        let engine = VerdictEngine(
+            preferences: SearchPreferences(), profile: WorkProfile(enrolment: enrolment), languages: [], totalYears: 1)
+        let decision = engine.decide(analysis, for: sampleJob())
+        #expect(decision.verdict == verdict)
+        if let reason { #expect(decision.reasons.contains(reason)) }
+        #expect(!JobAnalysis.Requirement.Category.enrolment.counts)
+    }
+
+    /// A work profile stored before student status existed still reads, as "not set".
+    @Test func olderWorkProfilesHaveNoStudentStatus() throws {
+        let stored = #"{"authorization":{"CA":"work_permit"},"hasClearance":false}"#
+        let profile = try JSONDecoder().decode(WorkProfile.self, from: Data(stored.utf8))
+        #expect(profile.enrolment == nil && profile.authorization[.canada] == .workPermit)
+        let saved = try JSONDecoder().decode(
+            WorkProfile.self, from: JSONEncoder().encode(WorkProfile(enrolment: .graduated)))
+        #expect(saved.enrolment == .graduated)
+    }
+
+    /// The Job page shows the analysis behind a verdict even when an older prompt made it.
+    @Test func theLatestAnalysisIsThereWhicheverPromptMadeIt() async throws {
+        let db = try Database(path: ":memory:")
+        try await Migrator.migrate(db, with: Migrator.bundled())
+        let job = sampleJob()
+        try await JobRepository(db).upsert(job)
+        let analysis = JobAnalysis(
+            requirements: [.init(text: "Go", kind: .must, matchedSkill: "Go")], yearsRequired: nil, seniority: nil,
+            domains: [], flags: plain)
+        try await AnalysisRepository(db).save(analysis, for: job.id, model: "flash-lite", promptVersion: 1)
+        #expect(try await AnalysisRepository(db).analysis(for: job.id, promptVersion: 2) == nil)
+        let latest = try await AnalysisRepository(db).latest(for: job.id)
+        #expect(latest?.analysis == analysis && latest?.promptVersion == 1)
+    }
 }

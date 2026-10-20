@@ -17,21 +17,31 @@
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": ["s3", "s4"]
+      "evidence": [
+        "s3",
+        "s4",
+        "x1b1",
+        "x2b3"
+      ]
     },
     {
       "text": "Experience building REST APIs",
       "kind": "must",
       "category": "experience",
       "match": "yes",
-      "evidence": ["x1b1"]
+      "evidence": [
+        "x1b1"
+      ]
     },
     {
       "text": "Kafka",
       "kind": "nice",
       "category": "skill",
       "match": "yes",
-      "evidence": ["s8"]
+      "evidence": [
+        "s8",
+        "x1b3"
+      ]
     },
     {
       "text": "Payments or banking experience",

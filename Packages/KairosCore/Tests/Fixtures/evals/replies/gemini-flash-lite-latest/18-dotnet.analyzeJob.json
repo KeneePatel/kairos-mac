@@ -11,21 +11,28 @@
       "kind": "must",
       "category": "skill",
       "match": "partial",
-      "evidence": ["s4", "x1b1"]
+      "evidence": [
+        "s4",
+        "x2b3"
+      ]
     },
     {
       "text": "Azure",
       "kind": "must",
       "category": "skill",
       "match": "partial",
-      "evidence": ["s6"]
+      "evidence": [
+        "s6"
+      ]
     },
     {
       "text": "Experience with REST APIs",
       "kind": "must",
       "category": "experience",
       "match": "yes",
-      "evidence": ["x1b1"]
+      "evidence": [
+        "x1b1"
+      ]
     },
     {
       "text": "Angular",

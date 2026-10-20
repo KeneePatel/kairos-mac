@@ -7,6 +7,13 @@ public struct StoredAnalysis: Sendable, Equatable {
     public let model: String
     public let promptVersion: Int
     public let analyzedAt: Date
+
+    public init(analysis: JobAnalysis, model: String, promptVersion: Int, analyzedAt: Date) {
+        self.analysis = analysis
+        self.model = model
+        self.promptVersion = promptVersion
+        self.analyzedAt = analyzedAt
+    }
 }
 
 /// Reads and writes `job_analysis`: one row per job, the latest analysis (SPEC §6.2).
@@ -23,7 +30,16 @@ public struct AnalysisRepository: Sendable {
         let rows = try await db.query(
             "SELECT * FROM job_analysis WHERE job_id = ? AND prompt_version = ? AND deleted = 0",
             [.text(job.rawValue), SQLValue(promptVersion)])
-        guard let row = rows.first else { return nil }
+        return try rows.first.map(stored)
+    }
+
+    /// The job's analysis whichever prompt made it: the one behind its verdict, for the Job page.
+    public func latest(for job: JobID) async throws -> StoredAnalysis? {
+        try await db.query("SELECT * FROM job_analysis WHERE job_id = ? AND deleted = 0", [.text(job.rawValue)])
+            .first.map(stored)
+    }
+
+    private func stored(_ row: Row) throws -> StoredAnalysis {
         let reader = RowReader(row: row, table: "job_analysis")
         guard let flags = try reader.json("flags", as: JobAnalysis.Flags.self) else { throw reader.corrupt("flags") }
         let analysis = JobAnalysis(

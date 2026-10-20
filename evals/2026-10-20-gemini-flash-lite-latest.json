@@ -11,8 +11,8 @@
   "mustRecall" : 1,
   "postings" : [
     {
-      "bullets" : 7,
-      "bulletsPassing" : 7,
+      "bullets" : 4,
+      "bulletsPassing" : 4,
       "id" : "01-backend-go",
       "labels" : [
         "3+ years building backend services in Go or Java",
@@ -63,8 +63,8 @@
       ]
     },
     {
-      "bullets" : 3,
-      "bulletsPassing" : 3,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "03-data-engineer",
       "labels" : [
         "4+ years of Python",
@@ -89,8 +89,8 @@
       ]
     },
     {
-      "bullets" : 4,
-      "bulletsPassing" : 4,
+      "bullets" : 6,
+      "bulletsPassing" : 6,
       "id" : "04-devops",
       "labels" : [
         "3+ years running production workloads on AWS",
@@ -130,7 +130,7 @@
 
       ],
       "predictedMusts" : [
-        "building iOS apps in Swift",
+        "3+ years building iOS apps in Swift",
         "SwiftUI",
         "Experience shipping apps to the App Store",
         "Professional proficiency in French and English"
@@ -143,8 +143,8 @@
       ]
     },
     {
-      "bullets" : 3,
-      "bulletsPassing" : 3,
+      "bullets" : 2,
+      "bulletsPassing" : 2,
       "id" : "06-ml-engineer",
       "labels" : [
         "Degree in computer science or related field, or equivalent experience",
@@ -197,8 +197,8 @@
       ]
     },
     {
-      "bullets" : 4,
-      "bulletsPassing" : 4,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "08-fullstack-django",
       "labels" : [
         "3+ years with Python and Django",
@@ -210,8 +210,7 @@
 
       ],
       "predictedMusts" : [
-        "3+ years with Python",
-        "Django",
+        "3+ years with Python and Django",
         "React",
         "PostgreSQL",
         "Comfortable with Docker"
@@ -252,8 +251,8 @@
       ]
     },
     {
-      "bullets" : 7,
-      "bulletsPassing" : 7,
+      "bullets" : 2,
+      "bulletsPassing" : 2,
       "id" : "10-android",
       "labels" : [
         "2+ years of Android in Kotlin",
@@ -330,8 +329,8 @@
       ]
     },
     {
-      "bullets" : 3,
-      "bulletsPassing" : 3,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "13-data-analyst",
       "labels" : [
         "2+ years of analytics",
@@ -356,8 +355,8 @@
       ]
     },
     {
-      "bullets" : 5,
-      "bulletsPassing" : 5,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "14-platform-rust",
       "labels" : [
         "3+ years of Rust or C++",
@@ -368,7 +367,7 @@
 
       ],
       "predictedMusts" : [
-        "systems programming in Rust or C++",
+        "3+ years of systems programming in Rust or C++",
         "Linux",
         "Experience with networking protocols"
       ],
@@ -408,8 +407,8 @@
       ]
     },
     {
-      "bullets" : 3,
-      "bulletsPassing" : 3,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "16-salesforce",
       "labels" : [
         "3+ years of Salesforce development",
@@ -484,8 +483,8 @@
       ]
     },
     {
-      "bullets" : 6,
-      "bulletsPassing" : 6,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "19-junior-python",
       "labels" : [
         "Python experience",
@@ -538,8 +537,8 @@
       ]
     },
     {
-      "bullets" : 7,
-      "bulletsPassing" : 7,
+      "bullets" : 3,
+      "bulletsPassing" : 3,
       "id" : "21-analytics-engineer",
       "labels" : [
         "2+ years of analytics engineering",
@@ -551,7 +550,7 @@
 
       ],
       "predictedMusts" : [
-        "analytics engineering",
+        "2+ years of analytics engineering",
         "dbt",
         "SQL",
         "Snowflake"
@@ -564,8 +563,8 @@
       ]
     },
     {
-      "bullets" : 7,
-      "bulletsPassing" : 7,
+      "bullets" : 2,
+      "bulletsPassing" : 2,
       "id" : "22-game-dev",
       "labels" : [
         "3+ years of C# in Unity",
@@ -580,7 +579,7 @@
         "3+ years of C# in Unity",
         "Shipped at least one mobile game",
         "Strong math for gameplay (vectors, physics)",
-        "French is required"
+        "French is required for this Montreal role"
       ],
       "violations" : [
 
@@ -603,7 +602,8 @@
 
       ],
       "predictedMusts" : [
-        "7+ years in infrastructure, 3+ as an architect",
+        "7+ years in infrastructure",
+        "3+ years as an architect",
         "AWS Solutions Architect – Professional certification",
         "Terraform",
         "Networking (VPCs, VPNs, DNS)"
@@ -616,8 +616,8 @@
       ]
     },
     {
-      "bullets" : 2,
-      "bulletsPassing" : 2,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "24-product-designer-dev",
       "labels" : [
         "3+ years of React UI",
@@ -670,8 +670,8 @@
       ]
     },
     {
-      "bullets" : 2,
-      "bulletsPassing" : 2,
+      "bullets" : 3,
+      "bulletsPassing" : 3,
       "id" : "26-support-engineer",
       "labels" : [
         "2+ years in technical support",
@@ -720,8 +720,8 @@
       ]
     },
     {
-      "bullets" : 7,
-      "bulletsPassing" : 7,
+      "bullets" : 2,
+      "bulletsPassing" : 2,
       "id" : "28-mobile-react-native",
       "labels" : [
         "3+ years of React Native",
@@ -746,8 +746,8 @@
       ]
     },
     {
-      "bullets" : 5,
-      "bulletsPassing" : 5,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "29-data-scientist",
       "labels" : [
         "Master's degree in statistics, math or related field",
@@ -785,9 +785,9 @@
 
       ],
       "predictedMusts" : [
-        "2+ years managing software engineers",
-        "5+ years as a software engineer before that",
-        "Experience running agile delivery",
+        "managing software engineers",
+        "as a software engineer before that",
+        "running agile delivery",
         "Hiring experience"
       ],
       "violations" : [

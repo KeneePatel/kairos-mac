@@ -11,21 +11,30 @@
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": ["s12", "x2b2"]
+      "evidence": [
+        "s12",
+        "x2b2"
+      ]
     },
     {
       "text": "MongoDB or PostgreSQL",
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": ["s3", "x1b1"]
+      "evidence": [
+        "s3",
+        "x1b1"
+      ]
     },
     {
       "text": "AWS",
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": ["s6", "x1b2"]
+      "evidence": [
+        "s6",
+        "x1b2"
+      ]
     },
     {
       "text": "Authorized to work in the US",
@@ -49,7 +58,7 @@
   "years_required": 3,
   "seniority": "unspecified",
   "domains": [
-    "EdTech"
+    "education"
   ],
   "flags": {
     "sponsorship": "not_offered",

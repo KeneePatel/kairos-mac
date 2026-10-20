@@ -3,11 +3,10 @@
     {
       "text": "4+ years of Python",
       "kind": "must",
-      "category": "skill",
+      "category": "experience",
       "match": "partial",
       "evidence": [
         "y1",
-        "s2",
         "x2b1"
       ]
     },

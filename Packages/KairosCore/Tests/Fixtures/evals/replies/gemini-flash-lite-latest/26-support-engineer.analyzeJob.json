@@ -20,10 +20,10 @@
       "text": "Reading logs and debugging web apps",
       "kind": "must",
       "category": "experience",
-      "match": "partial",
+      "match": "yes",
       "evidence": [
         "x1b1",
-        "x2b2"
+        "x1b2"
       ]
     },
     {
@@ -47,7 +47,10 @@
   ],
   "years_required": 2,
   "seniority": "unspecified",
-  "domains": [],
+  "domains": [
+    "accounting",
+    "customer support"
+  ],
   "flags": {
     "sponsorship": "not_mentioned",
     "clearance": "not_mentioned",

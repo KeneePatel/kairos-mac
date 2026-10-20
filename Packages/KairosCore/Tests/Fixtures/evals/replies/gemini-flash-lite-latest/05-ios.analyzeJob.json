@@ -1,7 +1,7 @@
 {
   "requirements": [
     {
-      "text": "building iOS apps in Swift",
+      "text": "3+ years building iOS apps in Swift",
       "kind": "must",
       "category": "experience",
       "match": "partial",
@@ -23,7 +23,10 @@
       "text": "Experience shipping apps to the App Store",
       "kind": "must",
       "category": "experience",
-      "match": "no"
+      "match": "partial",
+      "evidence": [
+        "p1b1"
+      ]
     },
     {
       "text": "Professional proficiency in French and English",

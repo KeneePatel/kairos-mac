@@ -1,7 +1,7 @@
 {
   "requirements": [
     {
-      "text": "7+ years in infrastructure, 3+ as an architect",
+      "text": "7+ years in infrastructure",
       "kind": "must",
       "category": "experience",
       "match": "partial",
@@ -10,6 +10,12 @@
         "x1",
         "x2"
       ]
+    },
+    {
+      "text": "3+ years as an architect",
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
     },
     {
       "text": "AWS Solutions Architect – Professional certification",

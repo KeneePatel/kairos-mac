@@ -1,21 +1,15 @@
 {
   "requirements": [
     {
-      "text": "3+ years with Python",
+      "text": "3+ years with Python and Django",
       "kind": "must",
-      "category": "skill",
-      "match": "yes",
+      "category": "experience",
+      "match": "partial",
       "evidence": [
         "y1",
         "s2",
         "x2b1"
       ]
-    },
-    {
-      "text": "Django",
-      "kind": "must",
-      "category": "skill",
-      "match": "no"
     },
     {
       "text": "React",
@@ -60,6 +54,7 @@
   "seniority": "unspecified",
   "domains": [
     "bookkeeping",
+    "accounting",
     "software"
   ],
   "flags": {

@@ -121,18 +121,27 @@ public struct WorkProfile: Codable, Sendable, Equatable {
         case needsSponsorship = "needs_sponsorship"
     }
 
+    /// Whether you're a student now, for postings that ask for one (internships, co-ops). Nil is
+    /// "not set": such a requirement is taken as met and noted.
+    public enum Enrolment: String, Codable, Sendable, CaseIterable {
+        case student
+        case graduated
+    }
+
     /// Per country. A country left out is unknown, and an unknown never rejects a job.
     public var authorization: [Country: Status]
     public var hasClearance: Bool
+    public var enrolment: Enrolment?
 
     public static let storageKey = "work_profile"
 
-    public init(authorization: [Country: Status] = [:], hasClearance: Bool = false) {
+    public init(authorization: [Country: Status] = [:], hasClearance: Bool = false, enrolment: Enrolment? = nil) {
         self.authorization = authorization
         self.hasClearance = hasClearance
+        self.enrolment = enrolment
     }
 
-    private enum CodingKeys: String, CodingKey { case authorization, hasClearance }
+    private enum CodingKeys: String, CodingKey { case authorization, hasClearance, enrolment }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -140,6 +149,7 @@ public struct WorkProfile: Codable, Sendable, Equatable {
         authorization = Dictionary(
             uniqueKeysWithValues: byCode.compactMap { code, status in Country(rawValue: code).map { ($0, status) } })
         hasClearance = try container.decodeIfPresent(Bool.self, forKey: .hasClearance) ?? false
+        enrolment = try container.decodeIfPresent(Enrolment.self, forKey: .enrolment)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -147,5 +157,6 @@ public struct WorkProfile: Codable, Sendable, Equatable {
         try container.encode(
             Dictionary(uniqueKeysWithValues: authorization.map { ($0.key.rawValue, $0.value) }), forKey: .authorization)
         try container.encode(hasClearance, forKey: .hasClearance)
+        try container.encodeIfPresent(enrolment, forKey: .enrolment)
     }
 }

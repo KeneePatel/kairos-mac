@@ -11,10 +11,11 @@ public struct JobAnalysis: Codable, Sendable, Equatable {
         public enum Kind: String, Codable, Sendable, CaseIterable { case must, nice }
 
         /// What a requirement is about. Only skills, experience, education and languages count
-        /// toward a verdict: soft skills are never judged, and location, authorization and
-        /// availability are taken as met (your decision, 2026-10-20) or left to the prefilter.
+        /// toward a verdict: soft skills are never judged, location, authorization and
+        /// availability are taken as met (your decision, 2026-10-20) or left to the prefilter, and
+        /// enrolment (being a student now) is judged against your work profile.
         public enum Category: String, Codable, Sendable, CaseIterable {
-            case skill, experience, education, location, authorization, language, availability, soft
+            case skill, experience, education, location, authorization, language, availability, enrolment, soft
 
             public var counts: Bool { [.skill, .experience, .education, .language].contains(self) }
         }

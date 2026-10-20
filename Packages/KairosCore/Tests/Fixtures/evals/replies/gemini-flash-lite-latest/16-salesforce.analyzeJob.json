@@ -34,12 +34,13 @@
   "years_required": 3,
   "seniority": "unspecified",
   "domains": [
-    "insurance"
+    "insurance",
+    "salesforce"
   ],
   "flags": {
     "sponsorship": "not_mentioned",
     "clearance": "not_mentioned",
-    "french": "required",
+    "french": "asset",
     "remote_scope": "unknown"
   }
 }

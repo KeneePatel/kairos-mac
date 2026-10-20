@@ -14,7 +14,7 @@
       "evidence": [
         "y1",
         "s2",
-        "x2b1"
+        "x2"
       ]
     },
     {
@@ -30,7 +30,6 @@
       "match": "yes",
       "evidence": [
         "s4",
-        "x1b1",
         "x2b3"
       ]
     },
@@ -51,7 +50,7 @@
   "seniority": "unspecified",
   "domains": [
     "insurance",
-    "risk"
+    "risk modeling"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

@@ -1,11 +1,12 @@
 {
   "requirements": [
     {
-      "text": "analytics engineering",
+      "text": "2+ years of analytics engineering",
       "kind": "must",
       "category": "experience",
       "match": "partial",
       "evidence": [
+        "y1",
         "x2"
       ]
     },
@@ -21,7 +22,8 @@
       "category": "skill",
       "match": "yes",
       "evidence": [
-        "s4"
+        "s4",
+        "x2b3"
       ]
     },
     {
@@ -30,7 +32,8 @@
       "category": "skill",
       "match": "yes",
       "evidence": [
-        "s10"
+        "s10",
+        "x2b1"
       ]
     },
     {
@@ -49,7 +52,8 @@
   "years_required": 2,
   "seniority": "unspecified",
   "domains": [
-    "healthcare"
+    "healthcare",
+    "data"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

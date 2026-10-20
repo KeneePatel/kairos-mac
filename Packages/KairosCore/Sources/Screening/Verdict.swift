@@ -35,6 +35,7 @@ public enum VerdictRule: String, Sendable, CaseIterable, Codable {
     case remoteScope = "remote_scope"
     case clearance
     case french
+    case enrolment
     case seniority
     case yearsRequired = "years_required"
     case yearsAboveYours = "years_above_yours"
@@ -167,6 +168,17 @@ public struct VerdictEngine: Sendable {
         }
         if flags.french == .required && !speaksFrench {
             return decision(.no, .french, "Asks for French, which isn't among your languages.")
+        }
+        // A student-only posting: judged against your work profile, taken as met while it's unset.
+        if analysis.requirements.contains(where: { $0.kind == .must && $0.category == .enrolment }) {
+            switch profile.enrolment {
+            case .graduated?:
+                return decision(.no, .enrolment, "Asks for a current student, and you've said you've graduated.")
+            case .student?:
+                break
+            case nil:
+                notes.append("Asks for a current student; set whether you are in Settings, Search.")
+            }
         }
         if let level = analysis.seniority, !preferences.seniority.contains(level) {
             return decision(.no, .seniority, "\(level.rawValue.capitalized) level, which you've turned off.")

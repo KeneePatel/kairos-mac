@@ -57,7 +57,8 @@
   "seniority": "mid",
   "domains": [
     "logistics",
-    "freight"
+    "freight",
+    "shipping"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

@@ -6,9 +6,9 @@
       "category": "skill",
       "match": "yes",
       "evidence": [
-        "y1",
         "s2",
-        "x2b1"
+        "x2b1",
+        "y1"
       ]
     },
     {
@@ -61,7 +61,9 @@
   "years_required": 4,
   "seniority": "unspecified",
   "domains": [
-    "health"
+    "health",
+    "reporting",
+    "data pipelines"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

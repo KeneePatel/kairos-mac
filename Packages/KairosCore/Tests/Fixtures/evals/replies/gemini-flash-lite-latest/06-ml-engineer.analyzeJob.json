@@ -4,21 +4,15 @@
       "text": "MS or PhD in computer science, statistics or a related field, or equivalent experience",
       "kind": "must",
       "category": "education",
-      "match": "yes",
-      "evidence": [
-        "y1"
-      ]
+      "match": "partial",
+      "evidence": ["y1"]
     },
     {
       "text": "3+ years of Python",
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": [
-        "y1",
-        "s2",
-        "x2b1"
-      ]
+      "evidence": ["s2", "x2"]
     },
     {
       "text": "PyTorch or TensorFlow",
@@ -49,17 +43,13 @@
       "kind": "nice",
       "category": "skill",
       "match": "yes",
-      "evidence": [
-        "s5",
-        "x1b2"
-      ]
+      "evidence": ["s5", "x1b2"]
     }
   ],
   "years_required": 3,
   "seniority": "unspecified",
   "domains": [
-    "education",
-    "machine learning"
+    "education"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

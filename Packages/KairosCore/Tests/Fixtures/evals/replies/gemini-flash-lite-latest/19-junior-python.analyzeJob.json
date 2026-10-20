@@ -41,7 +41,9 @@
   ],
   "years_required": 2,
   "seniority": "junior",
-  "domains": [],
+  "domains": [
+    "analytics"
+  ],
   "flags": {
     "sponsorship": "not_mentioned",
     "clearance": "not_mentioned",

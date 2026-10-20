@@ -41,13 +41,15 @@
       "text": "Cloud security on AWS",
       "kind": "nice",
       "category": "experience",
-      "match": "no"
+      "match": "partial",
+      "evidence": ["x1b2", "s6"]
     }
   ],
   "years_required": 4,
   "seniority": "unspecified",
   "domains": [
-    "insurance"
+    "insurance",
+    "application security"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

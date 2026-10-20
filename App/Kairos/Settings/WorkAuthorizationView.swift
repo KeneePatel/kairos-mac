@@ -35,6 +35,21 @@ struct WorkAuthorizationView: View {
                     }
                 }
                 Toggle("I hold an active security clearance", isOn: $profile.hasClearance).toggleStyle(.checkbox)
+                HStack(spacing: Spacing.space4) {
+                    Text("Student status").font(TypeStyle.body).foregroundStyle(Color(.ink))
+                    Picker("Student status", selection: $profile.enrolment) {
+                        Text("Not set").tag(WorkProfile.Enrolment?.none)
+                        Text("Currently a student").tag(WorkProfile.Enrolment?.some(.student))
+                        Text("Graduated").tag(WorkProfile.Enrolment?.some(.graduated))
+                    }
+                    .labelsHidden()
+                    .frame(width: 240)
+                }
+                Text(
+                    "For internships and co-ops that ask for a current student. Graduated rules those out; not set takes them as open to you."
+                )
+                .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).fixedSize(
+                    horizontal: false, vertical: true)
             }
         }
         .task {

@@ -18,8 +18,7 @@
       "category": "skill",
       "match": "yes",
       "evidence": [
-        "s12",
-        "x2b2"
+        "s12"
       ]
     },
     {
@@ -44,7 +43,8 @@
   "years_required": 2,
   "seniority": "unspecified",
   "domains": [
-    "banking"
+    "banking",
+    "finance"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

@@ -3,7 +3,7 @@
     {
       "text": "3+ years of React Native",
       "kind": "must",
-      "category": "experience",
+      "category": "skill",
       "match": "no"
     },
     {
@@ -11,10 +11,7 @@
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": [
-        "s12",
-        "x2b2"
-      ]
+      "evidence": ["s12", "x2b2"]
     },
     {
       "text": "Publishing apps to the App Store and Google Play",
@@ -33,10 +30,7 @@
       "kind": "nice",
       "category": "skill",
       "match": "yes",
-      "evidence": [
-        "s13",
-        "p1"
-      ]
+      "evidence": ["s13", "p1"]
     }
   ],
   "years_required": 3,
@@ -49,6 +43,6 @@
     "sponsorship": "not_mentioned",
     "clearance": "not_mentioned",
     "french": "not_mentioned",
-    "remote_scope": "onsite"
+    "remote_scope": "unknown"
   }
 }

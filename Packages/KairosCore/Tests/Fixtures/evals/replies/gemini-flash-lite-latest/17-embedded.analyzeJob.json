@@ -21,7 +21,7 @@
     {
       "text": "Debugging with oscilloscopes and logic analyzers",
       "kind": "must",
-      "category": "experience",
+      "category": "skill",
       "match": "no"
     },
     {
@@ -40,7 +40,8 @@
   "years_required": 3,
   "seniority": "unspecified",
   "domains": [
-    "robotics"
+    "robotics",
+    "embedded"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

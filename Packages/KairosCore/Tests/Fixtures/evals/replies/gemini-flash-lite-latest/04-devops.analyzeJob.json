@@ -7,7 +7,7 @@
       "match": "yes",
       "evidence": [
         "y1",
-        "x1b2"
+        "x1"
       ]
     },
     {
@@ -26,6 +26,7 @@
       "category": "experience",
       "match": "yes",
       "evidence": [
+        "s5",
         "x1b2"
       ]
     },
@@ -57,7 +58,9 @@
       "match": "yes",
       "evidence": [
         "s1",
-        "s2"
+        "s2",
+        "x1b1",
+        "x2b1"
       ]
     }
   ],

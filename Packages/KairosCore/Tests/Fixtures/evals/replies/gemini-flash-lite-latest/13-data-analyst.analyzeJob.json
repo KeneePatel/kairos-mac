@@ -4,7 +4,7 @@
       "text": "2+ years of analytics experience",
       "kind": "must",
       "category": "experience",
-      "match": "yes",
+      "match": "partial",
       "evidence": [
         "y1",
         "x2"
@@ -14,7 +14,7 @@
       "text": "Advanced SQL",
       "kind": "must",
       "category": "skill",
-      "match": "partial",
+      "match": "yes",
       "evidence": [
         "s4",
         "x2b3"
