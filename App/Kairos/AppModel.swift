@@ -1,5 +1,6 @@
 import Foundation
 import JobSources
+import LLM
 import OSLog
 import Observation
 import Pipeline
@@ -25,8 +26,11 @@ final class AppModel {
     private(set) var sources: [Source] = []
     private(set) var jobs: [Job] = []
     private(set) var lastFetch: Run?
+    private(set) var lastScreening: Run?
     /// The fetch in flight, or the last one this session; it holds per-source failures.
     private(set) var progress: FetchRun.Progress?
+    /// Screening after the fetch: prefilter, analysis, verdicts (T30).
+    private(set) var screening: ScreeningRun.Progress?
     private(set) var isFetching = false
     /// The master resume editor's state; there once the database is open.
     private(set) var resume: ResumeModel?
@@ -71,6 +75,7 @@ final class AppModel {
             sources = try await SourceRepository(db).sources()
             jobs = try await JobRepository(db).jobs()
             lastFetch = try await RunRepository(db).runs(kind: "fetch", limit: 1).first
+            lastScreening = try await RunRepository(db).runs(kind: "screen", limit: 1).first
         } catch {
             log.error("Reloading failed: \(String(describing: error), privacy: .public)")
         }
@@ -147,15 +152,27 @@ final class AppModel {
         id.flatMap { id in jobs.first { $0.id == id } }
     }
 
+    /// Fetches every enabled board, then screens what's new (SPEC §5.2). Without an AI key only
+    /// the prefilter runs, and the rest wait.
     func fetchNow() {
         guard let db, !isFetching else { return }
         isFetching = true
+        screening = nil
         let http = self.http
-        let run = FetchRun(db: db, makeSource: { try SourceFactory.make($0, http: http) })
+        let run = PipelineRun(
+            fetch: FetchRun(db: db, makeSource: { try SourceFactory.make($0, http: http) }),
+            screening: ScreeningRun(db: db, router: ai?.router()))
         fetchTask = Task { [weak self] in
-            for await update in run.start() {
-                self?.progress = update
-                if update.added > 0 { await self?.reload() }
+            for await event in run.start() {
+                switch event {
+                case .fetching(let update):
+                    self?.progress = update
+                    if update.added > 0 { await self?.reload() }
+                case .screening(let update):
+                    self?.screening = update
+                    // Verdicts arrive one by one; refresh the list now and then, not on every one.
+                    if update.done % 5 == 0 { await self?.reload() }
+                }
             }
             if Task.isCancelled { self?.progress?.phase = .cancelled }
             self?.isFetching = false
@@ -169,6 +186,9 @@ final class AppModel {
 
     /// "Last fetch 7:58 AM · 312 found · 12 new", or what's happening now.
     var fetchSummary: String {
+        if isFetching, let screening, screening.phase == .running {
+            return "Screening \(screening.done) of \(screening.total) · \(screening.yes) yes · \(screening.maybe) maybe"
+        }
         if isFetching, let progress {
             return "Fetching \(progress.sourcesDone) of \(progress.sourcesTotal) boards · \(progress.added) new so far"
         }
@@ -181,6 +201,12 @@ final class AppModel {
         ]
         if stats.failed > 0 { parts.append("\(stats.failed) board\(stats.failed == 1 ? "" : "s") failed") }
         if run.error == "cancelled" { parts.append("stopped") }
+        if let screen = lastScreening, screen.startedAt >= run.startedAt,
+            let screened = ScreeningRun.Stats.decode(screen.stats)
+        {
+            parts.append("\(screened.yes) yes · \(screened.maybe) maybe")
+            if screened.waiting > 0 { parts.append("\(screened.waiting) waiting for AI") }
+        }
         return parts.joined(separator: " · ")
     }
 }

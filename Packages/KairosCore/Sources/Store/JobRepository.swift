@@ -115,6 +115,26 @@ public struct JobRepository: Sendable {
         }
     }
 
+    /// Sets a screening verdict and rank, unless you've overruled the verdict yourself (SPEC user
+    /// story 4). Only those three columns change, so an edit made meanwhile isn't lost. Returns
+    /// whether the job changed.
+    @discardableResult
+    public func setVerdict(_ verdict: Verdict, source: VerdictSource, rank: Double, for id: JobID) async throws -> Bool
+    {
+        try await db.write { connection, stamp in
+            try connection.execute(
+                """
+                UPDATE job SET verdict = ?, verdict_source = ?, rank = ?, updated_hlc = ?
+                WHERE id = ? AND deleted = 0 AND (verdict_source IS NULL OR verdict_source != 'user')
+                """,
+                [
+                    .text(verdict.rawValue), .text(source.rawValue), .real(rank), .text(stamp.hlc.description),
+                    .text(id.rawValue),
+                ])
+            return connection.changes > 0
+        }
+    }
+
     // MARK: - Row mapping
 
     private static let columns = [

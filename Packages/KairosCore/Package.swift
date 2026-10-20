@@ -33,8 +33,11 @@ let package = Package(
         .target(name: "Screening", dependencies: ["Store", "LLM", "MasterResume"], swiftSettings: strict),
         .testTarget(
             name: "ScreeningTests", dependencies: ["Screening", "Store", "MasterResume", "LLM"], swiftSettings: strict),
-        .target(name: "Pipeline", dependencies: ["Store", "JobSources"], swiftSettings: strict),
-        .testTarget(name: "PipelineTests", dependencies: ["Pipeline"], swiftSettings: strict),
+        .target(name: "Pipeline", dependencies: ["Store", "JobSources", "Screening", "LLM"], swiftSettings: strict),
+        .testTarget(
+            name: "PipelineTests",
+            dependencies: ["Pipeline", "Store", "JobSources", "Screening", "LLM", "MasterResume"],
+            swiftSettings: strict),
         .target(name: "Render", resources: [.copy("Templates")], swiftSettings: strict),
         .testTarget(name: "RenderTests", dependencies: ["Render"], swiftSettings: strict),
         .target(name: "Secrets", swiftSettings: strict),

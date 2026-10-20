@@ -365,13 +365,20 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - **Rank** = verdict, then your country order (Canada first by default, a country you didn't list last), then match.
     - **TN note:** a US job that won't sponsor shows "Possible TN route" for a Canadian citizen (SPEC §5.9). It never changes the verdict.
 
-- [ ] **T30 · Screening pipeline** (M) · deps: T29, T14
+- [x] **T30 · Screening pipeline** (M) · deps: T29, T14
   - **Acceptance:**
-    - [ ] Fetch → normalize → de-duplicate → prefilter → analyze (rate-limited, cancellable) → verdict → rank, with progress events.
-    - [ ] Run stats record the prefilter drop rate and the counts of new `yes` and `maybe` jobs.
-    - [ ] Integration test with a fake source and a fake LLM.
+    - [x] Fetch → normalize → de-duplicate → prefilter → analyze (rate-limited, cancellable) → verdict → rank, with progress events.
+    - [x] Run stats record the prefilter drop rate and the counts of new `yes` and `maybe` jobs.
+    - [x] Integration test with a fake source and a fake LLM.
   - **Verify:** `core-test PipelineTests`
   - **Files:** `Sources/Pipeline/ScreeningRun.swift`, `Sources/Pipeline/PipelineEvents.swift`, `Tests/PipelineTests/ScreeningRunTests.swift`
+  - **Done 2026-10-20:** 8 tests: an end-to-end fetch and screen with a fake board and a fake AI that answers per job title, a reused stored analysis, no AI set up, the daily budget, a failed analysis, which errors stop analysis, cancelling, and `JobRepository.setVerdict`.
+    - **Run order:** `ScreeningRun` takes every new job without a verdict (new ones and any left from earlier runs), prefilters them all first, then analyses the survivors two at a time, reusing a stored analysis while the prompt version is the same. It records each decision and sets verdict and rank. `PipelineRun` chains fetch and screening into one event stream, and "Fetch now" in the app runs it; the window subtitle shows "Screening 12 of 40 · 5 yes · 3 maybe", then the yes and maybe counts.
+    - **Your overrule wins:** `setVerdict` changes only verdict, source and rank, and never touches a job whose verdict you set yourself.
+    - **When analysis stops:** without an AI key, with the daily budget or the provider's quota used up, or with a rejected key, analysis stops and the remaining jobs wait for the next run without a verdict ("12 waiting for AI"). Any other error fails just that job, which also waits.
+    - **Run stats** (`run` kind "screen"): screened, prefiltered and drop rate (S6), analysed, failed, waiting, and the new yes, maybe and no counts.
+    - **Notifications** (step 8) aren't here yet; they come with the menu bar work.
+  - **Heads-up for your first run:** until T31's settings exist, the prefilter filters nothing, so every job already fetched goes to analysis, one AI call each (Flash-Lite by default, within your 300-a-day budget).
 
 - [ ] **T31 · Today screen and verdict explanations** (M) · deps: T30, T17
   - **Acceptance:**
