@@ -10,6 +10,17 @@ public struct ScreeningRecord: Sendable, Equatable {
     public let coverage: Coverage?
     public let reasons: [String]
     public let at: Date
+
+    public init(
+        stage: VerdictSource, verdict: Verdict, ruleID: String?, coverage: Coverage?, reasons: [String], at: Date
+    ) {
+        self.stage = stage
+        self.verdict = verdict
+        self.ruleID = ruleID
+        self.coverage = coverage
+        self.reasons = reasons
+        self.at = at
+    }
 }
 
 /// Writes and reads `screening`: every verdict a job got and what decided it (SPEC §6.2).
@@ -32,21 +43,40 @@ public struct ScreeningRepository: Sendable {
             coverage: decision.coverage, reasons: decision.reasons)
     }
 
+    /// Your overrule, in the trail after what screening decided.
+    public func recordOverrule(_ verdict: Verdict, for job: JobID) async throws {
+        try await insert(
+            job, stage: .user, verdict: verdict, rule: nil, coverage: nil,
+            reasons: ["You marked it \(verdict.rawValue.capitalized)."])
+    }
+
+    /// Each job's latest decision, keyed by job id, for lists that show every job's reason.
+    public func latestByJob() async throws -> [String: ScreeningRecord] {
+        let rows = try await db.query("SELECT * FROM screening WHERE deleted = 0 ORDER BY at, rowid")
+        var latest: [String: ScreeningRecord] = [:]
+        for row in rows {
+            guard let job = row.string("job_id") else { continue }
+            latest[job] = try record(row)
+        }
+        return latest
+    }
+
     /// Oldest first.
     public func trail(for job: JobID) async throws -> [ScreeningRecord] {
         let rows = try await db.query(
             "SELECT * FROM screening WHERE job_id = ? AND deleted = 0 ORDER BY at, rowid", [.text(job.rawValue)])
-        return try rows.map { row throws in
-            let reader = RowReader(row: row, table: "screening")
-            let coverage = try row.string("coverage").flatMap { text throws -> Coverage? in
-                text == "null" ? nil : try reader.json("coverage", as: Coverage.self)
-            }
-            return ScreeningRecord(
-                stage: try reader.value("stage", as: VerdictSource.self),
-                verdict: try reader.value("verdict", as: Verdict.self), ruleID: row.string("rule_id"),
-                coverage: coverage, reasons: try reader.json("reasons", as: [String].self) ?? [],
-                at: try reader.date("at"))
+        return try rows.map(record)
+    }
+
+    private func record(_ row: Row) throws -> ScreeningRecord {
+        let reader = RowReader(row: row, table: "screening")
+        let coverage = try row.string("coverage").flatMap { text throws -> Coverage? in
+            text == "null" ? nil : try reader.json("coverage", as: Coverage.self)
         }
+        return ScreeningRecord(
+            stage: try reader.value("stage", as: VerdictSource.self),
+            verdict: try reader.value("verdict", as: Verdict.self), ruleID: row.string("rule_id"), coverage: coverage,
+            reasons: try reader.json("reasons", as: [String].self) ?? [], at: try reader.date("at"))
     }
 
     private func insert(

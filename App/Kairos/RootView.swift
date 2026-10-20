@@ -39,14 +39,14 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
-    @State private var selection: AppSection? = .jobs
+    @State private var selection: AppSection? = .today
 
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
                 ForEach(AppSection.workflow) { section in
                     Label(section.title, systemImage: section.symbol).tag(section)
-                        .badge(section == .jobs ? model.jobs.count : 0)
+                        .badge(badge(section))
                 }
                 Section("Profile") {
                     ForEach(AppSection.profile) { section in
@@ -63,6 +63,8 @@ struct RootView: View {
                 ContentUnavailableView(
                     "Kairos couldn't start", systemImage: "exclamationmark.triangle",
                     description: Text(message).foregroundStyle(Color(.inkSecondary)))
+            case (.ready, .today):
+                TodayView()
             case (.ready, .jobs):
                 JobsView()
             case (.ready, .sources):
@@ -78,6 +80,17 @@ struct RootView: View {
             case (.ready, let section):
                 PlaceholderView(section: section)
             }
+        }
+    }
+}
+
+extension RootView {
+    /// Today counts the jobs worth a look; Jobs counts everything stored.
+    func badge(_ section: AppSection) -> Int {
+        switch section {
+        case .today: model.todayCount(.yes) + model.todayCount(.maybe)
+        case .jobs: model.jobs.count
+        default: 0
         }
     }
 }

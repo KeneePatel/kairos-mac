@@ -85,7 +85,9 @@ public struct Coverage: Codable, Sendable, Equatable {
         "Covers \(mustCovered) of \(mustTotal) must-haves and \(niceCovered) of \(niceTotal) nice-to-haves."
     }
 
-    static func isCondition(_ text: String) -> Bool {
+    /// Work authorization, clearance, a language, a degree, travel or a licence: judged against your
+    /// profile rather than your skills.
+    public static func isCondition(_ text: String) -> Bool {
         let folded = TextScan.fold(text)
         return conditionWords.contains { folded.contains($0) }
     }
@@ -192,7 +194,22 @@ public struct VerdictEngine: Sendable {
             if let yearsNote { return decision(.maybe, .yearsAboveYours, yearsNote) }
             return decision(.yes, .strongMatch)
         }
-        return share >= thresholds.maybeAt ? decision(.maybe, .partialMatch) : decision(.no, .weakMatch)
+        let gap = Self.missing(analysis)
+        return share >= thresholds.maybeAt ? decision(.maybe, .partialMatch, gap) : decision(.no, .weakMatch, gap)
+    }
+
+    /// "Missing Rust", "Missing Rust and Scala", "Missing Rust, Scala and 2 more": the must-have
+    /// skills none of yours covers.
+    private static func missing(_ analysis: JobAnalysis) -> String? {
+        let names = analysis.requirements.filter {
+            $0.kind == .must && $0.matchedSkill == nil && !Coverage.isCondition($0.text)
+        }.map(\.text)
+        switch names.count {
+        case 0: return nil
+        case 1: return "Missing \(names[0])"
+        case 2: return "Missing \(names[0]) and \(names[1])"
+        default: return "Missing \(names[0]), \(names[1]) and \(names.count - 2) more"
+        }
     }
 }
 

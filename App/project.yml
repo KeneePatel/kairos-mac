@@ -46,6 +46,8 @@ targets:
         product: MasterResume
       - package: KairosCore
         product: LLM
+      - package: KairosCore
+        product: Screening
     info:
       path: Kairos/Info.plist
       properties:

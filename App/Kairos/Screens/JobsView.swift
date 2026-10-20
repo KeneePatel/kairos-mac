@@ -11,7 +11,7 @@ struct JobsView: View {
         content
             .navigationTitle("Jobs")
             .navigationSubtitle(model.fetchSummary)
-            .toolbar { fetchControls }
+            .toolbar { RunControls(model: model, title: "Fetch now") }
             .inspector(isPresented: $showsInspector) {
                 inspector.inspectorColumnWidth(min: 320, ideal: 400, max: 560)
             }
@@ -69,34 +69,6 @@ struct JobsView: View {
             JobDetailView(job: job, source: model.source(job.sourceID))
         } else {
             ContentUnavailableView("Select a job", systemImage: "sidebar.right")
-        }
-    }
-
-    /// The view's one primary button, or the run's progress and a way to stop it.
-    @ToolbarContentBuilder private var fetchControls: some ToolbarContent {
-        ToolbarItemGroup(placement: .primaryAction) {
-            if model.isFetching {
-                let progress = model.progress
-                ProgressView(
-                    value: Double(progress?.sourcesDone ?? 0), total: Double(max(progress?.sourcesTotal ?? 1, 1))
-                )
-                .frame(width: 120)
-                .accessibilityLabel("Fetching boards")
-                Button {
-                    model.stopFetch()
-                } label: {
-                    Label("Stop", systemImage: "stop.fill").labelStyle(.titleAndIcon)
-                }
-            } else {
-                Button {
-                    model.fetchNow()
-                } label: {
-                    Label("Fetch now", systemImage: "arrow.clockwise").labelStyle(.titleAndIcon)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(model.sources.allSatisfy { !$0.enabled })
-                .help(model.sources.isEmpty ? "Add a company in Sources first" : "Check every enabled board now")
-            }
         }
     }
 }

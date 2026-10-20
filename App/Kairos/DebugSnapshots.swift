@@ -2,6 +2,7 @@
     import AppKit
     import LLM
     import MasterResume
+    import Screening
     import Store
     import SwiftUI
 
@@ -57,6 +58,24 @@
                     ProvidersView().environment(ai).frame(width: 980, height: 1_640).background(Color(.surface)),
                     to: folder.appending(path: "ai-settings-\(name).png"), appearance: appearance)
             }
+            let today = sampleToday()
+            for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+                render(
+                    NavigationStack { TodayView() }.environment(today.model).frame(width: 1_440, height: 520),
+                    to: folder.appending(path: "today-\(name).png"), appearance: appearance)
+                render(
+                    JobExplanationView(
+                        job: today.selected, source: today.model.sources.first,
+                        record: today.model.screening(for: today.selected), analysis: today.analysis,
+                        score: today.model.matchScore(for: today.selected)
+                    )
+                    .frame(width: 420, height: 980),
+                    to: folder.appending(path: "job-explanation-\(name).png"), appearance: appearance)
+                render(
+                    SearchPreferencesView().environment(today.model).frame(width: 820, height: 1_500)
+                        .background(Color(.surface)),
+                    to: folder.appending(path: "search-settings-\(name).png"), appearance: appearance)
+            }
             print("snapshots: \(folder.path)")
             exit(0)
         }
@@ -91,6 +110,85 @@
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             return (try? decoder.decode(ImportResumeTask.Output.self, from: Data(json.utf8))).map(ImportDraft.init)
+        }
+
+        /// Today with the design's sample companies (fictional), screened as screening would.
+        @MainActor private static func sampleToday() -> (model: AppModel, selected: Job, analysis: JobAnalysis) {
+            let source = Source(id: UUID(), kind: .greenhouse, config: "{}")
+            func job(
+                _ title: String, _ company: String, _ city: String, _ region: String, _ country: Country,
+                _ work: RemoteScope, _ verdict: Verdict, rank: Double
+            ) -> Job {
+                Job(
+                    canonicalURL: "https://jobs.example.com/\(company)/\(title)", sourceID: source.id,
+                    url: "https://jobs.example.com/1", dedupKey: "\(company)|\(title)", company: company, title: title,
+                    location: "\(city), \(region)", city: city, region: region, country: country, remoteScope: work,
+                    postedAt: Date().addingTimeInterval(-2 * 86_400),
+                    descriptionMarkdown: "Build the services that track two million shipments a day.", verdict: verdict,
+                    verdictSource: .analysis, rank: rank, firstSeenAt: Date())
+            }
+            let jobs = [
+                job("Backend Developer II", "Northline Freight", "Toronto", "ON", .canada, .hybrid, .yes, rank: 220.92),
+                job(
+                    "Software Developer, Platform", "Cobalt Ledger", "Waterloo", "ON", .canada, .hybrid, .maybe,
+                    rank: 120.76),
+                job(
+                    "Développeur back-end", "Quillstone Média", "Montréal", "QC", .canada, .remoteCountry, .no, rank: 20
+                ),
+                job(
+                    "Backend Engineer, Integrations", "Fernhill Robotics", "Boston", "MA", .unitedStates, .remote, .yes,
+                    rank: 210.86),
+                job(
+                    "Senior Backend Engineer", "Kestrel Analytics", "New York", "NY", .unitedStates, .onsite, .no,
+                    rank: 10.35),
+            ]
+            func record(_ verdict: Verdict, _ stage: VerdictSource, _ reasons: [String], _ coverage: Coverage?)
+                -> ScreeningRecord
+            {
+                ScreeningRecord(
+                    stage: stage, verdict: verdict, ruleID: nil, coverage: coverage, reasons: reasons, at: Date())
+            }
+            let screenings = [
+                jobs[0].id.rawValue: record(
+                    .yes, .analysis, ["Covers 4 of 4 must-haves and 1 of 2 nice-to-haves.", "French is an asset."],
+                    Coverage(mustCovered: 4, mustTotal: 4, niceCovered: 1, niceTotal: 2)),
+                jobs[1].id.rawValue: record(
+                    .maybe, .analysis, ["Missing Java", "Covers 2 of 3 must-haves and 0 of 1 nice-to-haves."],
+                    Coverage(mustCovered: 2, mustTotal: 3, niceCovered: 0, niceTotal: 1)),
+                jobs[2].id.rawValue: record(
+                    .no, .prefilter, ["Written in French, which isn't among your languages."], nil),
+                jobs[3].id.rawValue: record(
+                    .yes, .analysis, ["Covers 3 of 3 must-haves and 1 of 3 nice-to-haves."],
+                    Coverage(mustCovered: 3, mustTotal: 3, niceCovered: 1, niceTotal: 3)),
+                jobs[4].id.rawValue: record(
+                    .no, .analysis,
+                    [
+                        "Won't sponsor a visa, and you'd need one in the US.",
+                        "Covers 2 of 3 must-haves and 0 of 0 nice-to-haves.",
+                        "Possible TN route: as a Canadian citizen you may qualify for TN status for some professions.",
+                    ], Coverage(mustCovered: 2, mustTotal: 3, niceCovered: 0, niceTotal: 0)),
+            ]
+            var preferences = SearchPreferences()
+            preferences.titleInclude = ["Backend Developer", "Software Engineer, Backend", "Platform Engineer"]
+            preferences.titleExclude = ["Principal", "Manager", "Director", "Intern"]
+            preferences.regions = ["CA": ["ON", "BC"]]
+            preferences.maxYearsRequired = 8
+            let model = AppModel(
+                preview: jobs, screenings: screenings, sources: [source], preferences: preferences,
+                profile: WorkProfile(authorization: [.canada: .citizen, .unitedStates: .needsSponsorship]))
+            let analysis = JobAnalysis(
+                requirements: [
+                    .init(text: "3+ years building services in Go or Java", kind: .must, matchedSkill: "Go"),
+                    .init(text: "PostgreSQL in production", kind: .must, matchedSkill: "PostgreSQL"),
+                    .init(text: "Message queues such as RabbitMQ or Kafka", kind: .must, matchedSkill: "Kafka"),
+                    .init(text: "Designing REST or gRPC APIs", kind: .must, matchedSkill: "gRPC"),
+                    .init(text: "Legally entitled to work in Canada", kind: .must),
+                    .init(text: "Kubernetes", kind: .nice, matchedSkill: "Kubernetes"),
+                    .init(text: "Terraform", kind: .nice),
+                    .init(text: "French", kind: .nice),
+                ], yearsRequired: 3, seniority: .mid, domains: ["logistics"],
+                flags: .init(sponsorship: .notOffered, clearance: .notMentioned, french: .asset, remoteScope: .hybrid))
+            return (model, jobs[0], analysis)
         }
 
         /// Sample keys are made-up strings shown masked; nothing here is a real key.

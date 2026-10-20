@@ -4,6 +4,7 @@ import LLM
 import OSLog
 import Observation
 import Pipeline
+import Screening
 import Secrets
 import Store
 
@@ -31,11 +32,33 @@ final class AppModel {
     private(set) var progress: FetchRun.Progress?
     /// Screening after the fetch: prefilter, analysis, verdicts (T30).
     private(set) var screening: ScreeningRun.Progress?
+    /// Each job's latest decision (screening's or yours), keyed by job id.
+    private(set) var screenings: [String: ScreeningRecord] = [:]
+    /// What you're looking for (synced) and where you may work (this Mac only).
+    private(set) var searchPreferences = SearchPreferences()
+    private(set) var workProfile = WorkProfile()
     private(set) var isFetching = false
     /// The master resume editor's state; there once the database is open.
     private(set) var resume: ResumeModel?
     /// AI providers, keys (in the Keychain) and routing; there once the database is open.
     private(set) var ai: AISettingsModel?
+
+    init() {}
+
+    #if DEBUG
+        /// For snapshots: an open model with sample jobs and their screening.
+        init(
+            preview jobs: [Job], screenings: [String: ScreeningRecord], sources: [Source],
+            preferences: SearchPreferences = SearchPreferences(), profile: WorkProfile = WorkProfile()
+        ) {
+            self.jobs = jobs
+            self.screenings = screenings
+            self.sources = sources
+            searchPreferences = preferences
+            workProfile = profile
+            phase = .ready
+        }
+    #endif
 
     @ObservationIgnored private var db: Database?
     @ObservationIgnored private var fetchTask: Task<Void, Never>?
@@ -76,6 +99,13 @@ final class AppModel {
             jobs = try await JobRepository(db).jobs()
             lastFetch = try await RunRepository(db).runs(kind: "fetch", limit: 1).first
             lastScreening = try await RunRepository(db).runs(kind: "screen", limit: 1).first
+            screenings = try await ScreeningRepository(db).latestByJob()
+            searchPreferences =
+                try await SettingsRepository(db).value(SearchPreferences.storageKey, as: SearchPreferences.self)
+                ?? SearchPreferences()
+            workProfile =
+                try await PrivateSettingsRepository(db).value(WorkProfile.storageKey, as: WorkProfile.self)
+                ?? WorkProfile()
         } catch {
             log.error("Reloading failed: \(String(describing: error), privacy: .public)")
         }
@@ -182,6 +212,125 @@ final class AppModel {
 
     func stopFetch() {
         fetchTask?.cancel()
+    }
+
+    // MARK: - Today
+
+    /// Screened jobs you haven't acted on, best first.
+    var todayJobs: [Job] {
+        jobs.filter { $0.verdict != nil && ($0.state == .new || $0.state == .shortlisted) }
+            .sorted { ($0.rank ?? 0, $1.title) > ($1.rank ?? 0, $0.title) }
+    }
+
+    /// Today's jobs with `verdict` (all when nil), grouped by country in your order.
+    func todaySections(showing verdict: Verdict?) -> [JobSection] {
+        let shown = todayJobs.filter { verdict == nil || $0.verdict == verdict }
+        let countries: [Country?] =
+            searchPreferences.countries
+            + Country.allCases.filter {
+                !searchPreferences.countries.contains($0)
+            } + [nil]
+        return countries.compactMap { country in
+            let matching = shown.filter { $0.country == country }
+            guard !matching.isEmpty else { return nil }
+            return JobSection(
+                id: country?.rawValue ?? "none", title: country?.displayName ?? "Location not stated", jobs: matching)
+        }
+    }
+
+    func todayCount(_ verdict: Verdict?) -> Int {
+        todayJobs.count { verdict == nil || $0.verdict == verdict }
+    }
+
+    /// New jobs that passed the prefilter and still wait for an analysis.
+    var waitingForAI: Int { jobs.count { $0.verdict == nil && $0.state == .new } }
+
+    func screening(for job: Job) -> ScreeningRecord? { screenings[job.id.rawValue] }
+
+    /// 0 to 100, from the share of the posting your skills cover; nil when nothing was analysed.
+    func matchScore(for job: Job) -> Int? {
+        screening(for: job)?.coverage.map { Int(($0.match * 100).rounded()) }
+    }
+
+    /// The analysis behind a verdict, for the explanation.
+    func analysis(for job: Job) async -> JobAnalysis? {
+        guard let db else { return nil }
+        return try? await AnalysisRepository(db).analysis(for: job.id, promptVersion: AnalyzeJobTask.promptVersion)?
+            .analysis
+    }
+
+    /// Your verdict wins over screening's from now on.
+    func overrule(_ job: Job, to verdict: Verdict) async {
+        guard let db else { return }
+        let match = screening(for: job)?.coverage?.match ?? 0
+        let rank = Ranking.rank(verdict, country: job.country, match: match, countries: searchPreferences.countries)
+        do {
+            try await JobRepository(db).setUserVerdict(verdict, rank: rank, for: job.id)
+            try await ScreeningRepository(db).recordOverrule(verdict, for: job.id)
+        } catch {
+            log.error("Overruling failed: \(String(describing: error), privacy: .public)")
+        }
+        await reload()
+    }
+
+    /// "Not for me": off Today, verdict kept.
+    func skip(_ job: Job) async {
+        guard let db else { return }
+        try? await JobRepository(db).setState(.skipped, for: job.id)
+        await reload()
+    }
+
+    // MARK: - Screening settings
+
+    func save(_ preferences: SearchPreferences) async {
+        guard let db else { return }
+        searchPreferences = preferences
+        try? await SettingsRepository(db).save(preferences, for: SearchPreferences.storageKey)
+    }
+
+    func save(_ profile: WorkProfile) async {
+        guard let db else { return }
+        workProfile = profile
+        try? await PrivateSettingsRepository(db).save(profile, for: WorkProfile.storageKey)
+    }
+
+    /// Screens new jobs again with your current settings. Stored analyses are reused, so only jobs
+    /// never analysed cost an AI call. Your own verdicts stay.
+    func screenAgain() {
+        guard let db, !isFetching else { return }
+        isFetching = true
+        screening = nil
+        let run = ScreeningRun(db: db, router: ai?.router())
+        fetchTask = Task { [weak self] in
+            _ = try? await JobRepository(db).clearScreening()
+            for await update in run.start() {
+                self?.screening = update
+                if update.done % 5 == 0 { await self?.reload() }
+            }
+            self?.isFetching = false
+            await self?.reload()
+        }
+    }
+
+    /// How far the run is: fetching boards, then screening jobs.
+    var runFraction: Double {
+        if let screening, screening.total > 0 { return Double(screening.done) / Double(screening.total) }
+        guard let progress, progress.sourcesTotal > 0 else { return 0 }
+        return Double(progress.sourcesDone) / Double(progress.sourcesTotal)
+    }
+
+    /// "Last run 7:58 AM · 312 fetched · 61% filtered before AI", or what's happening now.
+    var runSummary: String {
+        if isFetching { return fetchSummary }
+        guard let run = lastScreening, let finished = run.finishedAt, let stats = ScreeningRun.Stats.decode(run.stats)
+        else { return fetchSummary }
+        var parts = ["Last run \(finished.formatted(date: .omitted, time: .shortened))"]
+        if let fetch = lastFetch, let fetched = FetchRun.Stats.decode(fetch.stats), fetch.startedAt <= run.startedAt {
+            parts.append("\(fetched.found) fetched")
+        }
+        if stats.screened > 0 { parts.append("\(Int((stats.dropRate * 100).rounded()))% filtered before AI") }
+        if waitingForAI > 0 { parts.append("\(waitingForAI) waiting for AI") }
+        return parts.joined(separator: " · ")
     }
 
     /// "Last fetch 7:58 AM · 312 found · 12 new", or what's happening now.

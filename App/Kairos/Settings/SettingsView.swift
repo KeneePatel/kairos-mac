@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// Settings, in the design's tabs. AI providers is built; the others arrive with their tasks.
+/// Settings, in the design's tabs. Search and AI providers are built; the others arrive with their tasks.
 struct SettingsView: View {
     enum Tab: String, CaseIterable, Identifiable {
         case general = "General"
+        case search = "Search"
         case schedule = "Schedule"
         case ai = "AI providers"
         case account = "Account"
@@ -26,6 +27,8 @@ struct SettingsView: View {
             switch tab {
             case .ai:
                 ProvidersView()
+            case .search:
+                SearchPreferencesView()
             case .general, .schedule, .account:
                 ContentUnavailableView(
                     tab.rawValue, systemImage: "gearshape",

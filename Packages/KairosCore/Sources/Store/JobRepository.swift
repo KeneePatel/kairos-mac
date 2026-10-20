@@ -135,6 +135,39 @@ public struct JobRepository: Sendable {
         }
     }
 
+    /// Your verdict: it wins over screening's from now on (SPEC user story 4).
+    public func setUserVerdict(_ verdict: Verdict, rank: Double, for id: JobID) async throws {
+        try await db.write { connection, stamp in
+            try connection.execute(
+                "UPDATE job SET verdict = ?, verdict_source = 'user', rank = ?, updated_hlc = ? WHERE id = ? AND deleted = 0",
+                [.text(verdict.rawValue), .real(rank), .text(stamp.hlc.description), .text(id.rawValue)])
+        }
+    }
+
+    /// Where you are with a job, such as "skipped" for "Not for me". The verdict stays.
+    public func setState(_ state: JobState, for id: JobID) async throws {
+        try await db.write { connection, stamp in
+            try connection.execute(
+                "UPDATE job SET state = ?, updated_hlc = ? WHERE id = ? AND deleted = 0",
+                [.text(state.rawValue), .text(stamp.hlc.description), .text(id.rawValue)])
+        }
+    }
+
+    /// Forgets screening's verdicts on new jobs, so the next screening run decides them again, after
+    /// you change your preferences. Your own verdicts and jobs you've acted on keep theirs. Returns
+    /// how many jobs were cleared.
+    @discardableResult
+    public func clearScreening() async throws -> Int {
+        try await db.write { connection, stamp in
+            try connection.execute(
+                """
+                UPDATE job SET verdict = NULL, verdict_source = NULL, rank = NULL, updated_hlc = ?
+                WHERE deleted = 0 AND state = 'new' AND verdict_source IN ('prefilter', 'analysis')
+                """, [.text(stamp.hlc.description)])
+            return connection.changes
+        }
+    }
+
     // MARK: - Row mapping
 
     private static let columns = [

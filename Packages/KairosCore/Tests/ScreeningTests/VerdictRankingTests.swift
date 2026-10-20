@@ -208,3 +208,45 @@ struct ScreeningTrailTests {
         #expect(try await repo.trail(for: austin.id).isEmpty)
     }
 }
+
+@Suite("Screening trail: overrules and latest")
+struct ScreeningLatestTests {
+    @Test func theLatestDecisionPerJobAndYourOverrule() async throws {
+        let db = try Database(path: ":memory:", device: "0000beef", now: { 1_790_000_000_000 })
+        try await Migrator.migrate(db, with: Migrator.bundled())
+        let repo = ScreeningRepository(db)
+        let decision = engine().decide(analysis(must: [("Go", "Go"), ("Rust", nil)]), for: toronto)
+        try await repo.record(decision, for: toronto.id)
+        try await repo.record(
+            Rejection(rule: .postingAge, reason: "Posted 40 days ago; your limit is 30."), for: austin.id)
+        try await repo.recordOverrule(.yes, for: toronto.id)
+
+        let latest = try await repo.latestByJob()
+        #expect(latest.count == 2)
+        let mine = try #require(latest[toronto.id.rawValue])
+        #expect(mine.stage == .user && mine.verdict == .yes && mine.ruleID == nil)
+        #expect(mine.reasons == ["You marked it Yes."])
+        #expect(latest[austin.id.rawValue]?.ruleID == "posting_age")
+        // The trail keeps what screening decided before you.
+        #expect(try await repo.trail(for: toronto.id).map(\.stage) == [.analysis, .user])
+    }
+}
+
+@Suite("Verdict reasons")
+struct VerdictReasonTests {
+    /// Today shows the deciding reason under the company, so a partial match names the gap.
+    @Test func aPartialOrWeakMatchNamesWhatsMissing() {
+        let maybe = engine().decide(analysis(must: [("Go", "Go"), ("Rust", nil)]), for: toronto)
+        #expect(maybe.reasons.first == "Missing Rust")
+        let two = engine().decide(analysis(must: [("Go", "Go"), ("Rust", nil), ("Scala", nil)]), for: toronto)
+        #expect(two.reasons.first == "Missing Rust and Scala")
+        let many = engine().decide(
+            analysis(must: [
+                ("Go", "Go"), ("Rust", nil), ("Scala", nil), ("Elixir", nil), ("Legally entitled to work", nil),
+            ]),
+            for: toronto)
+        #expect(many.reasons.first == "Missing Rust, Scala and 1 more")  // conditions aren't skills
+        let strong = engine().decide(analysis(must: [("Go", "Go")]), for: toronto)
+        #expect(strong.reasons.first == "Covers 1 of 1 must-haves and 0 of 0 nice-to-haves.")
+    }
+}

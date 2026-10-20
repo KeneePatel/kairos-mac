@@ -380,13 +380,35 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - **Notifications** (step 8) aren't here yet; they come with the menu bar work.
   - **Heads-up for your first run:** until T31's settings exist, the prefilter filters nothing, so every job already fetched goes to analysis, one AI call each (Flash-Lite by default, within your 300-a-day budget).
 
-- [ ] **T31 · Today screen and verdict explanations** (M) · deps: T30, T17
+- [x] **T31 · Today screen and verdict explanations** (M) · deps: T30, T17
   - **Acceptance:**
-    - [ ] Today shows the ranked list with verdict and country chips and filters; Run and Stop show progress.
-    - [ ] The job explanation shows requirements covered and missing, flags, and the deciding rule, and lets you overrule the verdict.
-    - [ ] Settings has search preferences (titles, locations, countries in order) and work authorization (marked "stays on this Mac").
+    - [x] Today shows the ranked list with verdict and country chips and filters; Run and Stop show progress.
+    - [x] The job explanation shows requirements covered and missing, flags, and the deciding rule, and lets you overrule the verdict.
+    - [x] Settings has search preferences (titles, locations, countries in order) and work authorization (marked "stays on this Mac").
   - **Verify:** `app-build`; manual run on your watchlist
   - **Files:** `App/Kairos/Screens/TodayView.swift`, `App/Kairos/Screens/JobExplanationView.swift`, `App/Kairos/Settings/SearchPreferencesView.swift`, `App/Kairos/Settings/WorkAuthorizationView.swift`
+  - **Done 2026-10-20:** app builds clean; checked in light and dark with `--render-snapshots` (Today, the explanation, Search settings).
+    - **Today:** opens first. The list holds screened jobs you haven't acted on, ranked, grouped by your country order. The All, Yes, Maybe and No filter has counts. Each row shows a verdict pill (colour, icon and word), the deciding reason under the company for a maybe or a no (a partial match now names the gap: "Missing Java"), location, work, source and match score. "No" rows are dimmed with `ink-dimmed`. The sidebar badge counts yes and maybe.
+    - **Run:** "Run now" runs the whole pipeline; the progress bar covers fetching then screening, with Stop. The subtitle reads "Last run 8:02 AM · 312 fetched · 61% filtered before AI · 4 waiting for AI".
+    - **Explanation:** score and verdict, the deciding reason and who decided (the prefilter, the AI's reading, or you), must-haves and nice-to-haves each covered (with the matched skill), missing, or a condition checked against your profile, notes such as "French is an asset" or "Possible TN route", "Change verdict", "Open posting", "Not for me" (skips it and keeps the verdict), and the posting text in a disclosure.
+    - **Core, test-first** (3 tests): overruling (`setUserVerdict`, recorded in the trail as stage "user"), `setState`, `clearScreening` (keeps your verdicts and jobs you've acted on), and `latestByJob`.
+    - **Settings › Search:**
+      - job titles, words to skip, levels, countries in order with provinces or states for on-site work, remote on or off;
+      - a years limit and a posting-age limit, blocked companies, and the yes and maybe thresholds;
+      - work authorization per country and clearance, marked "Stays on this Mac";
+      - "Screen again" re-screens the jobs you have with the new settings, reusing stored analyses.
+  - **Visual differences from `Main.dc.html`:**
+    - The verdict filter's segments show words and counts, not icons; a segmented control draws one or the other.
+    - The run status is the window subtitle, as in Jobs (T14).
+    - "Work" shows on-site, hybrid or remote without the days a week, which postings don't state in a form Kairos parses.
+    - The US section has no "remote roles that hire in Canada first" subtitle.
+    - The inspector shows no salary range yet.
+    - Its summary is the coverage line ("Covers 4 of 4 must-haves…") rather than the mockup's prose.
+    - Conditions read "A condition, checked against your profile" rather than "Covered · From your profile", since a French asset you don't have isn't covered.
+    - No "You list it as Can discuss" on missing rows.
+    - "Build resume" is disabled until Slice 4.
+  - **Visual differences from `Sources.dc.html`'s "Search for" panel:** it lives in Settings › Search, not beside Sources. Job titles aren't numbered or draggable (their order doesn't affect ranking). Countries move with an arrow rather than by dragging.
+  - **Not drawn in the design and decided here:** levels, limits, blocked companies, thresholds and work authorization in Search settings; the "Change verdict" menu; Today's empty state.
 
 #### Checkpoint D
 - [ ] Real run on your watchlist; you review the verdicts; prefilter drop rate recorded (success criterion S6 baseline)
