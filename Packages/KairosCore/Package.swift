@@ -35,9 +35,10 @@ let package = Package(
         .testTarget(
             name: "ScreeningTests", dependencies: ["Screening", "Store", "MasterResume", "LLM"], swiftSettings: strict),
         .target(
-            name: "Tailoring", dependencies: ["Store", "LLM", "MasterResume"], resources: [.copy("Synonyms.json")],
+            name: "Tailoring", dependencies: ["Store", "LLM", "MasterResume"],
+            resources: [.copy("Synonyms.json"), .copy("Spelling")],
             swiftSettings: strict),
-        .testTarget(name: "TailoringTests", dependencies: ["Tailoring", "MasterResume"], swiftSettings: strict),
+        .testTarget(name: "TailoringTests", dependencies: ["Tailoring", "MasterResume", "LLM"], swiftSettings: strict),
         .target(name: "Pipeline", dependencies: ["Store", "JobSources", "Screening", "LLM"], swiftSettings: strict),
         .testTarget(
             name: "PipelineTests",

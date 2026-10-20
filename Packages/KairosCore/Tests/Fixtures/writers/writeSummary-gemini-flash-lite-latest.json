@@ -1,0 +1,7 @@
+{
+  "summary": "Backend Developer with 5 years of experience building services in Go and Java, strong PostgreSQL, and message queue expertise. Built an event pipeline in Go handling 4.2M events a day with p99 under 120 ms and migrated 14 services to Kubernetes.",
+  "source_ids": [
+    "b1",
+    "b2"
+  ]
+}

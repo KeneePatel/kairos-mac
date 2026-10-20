@@ -445,12 +445,18 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - **Verifier, every mode:** years claimed up to your total; employer, title and dates exactly as in an experience; degrees and certifications that exist; nothing naming the hiring company or its products unless your master resume does; no date of birth, SIN or SSN, marital status or attached photo. Stretch mode's gap bullets need no source, may use Can-discuss skills and estimate numbers (T37 completes them).
     - **Fixtures:** the suite and its JSON format are in `Tests/Fixtures/tailoring/README.md`; T34 and T39 add writer output until it reaches 30 jobs (S9).
 
-- [ ] **T34 · Section writers and polish** (M) · deps: T33, T23
+- [x] **T34 · Section writers and polish** (M) · deps: T33, T23
   - **Acceptance:**
-    - [ ] Writer tasks for summary, skills, experience and projects (prompt v1, schemas with `source_ids`). They receive only the selected entries.
-    - [ ] Polish swaps AI-sounding phrases, de-duplicates opening verbs, enforces length, and applies en-CA or en-US spelling by job country.
+    - [x] Writer tasks for summary, skills, experience and projects (prompt v1, schemas with `source_ids`). They receive only the selected entries.
+    - [x] Polish swaps AI-sounding phrases, de-duplicates opening verbs, enforces length, and applies en-CA or en-US spelling by job country.
   - **Verify:** `core-test TailoringTests`
   - **Files:** `Sources/Tailoring/WriteSectionTasks.swift`, `Sources/Tailoring/Polish.swift`, `Sources/Tailoring/Spelling/en-CA.json`, `Sources/Tailoring/Spelling/en-US.json`, `Tests/TailoringTests/PolishTests.swift`
+  - **Done 2026-10-20:** 13 writer tests and 5 polish tests, plus recorded live replies (`RecordedWriterTests`).
+    - **What's sent:** writers get only the selected entries, your Proven skill names, the job title and requirements, and a spelling line for the job's country. Prompts name entries "e1" and bullets "b1", never UUIDs, and code maps them back.
+    - **Checks:** each reply's check covers every entry written, no unknown ids, no citing another entry's bullet, at most 260 characters, and every bullet through the strict verifier. A bad reply gets one repair call quoting exactly what was wrong (for example "“Rust” isn't in the cited bullets or your Proven skills"). The summary must stay within your total years and your skills; the skills writer may only group your Proven skills, each once, in your spelling.
+    - **Polish:** swaps AI-sounding phrases ("spearheaded" to "led", "leveraging" to "using", "in order to" to "to"), varies repeated opening verbs, cuts over-long bullets at a clause, ends bullets cleanly, and spells for the job's country. The spelling lists are 45 word pairs in `Spelling/`; Canada keeps -ize but uses -our, -re and a doubled l. Running it twice changes nothing more.
+    - **Live on Flash-Lite** (the sample resume and the T28 posting): all four writers produced grounded output on the first call, in about 1 s each, and the replies are kept in `Tests/Fixtures/writers/`. The experience bullets kept every number exactly; the summary used your 5 years; the skills writer grouped 8 Proven skills. Weak spots for a later prompt version: the project bullet was awkward ("…gathering 400+ stars using Go and Docker") and the summary had some filler.
+    - **Prompts:** v1 of `writeExperience`, `writeProjects`, `writeSummary` and `writeSkills`, in `LLM/Prompts/`. The full prompt evals come with T39.
 
 - [ ] **T35 · Match score, rewrite loop, build queue** (M) · deps: T34, T32
   - **Acceptance:**
