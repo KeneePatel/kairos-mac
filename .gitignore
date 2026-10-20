@@ -19,6 +19,8 @@ Vendor/
 *.p12
 *.cer
 *.mobileprovision
+# This Mac's signing choice (App/Config/Local.xcconfig.example shows it)
+App/Config/Local.xcconfig
 
 # Local agent settings
 .claude/settings.local.json

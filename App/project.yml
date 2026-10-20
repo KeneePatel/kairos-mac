@@ -48,6 +48,9 @@ targets:
         product: LLM
       - package: KairosCore
         product: Screening
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
     info:
       path: Kairos/Info.plist
       properties:
@@ -73,9 +76,9 @@ targets:
         ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        # Ad-hoc by default. Release and spike builds pass KAIROS_SIGNING_IDENTITY="Kairos Local Signing"
-        # (docs/signing.md); it only reaches this target, so package resource bundles stay unsigned.
+        # KAIROS_SIGNING_IDENTITY comes from Config/Signing.xcconfig: ad-hoc, unless this Mac's
+        # git-ignored Config/Local.xcconfig names the self-signed certificate (docs/signing.md). It
+        # only reaches this target, so package resource bundles stay unsigned.
         CODE_SIGN_STYLE: Manual
-        KAIROS_SIGNING_IDENTITY: "-"
         CODE_SIGN_IDENTITY: $(KAIROS_SIGNING_IDENTITY)
         ENABLE_HARDENED_RUNTIME: YES

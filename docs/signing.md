@@ -19,7 +19,22 @@ The certificate stays in your login keychain. Never commit it, export it into th
    ```
    You should see `Kairos Local Signing`. A "not trusted" note next to it is expected for a self-signed certificate and doesn't stop signing.
 
-## 2. Spike T07: does the keychain stay quiet across updates?
+## 2. Sign your everyday builds too
+
+Builds from Xcode or `xcodebuild` are ad-hoc unless told otherwise, and an ad-hoc build gets a new code identity every time. The login keychain then treats each rebuild as a new app and asks for your password once for every saved key. To sign this Mac's builds with the certificate:
+
+```bash
+cp App/Config/Local.xcconfig.example App/Config/Local.xcconfig
+(cd App && xcodegen generate)
+```
+
+`Local.xcconfig` is git-ignored, so CI and fresh clones stay ad-hoc. It also turns off Xcode's separate debug library, which macOS won't load into an app signed without a team ID (finding 2 of the spike below).
+
+The first launch after switching asks once for each key saved by an earlier ad-hoc build. Choose **Always Allow**: that adds the certificate's identity to the key, and later builds are let in without asking. Keys saved from now on are the app's own and never ask.
+
+Kairos also avoids reading keys it doesn't need. Opening the app reads none: the masked key shown in Settings is a hint stored beside the key, readable without unlocking it. Each key is then read at most once per launch, however many runs use it.
+
+## 3. Spike T07: does the keychain stay quiet across updates?
 
 Kairos debug builds have two terminal-only routes: `kairos://debug/keychain-write` saves a test item, and `kairos://debug/keychain-read` reads it back. The question is whether build B, with different code but the same certificate, can read build A's item **without a keychain password prompt**.
 

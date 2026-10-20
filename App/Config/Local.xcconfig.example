@@ -1,0 +1,9 @@
+// This Mac's signing (copy to Local.xcconfig, which git ignores; docs/signing.md, step 3).
+// Every build signed with this certificate keeps the same code identity, so the Keychain asks for
+// your password at most once per saved key ("Always Allow"), then never again across rebuilds.
+
+KAIROS_SIGNING_IDENTITY = Kairos Local Signing
+
+// With the hardened runtime on, macOS won't load Xcode's separate debug library into an app signed
+// without a team ID (spike T07). The app's code goes into its main binary instead.
+ENABLE_DEBUG_DYLIB = NO

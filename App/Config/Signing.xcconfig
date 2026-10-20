@@ -1,0 +1,11 @@
+// Code signing for the app target (docs/signing.md).
+//
+// Ad-hoc by default, which is what CI and a fresh clone use. An ad-hoc build gets a new code
+// identity every time it's built, so the login keychain treats each rebuild as a new app and asks
+// for your password once for every saved key. Signing with your stable self-signed certificate
+// keeps one identity across rebuilds: copy Local.xcconfig.example to Local.xcconfig (git-ignored).
+// A command-line KAIROS_SIGNING_IDENTITY still wins over both.
+
+KAIROS_SIGNING_IDENTITY = -
+
+#include? "Local.xcconfig"

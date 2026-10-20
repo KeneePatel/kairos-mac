@@ -25,8 +25,11 @@ final class AISettingsModel {
     private(set) var settings = LLMSettings.defaults()
     private(set) var models: [String: Models] = [:]
     private(set) var usage: [String: Usage] = [:]
-    /// Keychain account → masked key, for display only.
+    /// Keychain account → masked key, for display only. From the hint saved beside the key, so
+    /// showing it never unlocks the key; a key saved before hints shows its mask once something
+    /// reads it (opening AI providers lists models, which does).
     private(set) var masked: [String: String] = [:]
+    @ObservationIgnored private var revealed: [String: String] = [:]
     /// Keychain account → what the last "Test" found.
     private(set) var keyChecks: [String: KeyCheck] = [:]
     private(set) var error: String?
@@ -105,7 +108,7 @@ final class AISettingsModel {
         }
         let name = LLMSettings.newKeyName(for: providerID)
         do {
-            try secrets.write(trimmed, for: SecretKey(name))
+            try secrets.write(trimmed, for: SecretKey(name), hint: LLMSettings.masked(trimmed))
         } catch {
             self.error = "Couldn't save the key to your Keychain."
             return
@@ -119,7 +122,8 @@ final class AISettingsModel {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         do {
-            try secrets.write(trimmed, for: SecretKey(name))
+            try secrets.write(trimmed, for: SecretKey(name), hint: LLMSettings.masked(trimmed))
+            revealed[name] = nil
         } catch {
             self.error = "Couldn't save the key to your Keychain."
             return
@@ -204,6 +208,11 @@ final class AISettingsModel {
             ? provider.keyNames.compactMap { name in
                 ((try? secrets.read(SecretKey(name))) ?? nil).map { (name, $0) }
             } : [(nil, nil)]
+        // The keys were read anyway: a key saved before hints shows its mask from now on.
+        for case (let name?, let key?) in keys where masked[name] == "Saved in your Keychain" {
+            revealed[name] = LLMSettings.masked(key)
+            masked[name] = revealed[name]
+        }
         if keys.isEmpty {
             models[providerID] = .failed("Add a key first.")
             return
@@ -287,10 +296,12 @@ final class AISettingsModel {
         refreshMasks()
     }
 
+    /// Hints only: nothing here reads a key, so opening Kairos never asks for your password.
     private func refreshMasks() {
         var result: [String: String] = [:]
         for name in settings.providers.flatMap(\.keyNames) {
-            if let key = try? secrets.read(SecretKey(name)) { result[name] = LLMSettings.masked(key) }
+            guard let summary = (try? secrets.summary(SecretKey(name))) ?? nil else { continue }
+            result[name] = summary.hint ?? revealed[name] ?? "Saved in your Keychain"
         }
         masked = result
     }

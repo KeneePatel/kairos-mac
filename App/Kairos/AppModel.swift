@@ -96,7 +96,9 @@ final class AppModel {
             let resume = ResumeModel(db: db)
             await resume.load()
             self.resume = resume
-            let ai = AISettingsModel(db: db, secrets: KeychainStore(service: "com.keneepatel.kairos"))
+            // Each key is read from the Keychain at most once a session, however many runs use it.
+            let ai = AISettingsModel(
+                db: db, secrets: CachingSecretStore(KeychainStore(service: "com.keneepatel.kairos")))
             await ai.load()
             self.ai = ai
             await reload()
