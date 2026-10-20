@@ -32,7 +32,7 @@ let package = Package(
         .testTarget(name: "MasterResumeTests", dependencies: ["MasterResume", "LLM"], swiftSettings: strict),
         .target(name: "Screening", dependencies: ["Store", "LLM", "MasterResume"], swiftSettings: strict),
         .testTarget(
-            name: "ScreeningTests", dependencies: ["Screening", "Store", "MasterResume"], swiftSettings: strict),
+            name: "ScreeningTests", dependencies: ["Screening", "Store", "MasterResume", "LLM"], swiftSettings: strict),
         .target(name: "Pipeline", dependencies: ["Store", "JobSources"], swiftSettings: strict),
         .testTarget(name: "PipelineTests", dependencies: ["Pipeline"], swiftSettings: strict),
         .target(name: "Render", resources: [.copy("Templates")], swiftSettings: strict),

@@ -83,8 +83,9 @@ struct RecordedRepliesTests {
     /// failing the build. If a re-recorded reply no longer shows the problem, the test says so.
     static let knownMerges: [String: String] = [
         "ollama-plain-qwen3.5_4B.json":
-            "qwen3.5:4B with thinking merged \"Kubernetes, gRPC, French\" into one requirement (2026-10-19). "
-            + "analyzeJob's prompt (T28) must ask for one requirement per item."
+            "qwen3.5:4B with thinking merged \"Kubernetes, gRPC, French\" into one requirement under the spike's "
+            + "one-line prompt (2026-10-19). T28's analyzeJob prompt fixes it: see "
+            + "Fixtures/screening/analyzeJob-qwen3.5_4B-thinking-on.json."
     ]
 
     @Test func theErrorShapesTheAdapterMustParseAreRecorded() throws {

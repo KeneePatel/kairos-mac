@@ -49,6 +49,16 @@ That fills the last cell: Gemini Flash does strict schema mode. The client count
 
 The bisection used about 14 of Flash's 20 free requests a day: the free tier's daily cap (`limit: 20`, "retry in 8h") is a real constraint on live testing.
 
+**The real `analyzeJob` prompt (T28, 2026-10-19):** v1 carries T20's prompt rules (one requirement per item, never the job title) and runs on the sample posting grown into a full one with benefits and an equal-opportunity line, which the cleaner removes first. Replies are in `Tests/Fixtures/screening/`; `RecordedAnalysisTests` scores them against the hand labels.
+
+| Model | Mode | Must-haves (4) | Nice-to-haves (3) | Matches and flags | Output tokens | Time |
+|---|---|---|---|---|---|---|
+| `gemini-flash-lite-latest` | strict `json_schema` | 4, all right | 3, each its own item | all right | 321 | 2.5 s |
+| Ollama `qwen3.5:4B` | prompt-only, thinking off | 4, all right | none, even with a rule naming them | all right | 134 | 23 s |
+| Ollama `qwen3.5:4B` | prompt-only, thinking on | 4, all right | 3, each its own item | all right | 3,671 | 6 min |
+
+So T20's merge is gone on Gemini. The 4B local model with thinking off finds every must-have, which is SPEC §5.5's bar, but skips nice-to-haves: a smaller nice-to-have coverage when you choose the private option. Thinking also needs output headroom: at 1,500 output tokens it spent the whole budget thinking and sent an empty reply.
+
 ## Capability flags for T21
 
 | Preset | Structured output | Notes |

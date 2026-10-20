@@ -328,14 +328,25 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - **Clearance:** "able to obtain" one passes if you're a citizen there (or a permanent resident, for Canada's Reliability Status).
     - **Already applied:** same company (ignoring Inc, LLC and the like) and titles sharing at least 80% of their words, so "Senior Software Developer" isn't the "Software Developer" you applied to.
 
-- [ ] **T28 · Job analysis task** (M) · deps: T27, T23
+- [x] **T28 · Job analysis task** (M) · deps: T27, T23
   - **Acceptance:**
-    - [ ] Posting cleanup removes boilerplate and truncates to budget, keeping requirements sections first.
-    - [ ] The `analyzeJob` task (prompt v1, schema) receives only the posting plus skill names and languages. Output: requirements (must or nice, matched skill), years, seniority, domains, flags.
-    - [ ] `006_screening.sql` creates `job_analysis` and `screening`; results are cached by prompt version.
-    - [ ] From T20/T20a: the prompt asks for one requirement per item (never several skills in one) and never the job title. Re-record Ollama `qwen3.5:4B` with thinking on and remove `RecordedRepliesTests`' known-issue marker if the merge is gone.
+    - [x] Posting cleanup removes boilerplate and truncates to budget, keeping requirements sections first.
+    - [x] The `analyzeJob` task (prompt v1, schema) receives only the posting plus skill names and languages. Output: requirements (must or nice, matched skill), years, seniority, domains, flags.
+    - [x] `006_screening.sql` creates `job_analysis` and `screening`; results are cached by prompt version.
+    - [x] From T20/T20a: the prompt asks for one requirement per item (never several skills in one) and never the job title. Re-record Ollama `qwen3.5:4B` with thinking on and remove `RecordedRepliesTests`' known-issue marker if the merge is gone.
   - **Verify:** `core-test ScreeningTests` (fake provider plus recorded replies)
   - **Files:** `Sources/Screening/PostingCleaner.swift`, `Sources/Screening/AnalyzeJobTask.swift`, `Sources/Screening/AnalysisRepository.swift`, `Sources/Store/Schema/006_screening.sql`, `Tests/ScreeningTests/AnalyzeJobTaskTests.swift`
+  - **Done 2026-10-19:** 12 offline tests plus recorded real replies.
+    - **What's sent:** only the cleaned posting (title, company, location, description) and your skill and language names (a test pins the exact message).
+    - **Checks:** a requirement can't be blank or the job title, and a matched skill must really be yours; the model's spelling is mapped back to yours.
+    - **Storage:** `job_analysis` keeps one analysis per job with its model and prompt version; `AnalysisRepository` returns it only for the current prompt version, so a new prompt means a fresh analysis. `screening` is created for T29's verdict trail.
+    - **Cleanup:** drops benefits, equal-opportunity and similar sections and lines (English and French); over the budget, requirements come first, then responsibilities, then the rest, with "About us" last.
+    - **Live, on the sample posting:**
+      - Gemini Flash-Lite: all 7 requirements, each its own item (Kubernetes, gRPC and French no longer merged), every skill match right, years and flags right, in 2.5 s.
+      - Ollama `qwen3.5:4B`, thinking off (the default): all 4 must-haves right, but none of the 3 nice-to-haves, even with a prompt rule naming them. That passes SPEC's must-have bar; the nice-to-have gap is recorded as a known issue in `RecordedAnalysisTests`.
+      - Ollama `qwen3.5:4B`, thinking on: all 7, each its own item, every match right, so **T20's merge is gone with this prompt**. It took 3,671 output tokens and 6 minutes, and at the default 1,500-token budget it spent everything thinking and sent an empty reply, which confirms thinking off as the default.
+    - **T20's known-issue marker stays, reworded:** its fixture was recorded with the spike's one-line prompt, which still merges at temperature 0. The fix is shown by `analyzeJob-qwen3.5_4B-thinking-on.json`.
+    - The full prompt evals (30 labelled postings) come with their own task (`PromptEvals`).
 
 - [ ] **T29 · Verdict and ranking** (S, test-first) · deps: T28
   - **Acceptance:**

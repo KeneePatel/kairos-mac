@@ -1,0 +1,48 @@
+{
+  "requirements": [
+    {
+      "text": "3+ years building services in Go or Java",
+      "kind": "must",
+      "matched_skill": "Go"
+    },
+    {
+      "text": "Strong PostgreSQL",
+      "kind": "must",
+      "matched_skill": "PostgreSQL"
+    },
+    {
+      "text": "Experience with message queues such as RabbitMQ or Kafka",
+      "kind": "must",
+      "matched_skill": "Kafka"
+    },
+    {
+      "text": "Must be legally entitled to work in Canada",
+      "kind": "must"
+    },
+    {
+      "text": "Kubernetes",
+      "kind": "nice"
+    },
+    {
+      "text": "gRPC",
+      "kind": "nice"
+    },
+    {
+      "text": "French",
+      "kind": "nice"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "mid",
+  "domains": [
+    "logistics",
+    "freight",
+    "transportation"
+  ],
+  "flags": {
+    "sponsorship": "not_offered",
+    "clearance": "not_mentioned",
+    "french": "asset",
+    "remote_scope": "hybrid"
+  }
+}
