@@ -458,13 +458,22 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - **Live on Flash-Lite** (the sample resume and the T28 posting): all four writers produced grounded output on the first call, in about 1 s each, and the replies are kept in `Tests/Fixtures/writers/`. The experience bullets kept every number exactly; the summary used your 5 years; the skills writer grouped 8 Proven skills. Weak spots for a later prompt version: the project bullet was awkward ("…gathering 400+ stars using Go and Docker") and the summary had some filler.
     - **Prompts:** v1 of `writeExperience`, `writeProjects`, `writeSummary` and `writeSkills`, in `LLM/Prompts/`. The full prompt evals come with T39.
 
-- [ ] **T35 · Match score, rewrite loop, build queue** (M) · deps: T34, T32
+- [x] **T35 · Match score, rewrite loop, build queue** (M) · deps: T34, T32
   - **Acceptance:**
-    - [ ] Match score uses the SPEC §5.3 weights. Sections under 70 get `rewriteSection`, at most 3 passes, keeping the best version. Page fitting drops the lowest-ranked bullets.
-    - [ ] `007_builds.sql` creates `build` and `artifact`; builds record `master_version` and mode.
-    - [ ] The build queue (2 workers) resumes a crashed build from cached steps.
+    - [x] Match score uses the SPEC §5.3 weights. Sections under 70 get `rewriteSection`, at most 3 passes, keeping the best version. Page fitting drops the lowest-ranked bullets.
+    - [x] `007_builds.sql` creates `build` and `artifact`; builds record `master_version` and mode.
+    - [x] The build queue (2 workers) resumes a crashed build from cached steps.
   - **Verify:** `core-test TailoringTests`, `core-test PipelineTests`
   - **Files:** `Sources/Tailoring/MatchScore.swift`, `Sources/Tailoring/BuildLoop.swift`, `Sources/Pipeline/BuildQueue.swift`, `Sources/Store/Schema/007_builds.sql`, `Tests/TailoringTests/BuildLoopTests.swift`
+  - **Done 2026-10-20:** 18 new tests: match score 8, build loop 7, build repository 2 and the tailored header 1 in TailoringTests; 3 queue tests in PipelineTests; the document conversion in RenderTests.
+    - **Match score:** SPEC's weights (must-haves 40, nice-to-haves 10, evidence in bullets rather than only the skills list 15, domain 10, metrics 10 with full marks at 60% of bullets carrying a number, language 10, structure 5). Conditions such as work authorization aren't scored. Employers count as domain evidence. Each section gets a score out of 100 and findings: requirements no bullet shows, bullets without numbers, weak openers ("responsible for"), first person, buzzwords, repeated verbs and long bullets.
+    - **Build loop:** select, then the four writers in parallel, polish and score. Experience or projects under 70 get `rewriteSection` (prompt v1) with the findings, at most 3 passes; a rewrite is kept only if it scores higher, and a pass with no gain stops. A writer that still fails after its repair falls back to your bullets word for word. Lite mode copies your bullets and writes only the summary and skills (T38 adds the cover letter).
+    - **Page fitting:** renders and counts pages, then drops the lowest-ranked bullet (each bullet carries its sources' selector score), every entry keeping one, then whole projects, until it fits.
+    - **Contact line:** built by code from your contact block (phone shown as "(416) 555-0123"); a GitHub or portfolio link that doesn't validate is left off.
+    - **Storage:** `007_builds.sql` creates `build` (mode, master version, status, content, score and breakdown, rewrite count, error) and `artifact` (sha256, local path); `BuildRepository` reads and writes them.
+    - **`BuildQueue`:** two workers. It refuses a job without an analysis, a master resume that isn't ready (S14) and a missing AI setup, each with a message in words. It renders and saves the PDF, records its sha256, and streams step events. `resumeInterrupted()` restarts builds left queued or running, and the writers' replies come from the result cache, so finished steps cost nothing (tested).
+    - **Live:** a whole build on Gemini Flash-Lite with the real typst took 3.5 s: score 87, one rewrite (projects, which then scored 75), one page, nothing fell back. Weak spots for later prompt versions: the summary repeats a bullet word for word, and the skills writer grouped oddly (Go and Java under "Backend", Python alone under "Languages").
+    - **Dependencies:** Render now depends on Tailoring (types only, as SPEC §4 maps it) to lay out a build.
 
 - [ ] **T36 · Build screen** (M) · deps: T35, T31
   - **Acceptance:**

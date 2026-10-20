@@ -39,13 +39,21 @@ let package = Package(
             resources: [.copy("Synonyms.json"), .copy("Spelling")],
             swiftSettings: strict),
         .testTarget(name: "TailoringTests", dependencies: ["Tailoring", "MasterResume", "LLM"], swiftSettings: strict),
-        .target(name: "Pipeline", dependencies: ["Store", "JobSources", "Screening", "LLM"], swiftSettings: strict),
+        .target(
+            name: "Pipeline",
+            dependencies: ["Store", "JobSources", "Screening", "LLM", "Tailoring", "Render", "MasterResume"],
+            swiftSettings: strict),
         .testTarget(
             name: "PipelineTests",
-            dependencies: ["Pipeline", "Store", "JobSources", "Screening", "LLM", "MasterResume"],
+            dependencies: [
+                "Pipeline", "Store", "JobSources", "Screening", "LLM", "MasterResume", "Tailoring", "Render",
+            ],
             swiftSettings: strict),
-        .target(name: "Render", resources: [.copy("Templates"), .copy("Fonts")], swiftSettings: strict),
-        .testTarget(name: "RenderTests", dependencies: ["Render"], swiftSettings: strict),
+        // Render knows Tailoring's types only (SPEC §4), to lay out a build.
+        .target(
+            name: "Render", dependencies: ["Tailoring"], resources: [.copy("Templates"), .copy("Fonts")],
+            swiftSettings: strict),
+        .testTarget(name: "RenderTests", dependencies: ["Render", "Tailoring"], swiftSettings: strict),
         .target(name: "Secrets", swiftSettings: strict),
         .testTarget(name: "SecretsTests", dependencies: ["Secrets"], swiftSettings: strict),
     ]

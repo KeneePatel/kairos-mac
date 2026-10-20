@@ -11,7 +11,8 @@ public struct JobID: Hashable, Sendable, CustomStringConvertible {
             .map { String(format: "%02x", $0) }.joined()
     }
 
-    init(rawValue: String) {
+    /// An id as stored, such as a build's `job_id`.
+    public init(rawValue: String) {
         self.rawValue = rawValue
     }
 

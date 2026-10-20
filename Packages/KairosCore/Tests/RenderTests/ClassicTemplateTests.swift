@@ -1,5 +1,6 @@
 import Foundation
 import PDFKit
+import Tailoring
 import Testing
 
 @testable import Render
@@ -133,5 +134,31 @@ struct ClassicTemplateTests {
         let fonts = try #require(TypstRunner.bundledFonts)
         let files = try FileManager.default.contentsOfDirectory(atPath: fonts.path())
         #expect(Set(files.filter { $0.hasSuffix(".otf") }).count == 4 && files.contains("OFL.txt"))
+    }
+}
+
+@Suite("Tailored document")
+struct TailoredDocumentTests {
+    /// A build lays out in the Build mockup's order, and empty sections are left out.
+    @Test func aBuildBecomesADocumentInTheMockupsOrder() {
+        let resume = TailoredResume(
+            header: .init(name: "Jordan Rivera", contact: [.init(text: "Toronto, ON")]),
+            summary: "Backend developer.", skills: [SkillGroup(label: "Languages", skills: ["Go", "Java"])],
+            experience: [
+                .init(
+                    entryID: UUID(), title: "Software Developer, Backend", organization: "Harbourline Logistics",
+                    location: "Toronto, ON", dates: "Mar 2022 – Present",
+                    bullets: [TailoredBullet(text: "Built an event pipeline in Go.", sourceIDs: [UUID()])])
+            ],
+            education: [
+                .init(entryID: UUID(), title: "BMath, Computer Science", organization: "University of Waterloo")
+            ],
+            languages: "English (native)")
+        let document = ResumeDocument(resume)
+        #expect(document.sections.map(\.kind) == [.summary, .experience, .skills, .education, .languages])
+        #expect(document.header.name == "Jordan Rivera" && document.header.contact.map(\.text) == ["Toronto, ON"])
+        #expect(document.sections[1].items[0].subtitle == "Harbourline Logistics")
+        #expect(document.sections[1].items[0].bullets == ["Built an event pipeline in Go."])
+        #expect(document.sections[2].groups == [ResumeDocument.Group(label: "Languages", items: ["Go", "Java"])])
     }
 }

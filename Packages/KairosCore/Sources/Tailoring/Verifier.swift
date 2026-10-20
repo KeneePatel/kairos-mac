@@ -7,11 +7,24 @@ public struct TailoredBullet: Codable, Sendable, Equatable {
     public var sourceIDs: [UUID]
     /// A stretch-mode bullet covering a requirement the master resume doesn't.
     public var gap: Bool
+    /// How well its sources matched the job (the selector's score): page fitting drops the lowest.
+    public var rank: Double
 
-    public init(text: String, sourceIDs: [UUID], gap: Bool = false) {
+    public init(text: String, sourceIDs: [UUID], gap: Bool = false, rank: Double = 0) {
         self.text = text
         self.sourceIDs = sourceIDs
         self.gap = gap
+        self.rank = rank
+    }
+
+    private enum CodingKeys: String, CodingKey { case text, sourceIDs, gap, rank }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        text = try container.decode(String.self, forKey: .text)
+        sourceIDs = try container.decodeIfPresent([UUID].self, forKey: .sourceIDs) ?? []
+        gap = try container.decodeIfPresent(Bool.self, forKey: .gap) ?? false
+        rank = try container.decodeIfPresent(Double.self, forKey: .rank) ?? 0
     }
 }
 

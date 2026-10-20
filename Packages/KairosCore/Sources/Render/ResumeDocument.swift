@@ -119,6 +119,11 @@ public struct ResumeDocument: Codable, Sendable, Equatable {
 public struct RenderedPDF: Sendable, Equatable {
     public let data: Data
     public let pageCount: Int
+
+    public init(data: Data, pageCount: Int) {
+        self.data = data
+        self.pageCount = pageCount
+    }
 }
 
 /// The resume templates shipped in `Templates/`, vendored and never fetched (SPEC §5.6).

@@ -363,9 +363,14 @@ public struct SkillsOutput: Decodable, Sendable, Equatable {
 }
 
 /// A labelled line of the skills section, in your spelling.
-public struct SkillGroup: Sendable, Equatable {
+public struct SkillGroup: Codable, Sendable, Equatable {
     public let label: String
     public let skills: [String]
+
+    public init(label: String, skills: [String]) {
+        self.label = label
+        self.skills = skills
+    }
 }
 
 /// `writeSkills`: orders and groups your Proven skills for the job. It never adds one.
