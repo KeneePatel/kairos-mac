@@ -3,41 +3,64 @@
     {
       "text": "3+ years with Python",
       "kind": "must",
-      "matched_skill": "Python"
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "y1",
+        "s2",
+        "x2b1"
+      ]
     },
     {
       "text": "Django",
-      "kind": "must"
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
     },
     {
       "text": "React",
       "kind": "must",
-      "matched_skill": "React"
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s11",
+        "x2b2"
+      ]
     },
     {
       "text": "PostgreSQL",
       "kind": "must",
-      "matched_skill": "PostgreSQL"
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s3",
+        "x1b1"
+      ]
     },
     {
-      "text": "Docker",
+      "text": "Comfortable with Docker",
       "kind": "must",
-      "matched_skill": "Docker"
+      "category": "soft",
+      "match": "not_judged"
     },
     {
       "text": "Celery",
-      "kind": "nice"
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
     },
     {
       "text": "Experience with payments",
-      "kind": "nice"
+      "kind": "nice",
+      "category": "experience",
+      "match": "no"
     }
   ],
   "years_required": 3,
   "seniority": "unspecified",
   "domains": [
     "bookkeeping",
-    "payments"
+    "software"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

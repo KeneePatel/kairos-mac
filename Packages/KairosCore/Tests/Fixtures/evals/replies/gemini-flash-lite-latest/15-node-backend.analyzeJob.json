@@ -2,40 +2,54 @@
   "requirements": [
     {
       "text": "3+ years of Node.js",
-      "kind": "must"
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
     },
     {
       "text": "TypeScript",
       "kind": "must",
-      "matched_skill": "TypeScript"
+      "category": "skill",
+      "match": "yes",
+      "evidence": ["s12", "x2b2"]
     },
     {
       "text": "MongoDB or PostgreSQL",
       "kind": "must",
-      "matched_skill": "PostgreSQL"
+      "category": "skill",
+      "match": "yes",
+      "evidence": ["s3", "x1b1"]
     },
     {
       "text": "AWS",
       "kind": "must",
-      "matched_skill": "AWS"
+      "category": "skill",
+      "match": "yes",
+      "evidence": ["s6", "x1b2"]
     },
     {
       "text": "Authorized to work in the US",
-      "kind": "must"
+      "kind": "must",
+      "category": "authorization",
+      "match": "not_judged"
     },
     {
       "text": "GraphQL",
-      "kind": "nice"
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
     },
     {
       "text": "Redis",
-      "kind": "nice"
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
     }
   ],
   "years_required": 3,
   "seniority": "unspecified",
   "domains": [
-    "education"
+    "EdTech"
   ],
   "flags": {
     "sponsorship": "not_offered",

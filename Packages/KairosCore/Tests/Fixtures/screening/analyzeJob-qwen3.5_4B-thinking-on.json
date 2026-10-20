@@ -3,41 +3,56 @@
     {
       "text": "3+ years building services in Go or Java",
       "kind": "must",
-      "matched_skill": "Go"
+      "category": "experience",
+      "match": "yes",
+      "evidence": ["s1"]
     },
     {
       "text": "Strong PostgreSQL",
       "kind": "must",
-      "matched_skill": "PostgreSQL"
+      "category": "skill",
+      "match": "yes",
+      "evidence": ["s2"]
     },
     {
       "text": "Experience with message queues such as RabbitMQ or Kafka",
       "kind": "must",
-      "matched_skill": "Kafka"
+      "category": "skill",
+      "match": "yes",
+      "evidence": ["s3"]
     },
     {
-      "text": "Must be legally entitled to work in Canada",
-      "kind": "must"
+      "text": "Must be legally entitled to work in Canada; we can't sponsor visas.",
+      "kind": "must",
+      "category": "authorization",
+      "match": "no",
+      "evidence": []
     },
     {
       "text": "Kubernetes",
-      "kind": "nice"
+      "kind": "nice",
+      "category": "skill",
+      "match": "partial",
+      "evidence": ["c1"]
     },
     {
       "text": "gRPC",
-      "kind": "nice"
+      "kind": "nice",
+      "category": "skill",
+      "match": "no",
+      "evidence": []
     },
     {
       "text": "French",
-      "kind": "nice"
+      "kind": "nice",
+      "category": "language",
+      "match": "no",
+      "evidence": []
     }
   ],
   "years_required": 3,
-  "seniority": "unspecified",
-  "domains": [
-    "logistics",
-    "shipping"
-  ],
+  "seniority": "mid",
+  "domains": ["logistics", "freight"],
   "flags": {
     "sponsorship": "not_offered",
     "clearance": "not_mentioned",

@@ -137,6 +137,34 @@ public struct ScreeningRun: Sendable {
         continuation.finish()
     }
 
+    /// What Re-evaluate did to one job.
+    public enum Reevaluation: Sendable, Equatable {
+        case verdict(Verdict)
+        /// The analysis failed; the job keeps its verdict.
+        case failed
+        /// Nothing could be asked, in words: no AI set up, a used-up budget or quota.
+        case stopped(String)
+    }
+
+    /// Screens one job again from scratch with your current settings: the prefilter first, then,
+    /// if it passes, a fresh analysis (never the stored one, never a cached reply) and its verdict.
+    public func reevaluate(_ id: JobID) async -> Reevaluation {
+        let context = (try? await ScreeningContext.load(from: db)) ?? ScreeningContext()
+        guard let job = try? await JobRepository(db).job(id) else { return .failed }
+        if let rejection = context.prefilter(now: now()).rejection(for: job) {
+            try? await ScreeningRepository(db).record(rejection, for: job.id)
+            _ = try? await JobRepository(db).setVerdict(
+                .no, source: .prefilter, rank: context.rank(.no, for: job, match: 0), for: job.id)
+            return .verdict(.no)
+        }
+        guard let router else { return .stopped("AI isn't set up yet. Add a key in Settings, AI providers.") }
+        switch await screen(job, with: router, context: context, engine: context.verdictEngine(), fresh: true) {
+        case .verdict(let verdict): return .verdict(verdict)
+        case .failed: return .failed
+        case .stop(let reason): return .stopped(reason.replacing(Self.waitNote, with: "."))
+        }
+    }
+
     private func analyze(
         _ jobs: [Job], with router: LLMRouter, context: ScreeningContext, progress: inout Progress,
         _ continuation: AsyncStream<Progress>.Continuation
@@ -174,19 +202,19 @@ public struct ScreeningRun: Sendable {
         }
     }
 
-    /// One job: its analysis (stored or new), then its verdict and rank.
-    private func screen(_ job: Job, with router: LLMRouter, context: ScreeningContext, engine: VerdictEngine) async
-        -> Outcome
-    {
+    /// One job: its analysis (stored or new; always new when `fresh`), then its verdict and rank.
+    private func screen(
+        _ job: Job, with router: LLMRouter, context: ScreeningContext, engine: VerdictEngine, fresh: Bool = false
+    ) async -> Outcome {
         let analyses = AnalysisRepository(db)
         let analysis: JobAnalysis
-        if let stored = try? await analyses.analysis(for: job.id, promptVersion: AnalyzeJobTask.promptVersion) {
+        if !fresh, let stored = try? await analyses.analysis(for: job.id, promptVersion: AnalyzeJobTask.promptVersion) {
             analysis = stored.analysis
         } else {
             let input = context.analysisInput(for: job)
             do {
                 let result = try await router.run(
-                    AnalyzeJobTask(), input: input, context: CallContext(jobID: job.id.rawValue))
+                    AnalyzeJobTask(), input: input, context: CallContext(jobID: job.id.rawValue, fresh: fresh))
                 analysis = JobAnalysis(result.output, input: input)
                 try? await analyses.save(
                     analysis, for: job.id, model: result.model, promptVersion: AnalyzeJobTask.promptVersion)

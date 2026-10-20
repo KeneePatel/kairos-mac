@@ -45,10 +45,13 @@ private final class FakeAnalyst: LLMProvider {
     }
 }
 
-/// An analysis reply whose must-haves are (text, your matching skill).
+/// An analysis reply whose must-haves are (text, your matching skill), in prompt v2's shape: a
+/// matching skill is a yes citing its profile id (Go is "s1", PostgreSQL "s2", Kafka "s3").
 private func reply(_ musts: [(String, String?)]) -> String {
+    let ids = ["Go": "s1", "PostgreSQL": "s2", "Kafka": "s3"]
     let requirements = musts.map { text, skill in
-        #"{"text":"\#(text)","kind":"must"\#(skill.map { #","matched_skill":"\#($0)""# } ?? "")}"#
+        let match = skill.flatMap { ids[$0] }.map { #""match":"yes","evidence":["\#($0)"]"# } ?? #""match":"no""#
+        return #"{"text":"\#(text)","kind":"must","category":"skill",\#(match)}"#
     }
     return """
         {"requirements":[\(requirements.joined(separator: ","))],"years_required":3,"seniority":"unspecified",
@@ -178,6 +181,39 @@ struct ScreeningRunTests {
         let last = try #require(await screen(db, router: router(db, analyst)).last)
         #expect(analyst.calls == 0 && last.analyzed == 1 && last.yes == 1)
         #expect(try await JobRepository(db).job(posting.id)?.verdict == .yes)
+    }
+
+    /// Re-evaluate (P2): a fresh analysis even with one stored and a cached reply, and its verdict
+    /// recorded on top of the old one.
+    @Test func reevaluateAsksAgainAndRecordsTheNewVerdict() async throws {
+        let db = try await database()
+        let posting = job("Platform Engineer", "Vancouver, BC", region: "BC")
+        try await JobRepository(db).upsert(posting)
+        let analyst = FakeAnalyst(["Platform Engineer": partial])
+        _ = await screen(db, router: router(db, analyst))
+        let screened = try await JobRepository(db).job(posting.id)
+        #expect(analyst.calls == 1 && screened?.verdict == .maybe)
+
+        let better = FakeAnalyst(["Platform Engineer": strong])
+        let result = await ScreeningRun(db: db, router: router(db, better)).reevaluate(posting.id)
+        #expect(result == .verdict(.yes) && better.calls == 1)  // not the stored analysis, not the cache
+        #expect(try await JobRepository(db).job(posting.id)?.verdict == .yes)
+        let trail = try await ScreeningRepository(db).trail(for: posting.id)
+        #expect(trail.map(\.verdict) == [.maybe, .yes])
+    }
+
+    /// Re-evaluate applies your current settings first: a job they now rule out never reaches the AI.
+    @Test func reevaluateRunsThePrefilterFirst() async throws {
+        let db = try await database()
+        let posting = job("Sales Engineer", "Toronto, ON", region: "ON")
+        try await JobRepository(db).upsert(posting)
+        let analyst = FakeAnalyst([:])
+        let outcome = await ScreeningRun(db: db, router: router(db, analyst)).reevaluate(posting.id)
+        #expect(outcome == .verdict(.no) && analyst.calls == 0)
+        let backend = job("Backend Developer", "Toronto, ON", region: "ON")
+        try await JobRepository(db).upsert(backend)
+        let stopped = await ScreeningRun(db: db, router: nil).reevaluate(backend.id)
+        #expect(stopped == .stopped("AI isn't set up yet. Add a key in Settings, AI providers."))
     }
 
     @Test func withoutAIOnlyThePrefilterRuns() async throws {

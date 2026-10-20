@@ -1,1 +1,58 @@
-{"requirements":[{"text":"4+ years in application security","kind":"must"},{"text":"Threat modelling and secure code review","kind":"must"},{"text":"Experience with OWASP Top 10","kind":"must"},{"text":"Python or Go","kind":"must","matched_skill":"Python"},{"text":"Must be eligible for Reliability Status security clearance","kind":"must"},{"text":"CISSP or OSCP","kind":"nice"},{"text":"Cloud security on AWS","kind":"nice","matched_skill":"AWS"}],"years_required":4,"seniority":"unspecified","domains":["insurance","security"],"flags":{"sponsorship":"not_mentioned","clearance":"obtainable","french":"not_mentioned","remote_scope":"unknown"}}
+{
+  "requirements": [
+    {
+      "text": "4+ years in application security",
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Threat modelling and secure code review",
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Experience with OWASP Top 10",
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Scripting in Python or Go",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": ["s1", "s2"]
+    },
+    {
+      "text": "Must be eligible for Reliability Status security clearance",
+      "kind": "must",
+      "category": "authorization",
+      "match": "not_judged"
+    },
+    {
+      "text": "CISSP or OSCP",
+      "kind": "nice",
+      "category": "education",
+      "match": "no"
+    },
+    {
+      "text": "Cloud security on AWS",
+      "kind": "nice",
+      "category": "experience",
+      "match": "no"
+    }
+  ],
+  "years_required": 4,
+  "seniority": "unspecified",
+  "domains": [
+    "insurance"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "obtainable",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

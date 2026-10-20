@@ -1,1 +1,75 @@
-{"requirements": [{"text": "8+ years of backend development", "kind": "must"}, {"text": "Distributed systems design at scale", "kind": "must"}, {"text": "Go, Java or Kotlin", "kind": "must", "matched_skill": "Go"}, {"text": "Mentoring other engineers", "kind": "must"}, {"text": "Legally entitled to work in Canada", "kind": "must"}, {"text": "Logistics experience", "kind": "nice"}, {"text": "Event sourcing", "kind": "nice"}], "years_required": 8, "seniority": "staff", "domains": ["logistics", "backend"], "flags": {"sponsorship": "not_mentioned", "clearance": "not_mentioned", "french": "not_mentioned", "remote_scope": "unknown"}}
+{
+  "requirements": [
+    {
+      "text": "8+ years of backend development",
+      "kind": "must",
+      "category": "experience",
+      "match": "partial",
+      "evidence": [
+        "y1",
+        "x1",
+        "x2"
+      ]
+    },
+    {
+      "text": "Distributed systems design at scale",
+      "kind": "must",
+      "category": "experience",
+      "match": "partial",
+      "evidence": [
+        "x1b1",
+        "x1b3"
+      ]
+    },
+    {
+      "text": "Go, Java or Kotlin",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Mentoring other engineers",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": [
+        "x1b4"
+      ]
+    },
+    {
+      "text": "Legally entitled to work in Canada",
+      "kind": "must",
+      "category": "authorization",
+      "match": "not_judged"
+    },
+    {
+      "text": "Logistics experience",
+      "kind": "nice",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Event sourcing",
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
+    }
+  ],
+  "years_required": 8,
+  "seniority": "staff",
+  "domains": [
+    "freight",
+    "logistics",
+    "routing",
+    "backend"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

@@ -172,6 +172,8 @@ struct EvalReport: Encodable {
     var mustPrecision = 0.0
     var mustRecall = 0.0
     var firstWritePassRate = 0.0
+    /// Analyses that needed the repair call (S15 watches this over real use).
+    var analysisRepaired = 0
     var meetsThresholds = false
     var postings: [PostingResult] = []
 
@@ -308,8 +310,9 @@ struct PromptEvals {
             do {
                 let analysis = try await run(
                     client, AnalyzeJobTask(),
-                    AnalyzeJobTask.Input(job: posting.job, skills: persona.skills, languages: []), model: Self.model)
+                    AnalyzeJobTask.Input(job: posting.job, profile: ScreeningProfile(persona)), model: Self.model)
                 try Data(analysis.json.utf8).write(to: folder.appending(path: "\(posting.id).analyzeJob.json"))
+                if analysis.outcome == .repaired { report.analysisRepaired += 1 }
                 let written = try await run(
                     client, FirstWrite(task: Redacted(WriteExperienceTask(), header: persona.header)),
                     EvalScoring.writerInput(for: posting, analysis: analysis.output), model: Self.writerModel)

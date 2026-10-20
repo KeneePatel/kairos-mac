@@ -1,1 +1,55 @@
-{"requirements":[{"text":"C#","kind":"must"},{"text":".NET","kind":"must"},{"text":"SQL Server","kind":"must"},{"text":"Azure","kind":"must"},{"text":"Experience with REST APIs","kind":"must"},{"text":"Angular","kind":"nice"},{"text":"Transit or logistics experience","kind":"nice"}],"years_required":3,"seniority":"unspecified","domains":["scheduling","transit","logistics"],"flags":{"sponsorship":"not_mentioned","clearance":"not_mentioned","french":"not_mentioned","remote_scope":"unknown"}}
+{
+  "requirements": [
+    {
+      "text": "3+ years of C# and .NET",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "SQL Server",
+      "kind": "must",
+      "category": "skill",
+      "match": "partial",
+      "evidence": ["s4", "x1b1"]
+    },
+    {
+      "text": "Azure",
+      "kind": "must",
+      "category": "skill",
+      "match": "partial",
+      "evidence": ["s6"]
+    },
+    {
+      "text": "Experience with REST APIs",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": ["x1b1"]
+    },
+    {
+      "text": "Angular",
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Transit or logistics experience",
+      "kind": "nice",
+      "category": "experience",
+      "match": "no"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "transit",
+    "logistics"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

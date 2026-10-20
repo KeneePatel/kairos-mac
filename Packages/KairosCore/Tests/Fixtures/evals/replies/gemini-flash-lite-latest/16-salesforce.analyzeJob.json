@@ -1,1 +1,45 @@
-{"requirements":[{"text":"3+ years of Salesforce development","kind":"must"},{"text":"Apex","kind":"must"},{"text":"Lightning Web Components","kind":"must"},{"text":"Salesforce Platform Developer I certification","kind":"must"},{"text":"Insurance experience","kind":"nice"},{"text":"Bilingual English and French","kind":"nice"}],"years_required":3,"seniority":"unspecified","domains":["insurance","salesforce"],"flags":{"sponsorship":"not_mentioned","clearance":"not_mentioned","french":"required","remote_scope":"unknown"}}
+{
+  "requirements": [
+    {
+      "text": "3+ years of Salesforce development",
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Apex and Lightning Web Components",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Salesforce Platform Developer I certification",
+      "kind": "must",
+      "category": "education",
+      "match": "no"
+    },
+    {
+      "text": "Insurance experience",
+      "kind": "nice",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Bilingual English and French",
+      "kind": "nice",
+      "category": "language",
+      "match": "not_judged"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "insurance"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "required",
+    "remote_scope": "unknown"
+  }
+}

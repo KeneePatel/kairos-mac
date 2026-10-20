@@ -2,34 +2,45 @@
   "requirements": [
     {
       "text": "Bachelor's degree in electrical or computer engineering",
-      "kind": "must"
+      "kind": "must",
+      "category": "education",
+      "match": "no"
     },
     {
       "text": "3+ years of embedded C",
-      "kind": "must"
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
     },
     {
       "text": "Experience with RTOS",
-      "kind": "must"
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
     },
     {
       "text": "Debugging with oscilloscopes and logic analyzers",
-      "kind": "must"
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
     },
     {
       "text": "C++",
-      "kind": "nice"
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
     },
     {
       "text": "CAN bus",
-      "kind": "nice"
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
     }
   ],
   "years_required": 3,
   "seniority": "unspecified",
   "domains": [
-    "robotics",
-    "embedded"
+    "robotics"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

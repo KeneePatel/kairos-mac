@@ -1,1 +1,69 @@
-{"requirements":[{"text":"5+ years in SRE or infrastructure","kind":"must"},{"text":"Linux administration","kind":"must"},{"text":"Prometheus, Grafana or Datadog","kind":"must"},{"text":"Kubernetes","kind":"must","matched_skill":"Kubernetes"},{"text":"Python or Go","kind":"must","matched_skill":"Go"},{"text":"Azure","kind":"nice"},{"text":"Incident command experience","kind":"nice"}],"years_required":5,"seniority":"unspecified","domains":["energy","infrastructure"],"flags":{"sponsorship":"not_mentioned","clearance":"not_mentioned","french":"not_mentioned","remote_scope":"unknown"}}
+{
+  "requirements": [
+    {
+      "text": "5+ years in SRE or infrastructure",
+      "kind": "must",
+      "category": "experience",
+      "match": "partial",
+      "evidence": [
+        "y1",
+        "x1b2"
+      ]
+    },
+    {
+      "text": "Linux administration",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Prometheus, Grafana or Datadog",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Kubernetes",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s5"
+      ]
+    },
+    {
+      "text": "Python or Go",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "text": "Azure",
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Incident command experience",
+      "kind": "nice",
+      "category": "experience",
+      "match": "no"
+    }
+  ],
+  "years_required": 5,
+  "seniority": "unspecified",
+  "domains": [
+    "energy",
+    "infrastructure"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

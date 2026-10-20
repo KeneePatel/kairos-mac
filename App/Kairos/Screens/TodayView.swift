@@ -130,6 +130,7 @@ private struct JobExplanationLoader: View {
             skip: { Task { await model.skip(job) } },
             build: { Task { problem = await model.startBuild(for: job, coverLetter: coverLetter) } },
             coverLetter: $coverLetter,
+            describe: { model.screeningProfile?.describe($0) },
             buildBlocked: buildBlocked
         )
         .task(id: job.id) { analysis = await model.analysis(for: job) }

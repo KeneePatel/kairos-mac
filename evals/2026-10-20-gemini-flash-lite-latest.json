@@ -1,4 +1,5 @@
 {
+  "analysisRepaired" : 0,
   "date" : "2026-10-20",
   "firstWritePassRate" : 1,
   "meetsThresholds" : true,
@@ -62,8 +63,8 @@
       ]
     },
     {
-      "bullets" : 5,
-      "bulletsPassing" : 5,
+      "bullets" : 3,
+      "bulletsPassing" : 3,
       "id" : "03-data-engineer",
       "labels" : [
         "4+ years of Python",
@@ -76,9 +77,9 @@
       ],
       "predictedMusts" : [
         "4+ years of Python",
-        "Airflow",
+        "Airflow or a similar orchestrator",
         "Advanced SQL",
-        "Snowflake"
+        "Experience with a cloud data warehouse such as Snowflake or BigQuery"
       ],
       "violations" : [
 
@@ -88,8 +89,8 @@
       ]
     },
     {
-      "bullets" : 7,
-      "bulletsPassing" : 7,
+      "bullets" : 4,
+      "bulletsPassing" : 4,
       "id" : "04-devops",
       "labels" : [
         "3+ years running production workloads on AWS",
@@ -129,7 +130,7 @@
 
       ],
       "predictedMusts" : [
-        "3+ years building iOS apps in Swift",
+        "building iOS apps in Swift",
         "SwiftUI",
         "Experience shipping apps to the App Store",
         "Professional proficiency in French and English"
@@ -142,8 +143,8 @@
       ]
     },
     {
-      "bullets" : 7,
-      "bulletsPassing" : 7,
+      "bullets" : 3,
+      "bulletsPassing" : 3,
       "id" : "06-ml-engineer",
       "labels" : [
         "Degree in computer science or related field, or equivalent experience",
@@ -157,7 +158,7 @@
       ],
       "predictedMusts" : [
         "MS or PhD in computer science, statistics or a related field, or equivalent experience",
-        "Python",
+        "3+ years of Python",
         "PyTorch or TensorFlow",
         "Experience deploying models to production",
         "Must be authorized to work in the United States"
@@ -196,8 +197,8 @@
       ]
     },
     {
-      "bullets" : 3,
-      "bulletsPassing" : 3,
+      "bullets" : 4,
+      "bulletsPassing" : 4,
       "id" : "08-fullstack-django",
       "labels" : [
         "3+ years with Python and Django",
@@ -213,7 +214,7 @@
         "Django",
         "React",
         "PostgreSQL",
-        "Docker"
+        "Comfortable with Docker"
       ],
       "violations" : [
 
@@ -240,7 +241,7 @@
         "4+ years in application security",
         "Threat modelling and secure code review",
         "Experience with OWASP Top 10",
-        "Python or Go",
+        "Scripting in Python or Go",
         "Must be eligible for Reliability Status security clearance"
       ],
       "violations" : [
@@ -251,8 +252,8 @@
       ]
     },
     {
-      "bullets" : 2,
-      "bulletsPassing" : 2,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "10-android",
       "labels" : [
         "2+ years of Android in Kotlin",
@@ -263,7 +264,7 @@
 
       ],
       "predictedMusts" : [
-        "Android development in Kotlin",
+        "2+ years of Android development in Kotlin",
         "Jetpack Compose",
         "Room or SQLite"
       ],
@@ -329,8 +330,8 @@
       ]
     },
     {
-      "bullets" : 5,
-      "bulletsPassing" : 5,
+      "bullets" : 3,
+      "bulletsPassing" : 3,
       "id" : "13-data-analyst",
       "labels" : [
         "2+ years of analytics",
@@ -355,8 +356,8 @@
       ]
     },
     {
-      "bullets" : 3,
-      "bulletsPassing" : 3,
+      "bullets" : 5,
+      "bulletsPassing" : 5,
       "id" : "14-platform-rust",
       "labels" : [
         "3+ years of Rust or C++",
@@ -367,7 +368,7 @@
 
       ],
       "predictedMusts" : [
-        "3+ years of systems programming in Rust or C++",
+        "systems programming in Rust or C++",
         "Linux",
         "Experience with networking protocols"
       ],
@@ -407,8 +408,8 @@
       ]
     },
     {
-      "bullets" : 2,
-      "bulletsPassing" : 2,
+      "bullets" : 3,
+      "bulletsPassing" : 3,
       "id" : "16-salesforce",
       "labels" : [
         "3+ years of Salesforce development",
@@ -420,8 +421,7 @@
       ],
       "predictedMusts" : [
         "3+ years of Salesforce development",
-        "Apex",
-        "Lightning Web Components",
+        "Apex and Lightning Web Components",
         "Salesforce Platform Developer I certification"
       ],
       "violations" : [
@@ -458,8 +458,8 @@
       ]
     },
     {
-      "bullets" : 3,
-      "bulletsPassing" : 3,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "18-dotnet",
       "labels" : [
         "3+ years of C# and .NET",
@@ -471,8 +471,7 @@
 
       ],
       "predictedMusts" : [
-        "C#",
-        ".NET",
+        "3+ years of C# and .NET",
         "SQL Server",
         "Azure",
         "Experience with REST APIs"
@@ -485,8 +484,8 @@
       ]
     },
     {
-      "bullets" : 3,
-      "bulletsPassing" : 3,
+      "bullets" : 6,
+      "bulletsPassing" : 6,
       "id" : "19-junior-python",
       "labels" : [
         "Python experience",
@@ -498,7 +497,7 @@
 
       ],
       "predictedMusts" : [
-        "Up to 2 years of Python experience",
+        "Up to 2 years of Python experience, including internships or co-ops",
         "Git",
         "Basic SQL",
         "Clear written communication"
@@ -539,8 +538,8 @@
       ]
     },
     {
-      "bullets" : 5,
-      "bulletsPassing" : 5,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "21-analytics-engineer",
       "labels" : [
         "2+ years of analytics engineering",
@@ -552,7 +551,7 @@
 
       ],
       "predictedMusts" : [
-        "2+ years of analytics engineering",
+        "analytics engineering",
         "dbt",
         "SQL",
         "Snowflake"
@@ -580,7 +579,7 @@
       "predictedMusts" : [
         "3+ years of C# in Unity",
         "Shipped at least one mobile game",
-        "Strong math for gameplay",
+        "Strong math for gameplay (vectors, physics)",
         "French is required"
       ],
       "violations" : [
@@ -617,8 +616,8 @@
       ]
     },
     {
-      "bullets" : 7,
-      "bulletsPassing" : 7,
+      "bullets" : 2,
+      "bulletsPassing" : 2,
       "id" : "24-product-designer-dev",
       "labels" : [
         "3+ years of React UI",
@@ -643,8 +642,8 @@
       ]
     },
     {
-      "bullets" : 3,
-      "bulletsPassing" : 3,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "25-backend-python-us",
       "labels" : [
         "4+ years of Python",
@@ -657,7 +656,7 @@
 
       ],
       "predictedMusts" : [
-        "Python",
+        "4+ years of Python",
         "FastAPI or Django",
         "PostgreSQL",
         "Experience with HIPAA or similar compliance",
@@ -671,8 +670,8 @@
       ]
     },
     {
-      "bullets" : 6,
-      "bulletsPassing" : 6,
+      "bullets" : 2,
+      "bulletsPassing" : 2,
       "id" : "26-support-engineer",
       "labels" : [
         "2+ years in technical support",
@@ -697,8 +696,8 @@
       ]
     },
     {
-      "bullets" : 3,
-      "bulletsPassing" : 3,
+      "bullets" : 2,
+      "bulletsPassing" : 2,
       "id" : "27-search-engineer",
       "labels" : [
         "3+ years of Elasticsearch or OpenSearch",
@@ -721,8 +720,8 @@
       ]
     },
     {
-      "bullets" : 2,
-      "bulletsPassing" : 2,
+      "bullets" : 7,
+      "bulletsPassing" : 7,
       "id" : "28-mobile-react-native",
       "labels" : [
         "3+ years of React Native",
@@ -747,8 +746,8 @@
       ]
     },
     {
-      "bullets" : 7,
-      "bulletsPassing" : 7,
+      "bullets" : 5,
+      "bulletsPassing" : 5,
       "id" : "29-data-scientist",
       "labels" : [
         "Master's degree in statistics, math or related field",
@@ -800,7 +799,7 @@
     }
   ],
   "promptVersions" : {
-    "analyzeJob" : 1,
+    "analyzeJob" : 2,
     "writeExperience" : 1
   },
   "thresholds" : {

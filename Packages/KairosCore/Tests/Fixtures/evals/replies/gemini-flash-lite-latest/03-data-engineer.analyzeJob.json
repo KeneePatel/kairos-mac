@@ -1,1 +1,72 @@
-{"requirements": [{"text": "4+ years of Python", "kind": "must", "matched_skill": "Python"}, {"text": "Airflow", "kind": "must", "matched_skill": "Airflow"}, {"text": "Advanced SQL", "kind": "must", "matched_skill": "SQL"}, {"text": "Snowflake", "kind": "must", "matched_skill": "Snowflake"}, {"text": "dbt", "kind": "nice"}, {"text": "Terraform", "kind": "nice", "matched_skill": "Terraform"}], "years_required": 4, "seniority": "unspecified", "domains": ["healthcare", "analytics"], "flags": {"sponsorship": "not_mentioned", "clearance": "not_mentioned", "french": "not_mentioned", "remote_scope": "remote_country"}}
+{
+  "requirements": [
+    {
+      "text": "4+ years of Python",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "y1",
+        "s2",
+        "x2b1"
+      ]
+    },
+    {
+      "text": "Airflow or a similar orchestrator",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s9",
+        "x2b1"
+      ]
+    },
+    {
+      "text": "Advanced SQL",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s4",
+        "x2b3"
+      ]
+    },
+    {
+      "text": "Experience with a cloud data warehouse such as Snowflake or BigQuery",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": [
+        "s10",
+        "x2b1"
+      ]
+    },
+    {
+      "text": "dbt",
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Terraform",
+      "kind": "nice",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s7",
+        "x1b2"
+      ]
+    }
+  ],
+  "years_required": 4,
+  "seniority": "unspecified",
+  "domains": [
+    "health"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "remote_country"
+  }
+}

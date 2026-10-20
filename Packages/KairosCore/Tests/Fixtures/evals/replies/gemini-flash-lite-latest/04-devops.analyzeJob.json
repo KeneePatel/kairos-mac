@@ -1,1 +1,76 @@
-{"requirements": [{"text": "3+ years running production workloads on AWS", "kind": "must", "matched_skill": "AWS"}, {"text": "Terraform", "kind": "must", "matched_skill": "Terraform"}, {"text": "Kubernetes in production", "kind": "must", "matched_skill": "Kubernetes"}, {"text": "CI/CD pipelines (GitHub Actions, GitLab CI or similar)", "kind": "must"}, {"text": "On-call experience", "kind": "must"}, {"text": "Prometheus and Grafana", "kind": "nice"}, {"text": "Go or Python scripting", "kind": "nice", "matched_skill": "Go"}], "years_required": 3, "seniority": "unspecified", "domains": ["transit"], "flags": {"sponsorship": "not_mentioned", "clearance": "not_mentioned", "french": "not_mentioned", "remote_scope": "unknown"}}
+{
+  "requirements": [
+    {
+      "text": "3+ years running production workloads on AWS",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": [
+        "y1",
+        "x1b2"
+      ]
+    },
+    {
+      "text": "Terraform",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s7",
+        "x1b2"
+      ]
+    },
+    {
+      "text": "Kubernetes in production",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": [
+        "x1b2"
+      ]
+    },
+    {
+      "text": "CI/CD pipelines (GitHub Actions, GitLab CI or similar)",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "On-call experience",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": [
+        "x1b4"
+      ]
+    },
+    {
+      "text": "Prometheus and Grafana",
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Go or Python scripting",
+      "kind": "nice",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s1",
+        "s2"
+      ]
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "transit",
+    "logistics"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

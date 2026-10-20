@@ -1,1 +1,1 @@
-{"entries":[{"id":"e1","bullets":[{"text":"Mentored 3 junior developers and ran the weekly on-call review.","source_ids":["b4"]}]},{"id":"e2","bullets":[{"text":"Tuned SQL reports, cutting the slowest from 6 minutes to 40 seconds.","source_ids":["b7"]}]}]}
+{"entries":[{"id":"e1","bullets":[{"text":"Added Kafka event streaming between billing and shipping, retiring 4 nightly batch jobs.","source_ids":["b1"]}]},{"id":"e2","bullets":[{"text":"Tuned SQL reports, cutting the slowest from 6 minutes to 40 seconds.","source_ids":["b7"]}]}]}

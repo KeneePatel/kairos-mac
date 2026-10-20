@@ -1,1 +1,55 @@
-{"requirements": [{"text": "4+ years of Java", "kind": "must"}, {"text": "Spring Boot", "kind": "must"}, {"text": "SQL (Oracle or PostgreSQL)", "kind": "must", "matched_skill": "PostgreSQL"}, {"text": "Experience building REST APIs", "kind": "must"}, {"text": "Kafka", "kind": "nice", "matched_skill": "Kafka"}, {"text": "Payments or banking experience", "kind": "nice"}], "years_required": 4, "seniority": "unspecified", "domains": ["payments", "banking"], "flags": {"sponsorship": "not_mentioned", "clearance": "not_mentioned", "french": "not_mentioned", "remote_scope": "unknown"}}
+{
+  "requirements": [
+    {
+      "text": "4+ years of Java",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Spring Boot",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "SQL (Oracle or PostgreSQL)",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": ["s3", "s4"]
+    },
+    {
+      "text": "Experience building REST APIs",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": ["x1b1"]
+    },
+    {
+      "text": "Kafka",
+      "kind": "nice",
+      "category": "skill",
+      "match": "yes",
+      "evidence": ["s8"]
+    },
+    {
+      "text": "Payments or banking experience",
+      "kind": "nice",
+      "category": "experience",
+      "match": "no"
+    }
+  ],
+  "years_required": 4,
+  "seniority": "unspecified",
+  "domains": [
+    "payments",
+    "banking"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

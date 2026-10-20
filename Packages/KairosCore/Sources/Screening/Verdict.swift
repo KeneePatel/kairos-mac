@@ -44,15 +44,16 @@ public enum VerdictRule: String, Sendable, CaseIterable, Codable {
     case noRequirements = "no_requirements"
 }
 
-/// How many of a posting's skill requirements yours cover. Conditions (work authorization,
-/// clearance, languages, degrees, travel) don't count here: the flags and your profile judge them.
+/// How much of a posting's skills, experience, education and languages your master resume shows:
+/// a yes is worth 1 and a partial ½, so "3.5 of 5". Soft skills, location, authorization and
+/// availability don't count (the flags and the prefilter judge the last three).
 public struct Coverage: Codable, Sendable, Equatable {
-    public var mustCovered: Int
+    public var mustCovered: Double
     public var mustTotal: Int
-    public var niceCovered: Int
+    public var niceCovered: Double
     public var niceTotal: Int
 
-    public init(mustCovered: Int, mustTotal: Int, niceCovered: Int, niceTotal: Int) {
+    public init(mustCovered: Double, mustTotal: Int, niceCovered: Double, niceTotal: Int) {
         self.mustCovered = mustCovered
         self.mustTotal = mustTotal
         self.niceCovered = niceCovered
@@ -60,16 +61,16 @@ public struct Coverage: Codable, Sendable, Equatable {
     }
 
     public init(_ analysis: JobAnalysis) {
-        let skills = analysis.requirements.filter { !Self.isCondition($0.text) }
-        let musts = skills.filter { $0.kind == .must }
-        let nices = skills.filter { $0.kind == .nice }
+        let counted = analysis.requirements.filter(\.counts)
+        let musts = counted.filter { $0.kind == .must }
+        let nices = counted.filter { $0.kind == .nice }
         self.init(
-            mustCovered: musts.filter { $0.matchedSkill != nil }.count, mustTotal: musts.count,
-            niceCovered: nices.filter { $0.matchedSkill != nil }.count, niceTotal: nices.count)
+            mustCovered: musts.reduce(0) { $0 + $1.effectiveMatch.credit }, mustTotal: musts.count,
+            niceCovered: nices.reduce(0) { $0 + $1.effectiveMatch.credit }, niceTotal: nices.count)
     }
 
-    public var must: Double { mustTotal == 0 ? 0 : Double(mustCovered) / Double(mustTotal) }
-    public var nice: Double { niceTotal == 0 ? 0 : Double(niceCovered) / Double(niceTotal) }
+    public var must: Double { mustTotal == 0 ? 0 : mustCovered / Double(mustTotal) }
+    public var nice: Double { niceTotal == 0 ? 0 : niceCovered / Double(niceTotal) }
 
     /// 0 to 1, for ranking: must-haves weigh 80%, nice-to-haves 20%.
     public var match: Double {
@@ -82,7 +83,7 @@ public struct Coverage: Codable, Sendable, Equatable {
     }
 
     var summary: String {
-        "Covers \(mustCovered) of \(mustTotal) must-haves and \(niceCovered) of \(niceTotal) nice-to-haves."
+        "Covers \(mustCovered.formatted()) of \(mustTotal) must-haves and \(niceCovered.formatted()) of \(niceTotal) nice-to-haves."
     }
 
     /// Work authorization, clearance, a language, a degree, travel or a licence: judged against your
@@ -198,12 +199,11 @@ public struct VerdictEngine: Sendable {
         return share >= thresholds.maybeAt ? decision(.maybe, .partialMatch, gap) : decision(.no, .weakMatch, gap)
     }
 
-    /// "Missing Rust", "Missing Rust and Scala", "Missing Rust, Scala and 2 more": the must-have
-    /// skills none of yours covers.
+    /// "Missing Rust", "Missing Rust and Scala", "Missing Rust, Scala and 2 more": the counted
+    /// must-haves your master resume doesn't show at all.
     private static func missing(_ analysis: JobAnalysis) -> String? {
-        let names = analysis.requirements.filter {
-            $0.kind == .must && $0.matchedSkill == nil && !Coverage.isCondition($0.text)
-        }.map(\.text)
+        let names = analysis.requirements.filter { $0.kind == .must && $0.counts && $0.effectiveMatch == .no }
+            .map(\.text)
         switch names.count {
         case 0: return nil
         case 1: return "Missing \(names[0])"

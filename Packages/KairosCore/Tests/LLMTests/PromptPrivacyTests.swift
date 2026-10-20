@@ -131,7 +131,7 @@ struct PromptPrivacyTests {
 
         let context = ScreeningContext(
             profile: Avery.profile, skills: Avery.resume.skills,
-            languages: [.init(language: "English", proficiency: .native)], totalYears: 6)
+            languages: [.init(language: "English", proficiency: .native)], totalYears: 6, resume: Avery.resume)
         prompts[.analyzeJob] = [AnalyzeJobTask().messages(for: context.analysisInput(for: Avery.job), budget: budget)]
 
         // A Stretch build with a letter, every reply unusable, so each writer also falls back and

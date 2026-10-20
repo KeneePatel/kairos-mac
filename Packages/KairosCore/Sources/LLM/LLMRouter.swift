@@ -16,10 +16,13 @@ public struct ModelRef: Hashable, Sendable, Codable {
 public struct CallContext: Sendable, Equatable {
     public var jobID: String?
     public var buildID: String?
+    /// Ask the model again rather than reuse a cached answer (Re-evaluate). The new answer is cached.
+    public var fresh: Bool
 
-    public init(jobID: String? = nil, buildID: String? = nil) {
+    public init(jobID: String? = nil, buildID: String? = nil, fresh: Bool = false) {
         self.jobID = jobID
         self.buildID = buildID
+        self.fresh = fresh
     }
 }
 
@@ -99,7 +102,9 @@ public actor LLMRouter {
 
         for (position, ref) in chain.enumerated() {
             let key = ResultCache.Key(task: T.id, messages: messages, promptVersion: T.promptVersion, model: ref.model)
-            if let cached = await cachedOutput(task, input: input, key: key, ref: ref) { return cached }
+            if !context.fresh, let cached = await cachedOutput(task, input: input, key: key, ref: ref) {
+                return cached
+            }
             try await checkBudget()
             guard let client = clients[ref.provider] else {
                 lastError = .noProvider(T.id)

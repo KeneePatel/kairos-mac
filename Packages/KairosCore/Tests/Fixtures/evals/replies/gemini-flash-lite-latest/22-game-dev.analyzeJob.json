@@ -2,30 +2,39 @@
   "requirements": [
     {
       "text": "3+ years of C# in Unity",
-      "kind": "must"
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
     },
     {
       "text": "Shipped at least one mobile game",
-      "kind": "must"
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
     },
     {
-      "text": "Strong math for gameplay",
-      "kind": "must"
+      "text": "Strong math for gameplay (vectors, physics)",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
     },
     {
       "text": "French is required",
-      "kind": "must"
+      "kind": "must",
+      "category": "language",
+      "match": "not_judged"
     },
     {
       "text": "Shader programming",
-      "kind": "nice"
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
     }
   ],
   "years_required": 3,
   "seniority": "unspecified",
   "domains": [
-    "gaming",
-    "mobile"
+    "gaming"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

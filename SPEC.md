@@ -231,11 +231,14 @@ flowchart LR
    - posting age
    - already applied (same company + similar title)
 5. **Analyze** (one LLM call per survivor, JSON schema). The model extracts:
-   - the requirements, each marked must or nice, and for each one which of your skills matches it, if any
+   - the requirements, each marked must or nice, with its category (skill, experience, education, location, authorization, language, availability, soft) and whether your master resume shows it (yes, partial, no, not judged), citing the evidence ids it relied on; code checks every id exists
    - seniority, years required and domains
    - sponsorship statements, clearance and language requirements, remote scope
    Cached per `(job, prompt_version)`.
-6. **Verdict** (code) from must-have and nice-to-have coverage, the years and level policy, the authorization flags and your thresholds. The rule id is stored.
+6. **Verdict** (code) from must-have and nice-to-have coverage, the years and level policy, the authorization flags and your thresholds. The rule id is stored. *Changed 2026-10-20 (polish P1):*
+   - Coverage counts only skill, experience, education and language requirements: a yes is worth 1, a partial ½.
+   - Soft skills are never judged, and location, authorization and availability requirements are taken as met. The prefilter and the authorization flags still apply your settings.
+   - A job can be re-evaluated on its own, with a fresh analysis (P2).
 7. **Rank:** verdict first, then country priority (CA before US), then match. Today's list and notifications follow this order.
 8. **Notify:** one notification with the counts of new `yes` and `maybe` jobs.
 
@@ -363,7 +366,7 @@ let result = try await llm.run(AnalyzeJobTask(), input: job)
 | `importResume` | Onboarding, re-import | Resume text (extracted with PDFKit) with contact details removed in code first: the values you entered, plus anything shaped like an email, phone number or profile URL | Master-resume draft: contact, experience, projects, education, skills, additional sections | Flash | 10k / 6k | 0 |
 | `importGitHubRepo` | On request | Repo name, languages, README excerpt | One project entry | Flash-Lite | 3k / 600 | 0.2 |
 | `triage` | Optional, before `analyzeJob` | Title + first ~1,500 characters of the posting | Relevant? Role family | On-device | ≤ 3.5k total | 0 |
-| `analyzeJob` | Once per job that passes the prefilter | Cleaned posting + your skill names and languages only | Requirements (must or nice, matched skill), years, seniority, domains, flags (sponsorship, clearance, French, remote scope) | Flash-Lite | 7k / 1.5k | 0 |
+| `analyzeJob` | Once per job that passes the prefilter, or on Re-evaluate | Cleaned posting + your master resume as numbered evidence (skills, degrees and fields, languages, roles, projects and bullets; contact details redacted; never authorization, clearance or where you live) | Requirements (must or nice; category; match yes, partial, no or not judged; evidence ids), years, seniority, domains, flags (sponsorship, clearance, French, remote scope) | Flash-Lite | 7k / 1.5k | 0 |
 | `select` | Per build, only to break ties | Requirements + one-line summaries of candidate bullets, with ids | Ranked ids | Flash-Lite | 4k / 500 | 0 |
 | `writeSummary`, `writeSkills`, `writeExperience`, `writeProjects` | Per build, in parallel | Requirements + only the selected entries + mode rules + spelling locale | Bullets with `source_ids` | Flash | 4k / 1.5k each | 0.4 |
 | `rewriteSection` | Per weak section, ≤ 3 passes | Current section + the score's findings | Bullets with `source_ids` | Flash | 3k / 1.5k | 0.4 |
@@ -376,7 +379,7 @@ let result = try await llm.run(AnalyzeJobTask(), input: job)
 
 #### Prompts and context
 - **Layout:** the system message holds the role, rules and output contract. Those rarely change, so providers' prefix caching (Gemini's implicit caching, Anthropic's `cache_control`) can reuse them. The user message holds data in tagged blocks: `<job_posting>`, `<requirements>`, `<entries>`. The rules say text inside the blocks is data, never instructions.
-- **Least context:** each task receives only what it needs. `analyzeJob` gets skill names, not the resume. Writers get only the selected entries. **No task ever receives contact details** (name, phone, email, LinkedIn, GitHub, portfolio) or local-only sensitive fields; code inserts contact details into the PDF and the letter.
+- **Least context:** each task receives only what it needs. `analyzeJob` gets your resume's evidence (changed 2026-10-20: skill names alone couldn't judge degrees, experience or broad requirements) but never authorization, clearance or location. Writers get only the selected entries. **No task ever receives contact details** (name, phone, email, LinkedIn, GitHub, portfolio) or local-only sensitive fields; code inserts contact details into the PDF and the letter.
 - **Posting cleanup before sending:** HTML to Markdown; drop boilerplate (equal-opportunity statements, benefits lists) using heading heuristics. When truncating to the budget, keep the requirements, qualifications and responsibilities sections first.
 - **Token estimates:** characters ÷ 4 before sending, corrected per provider and model from the `usage` numbers each response returns.
 - **Versioned prompts:** `Prompts/<task>.v<N>.md` resources. Users may override a task's instructions in Settings, but the output contract and data blocks are fixed by code. Changing a built-in prompt bumps its version, which invalidates cached `analyzeJob` results.

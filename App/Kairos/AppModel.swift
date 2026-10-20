@@ -303,6 +303,9 @@ final class AppModel {
 
     // MARK: - Builds
 
+    /// Your master resume as screening evidence, to quote what showed a requirement.
+    var screeningProfile: ScreeningProfile? { resume.map { ScreeningProfile($0.resume) } }
+
     /// Stretch when you've turned it on, otherwise strict.
     var defaultBuildMode: BuildMode { stretch.enabled ? .stretch : .strict }
 

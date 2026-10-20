@@ -28,8 +28,15 @@ struct RecordedAnalysisTests {
     /// failing the build. If a re-recorded reply no longer shows the gap, the test says so.
     static let knownGaps: [String: String] = [
         "analyzeJob-qwen3.5_4B-thinking-off.json":
-            "qwen3.5:4B with thinking off lists every must-have but none of the nice-to-haves, even when the prompt "
-            + "names them (2026-10-19). Gemini Flash-Lite lists all seven."
+            "qwen3.5:4B with thinking off merges Kubernetes and gRPC into one nice-to-have (prompt v2, 2026-10-20). "
+            + "Gemini Flash-Lite and the same model with thinking on list all three."
+    ]
+
+    /// Must-have shortfalls, kept visible the same way.
+    static let knownMustGaps: [String: String] = [
+        "analyzeJob-qwen3.5_4B-thinking-off.json":
+            "qwen3.5:4B with thinking off says \"3+ years building services in Go or Java\" isn't shown, with Go in "
+            + "the skills (prompt v2, 2026-10-20). With thinking on, and on Gemini Flash-Lite, it's a yes."
     ]
 
     static func replies() throws -> [(name: String, text: String)] {
@@ -55,11 +62,18 @@ struct RecordedAnalysisTests {
             var wrong: [String] = []
             for requirement in analysis.requirements {
                 let label = Self.labels.first { requirement.text.lowercased().contains($0.pattern) }
-                if let label, label.kind == requirement.kind, requirement.matchedSkill == label.skill {
+                // Prompt v2: a label's skill must be what the cited evidence names (a yes, or a partial
+                // when the posting asks for years the profile doesn't state); no skill, no yes.
+                let shown = (requirement.evidence ?? []).compactMap { input.profile.describe($0) }
+                let agrees =
+                    label?.skill.map { shown.contains($0) && [.yes, .partial].contains(requirement.effectiveMatch) }
+                    ?? (requirement.effectiveMatch != .yes)
+                if let label, label.kind == requirement.kind, agrees {
                     found.insert(label.topic)
                 } else {
                     wrong.append(
-                        "\(requirement.kind.rawValue) \(requirement.text) → \(requirement.matchedSkill ?? "-")")
+                        "\(requirement.kind.rawValue) \(requirement.text) → \(requirement.effectiveMatch.rawValue) \(shown)"
+                    )
                 }
             }
             let musts = Self.labels.filter { $0.kind == .must }.map(\.topic)
@@ -69,9 +83,13 @@ struct RecordedAnalysisTests {
             let mustRecall = Double(found.intersection(musts).count) / Double(musts.count)
             let niceRecall = Double(found.intersection(nices).count) / Double(nices.count)
             print("recorded: \(name) must precision \(mustPrecision) recall \(mustRecall) · nice recall \(niceRecall)")
-            #expect(mustPrecision >= 0.85, "\(name): \(wrong)")
-            #expect(mustRecall >= 0.80, "\(name): found \(found.sorted())")
-            #expect(wrong.isEmpty, "\(name): \(wrong)")
+            withKnownIssue(Comment(rawValue: Self.knownMustGaps[name] ?? "")) {
+                #expect(mustPrecision >= 0.85, "\(name): \(wrong)")
+                #expect(mustRecall >= 0.80, "\(name): found \(found.sorted())")
+                #expect(wrong.isEmpty, "\(name): \(wrong)")
+            } when: {
+                Self.knownMustGaps[name] != nil
+            }
             if let reason = Self.knownGaps[name] {
                 withKnownIssue(Comment(rawValue: reason)) {
                     #expect(niceRecall >= 0.80, "\(name): found \(found.sorted())")

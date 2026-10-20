@@ -2,30 +2,48 @@
   "requirements": [
     {
       "text": "3+ years of Elasticsearch or OpenSearch",
-      "kind": "must"
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
     },
     {
       "text": "Java or Python",
       "kind": "must",
-      "matched_skill": "Python"
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s2"
+      ]
     },
     {
       "text": "Relevance tuning and ranking",
-      "kind": "must"
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
     },
     {
       "text": "Vector search",
-      "kind": "nice"
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
     },
     {
       "text": "Kafka",
       "kind": "nice",
-      "matched_skill": "Kafka"
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s8",
+        "x1b3"
+      ]
     }
   ],
   "years_required": 3,
   "seniority": "unspecified",
-  "domains": ["search", "edtech"],
+  "domains": [
+    "search",
+    "education"
+  ],
   "flags": {
     "sponsorship": "not_mentioned",
     "clearance": "not_mentioned",

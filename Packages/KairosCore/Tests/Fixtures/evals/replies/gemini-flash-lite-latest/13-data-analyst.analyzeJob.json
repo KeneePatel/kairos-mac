@@ -1,1 +1,64 @@
-{"requirements":[{"text":"2+ years of analytics experience","kind":"must"},{"text":"Advanced SQL","kind":"must","matched_skill":"SQL"},{"text":"Tableau or Power BI","kind":"must"},{"text":"Excel","kind":"must"},{"text":"Python or R","kind":"nice","matched_skill":"Python"},{"text":"Retail experience","kind":"nice"}],"years_required":2,"seniority":"unspecified","domains":["retail","sales"],"flags":{"sponsorship":"not_mentioned","clearance":"not_mentioned","french":"not_mentioned","remote_scope":"unknown"}}
+{
+  "requirements": [
+    {
+      "text": "2+ years of analytics experience",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": [
+        "y1",
+        "x2"
+      ]
+    },
+    {
+      "text": "Advanced SQL",
+      "kind": "must",
+      "category": "skill",
+      "match": "partial",
+      "evidence": [
+        "s4",
+        "x2b3"
+      ]
+    },
+    {
+      "text": "Tableau or Power BI",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Excel",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Python or R",
+      "kind": "nice",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s2",
+        "x2b1"
+      ]
+    },
+    {
+      "text": "Retail experience",
+      "kind": "nice",
+      "category": "experience",
+      "match": "no"
+    }
+  ],
+  "years_required": 2,
+  "seniority": "unspecified",
+  "domains": [
+    "retail",
+    "analytics"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

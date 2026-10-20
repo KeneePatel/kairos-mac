@@ -1,1 +1,53 @@
-{"requirements": [{"text": "3+ years building UI with React", "kind": "must", "matched_skill": "React"}, {"text": "Figma", "kind": "must"}, {"text": "CSS animation", "kind": "must"}, {"text": "A portfolio of shipped work", "kind": "must"}, {"text": "Storybook", "kind": "nice"}], "years_required": 3, "seniority": "unspecified", "domains": ["retail", "design", "storefront"], "flags": {"sponsorship": "not_mentioned", "clearance": "not_mentioned", "french": "not_mentioned", "remote_scope": "unknown"}}
+{
+  "requirements": [
+    {
+      "text": "3+ years building UI with React",
+      "kind": "must",
+      "category": "experience",
+      "match": "partial",
+      "evidence": [
+        "y1",
+        "x2b2"
+      ]
+    },
+    {
+      "text": "Figma",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "CSS animation",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "A portfolio of shipped work",
+      "kind": "must",
+      "category": "experience",
+      "match": "partial",
+      "evidence": [
+        "p1b1"
+      ]
+    },
+    {
+      "text": "Storybook",
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "retail",
+    "storefront"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

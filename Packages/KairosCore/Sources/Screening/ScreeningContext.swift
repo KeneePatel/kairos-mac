@@ -12,11 +12,16 @@ public struct ScreeningContext: Sendable {
     public var languages: [EntryFields.Language]
     public var totalYears: Double?
     public var applied: [AppliedJob]
+    /// Your master resume as the evidence `analyzeJob` matches against (contact details redacted).
+    public var evidence: ScreeningProfile
 
+    /// `resume` gives `analyzeJob` your whole master resume to match against; without it, only
+    /// your skill names and languages.
     public init(
         preferences: SearchPreferences = SearchPreferences(), profile: WorkProfile = WorkProfile(),
         skills: [Skill] = [],
-        languages: [EntryFields.Language] = [], totalYears: Double? = nil, applied: [AppliedJob] = []
+        languages: [EntryFields.Language] = [], totalYears: Double? = nil, applied: [AppliedJob] = [],
+        resume: MasterResume? = nil
     ) {
         self.preferences = preferences
         self.profile = profile
@@ -24,6 +29,9 @@ public struct ScreeningContext: Sendable {
         self.languages = languages
         self.totalYears = totalYears
         self.applied = applied
+        evidence =
+            resume.map(ScreeningProfile.init)
+            ?? ScreeningProfile(skills: skills, languages: languages, totalYears: totalYears)
     }
 
     public static func load(from db: Database) async throws -> ScreeningContext {
@@ -40,7 +48,7 @@ public struct ScreeningContext: Sendable {
                 if case .language(let language) = entry.fields { language } else { nil }
             },
             totalYears: resume.header.totalYears,
-            applied: applied.map { AppliedJob(company: $0.company, title: $0.title) })
+            applied: applied.map { AppliedJob(company: $0.company, title: $0.title) }, resume: resume)
     }
 
     public func prefilter(now: Date) -> Prefilter {
@@ -52,7 +60,7 @@ public struct ScreeningContext: Sendable {
     }
 
     public func analysisInput(for job: Job) -> AnalyzeJobTask.Input {
-        AnalyzeJobTask.Input(job: job, skills: skills, languages: languages)
+        AnalyzeJobTask.Input(job: job, profile: evidence)
     }
 
     /// Where a verdict puts the job in Today's list.

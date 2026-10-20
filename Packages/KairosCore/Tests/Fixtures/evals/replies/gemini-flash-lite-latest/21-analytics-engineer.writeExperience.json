@@ -14,6 +14,18 @@
           "source_ids": [
             "b2"
           ]
+        },
+        {
+          "text": "Added Kafka event streaming between billing and shipping, retiring 4 nightly batch jobs.",
+          "source_ids": [
+            "b3"
+          ]
+        },
+        {
+          "text": "Mentored 3 junior developers and ran the weekly on-call review.",
+          "source_ids": [
+            "b4"
+          ]
         }
       ]
     },

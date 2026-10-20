@@ -16,6 +16,8 @@ struct JobExplanationView: View {
     var build: (() -> Void)?
     /// Write a cover letter with the build.
     var coverLetter: Binding<Bool>?
+    /// An evidence id in words, from your master resume.
+    var describe: (String) -> String? = { _ in nil }
     /// Why Build is blocked, such as an unfinished master resume (S14).
     var buildBlocked: String?
 
@@ -102,17 +104,16 @@ struct JobExplanationView: View {
     }
 
     private func requirements(_ title: String, _ items: [JobAnalysis.Requirement]) -> some View {
-        let skills = items.filter { !Coverage.isCondition($0.text) }
-        let covered = skills.count { $0.matchedSkill != nil }
-        return VStack(alignment: .leading, spacing: Spacing.space2) {
+        VStack(alignment: .leading, spacing: Spacing.space2) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title).font(TypeStyle.headline).foregroundStyle(Color(.ink))
                 Spacer()
-                Text(skills.isEmpty ? "None listed" : "\(covered) of \(skills.count) covered")
-                    .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).monospacedDigit()
+                Text(items.shownSummary).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).monospacedDigit()
             }
             VStack(alignment: .leading, spacing: Spacing.space3) {
-                ForEach(Array(items.enumerated()), id: \.offset) { _, requirement in row(requirement) }
+                ForEach(Array(items.enumerated()), id: \.offset) { _, requirement in
+                    RequirementRow(requirement: requirement, describe: describe)
+                }
             }
             .padding(Spacing.space3)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -120,28 +121,6 @@ struct JobExplanationView: View {
         }
     }
 
-    /// Covered: a solid green check. Missing: a dashed grey circle. The meta line names the match.
-    private func row(_ requirement: JobAnalysis.Requirement) -> some View {
-        let condition = Coverage.isCondition(requirement.text)
-        let (symbol, color, meta): (String, Color, String) =
-            if let skill = requirement.matchedSkill {
-                ("checkmark.circle.fill", Color(.yes), "Covered · Matched: \(skill)")
-            } else if condition {
-                ("person.crop.circle", Color(.inkSecondary), "A condition, checked against your profile")
-            } else {
-                ("circle.dashed", Color(.inkSecondary), "Missing")
-            }
-        return HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
-            Image(systemName: symbol).foregroundStyle(color)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(requirement.text).font(TypeStyle.body).foregroundStyle(Color(.ink))
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(meta).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
-            }
-        }
-    }
-
-    /// One row when it fits; in a narrow inspector, building on one row and the rest under it.
     private var actions: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: Spacing.space2) {

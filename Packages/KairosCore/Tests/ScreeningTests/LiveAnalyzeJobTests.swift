@@ -74,7 +74,9 @@ struct LiveAnalyzeJobTests {
                     + "\(result.inputTokens.map(String.init) ?? "?") out \(result.outputTokens.map(String.init) ?? "?")"
                     + " · \(result.latency)")
             for requirement in analysis.requirements {
-                print("live:   \(requirement.kind.rawValue) \(requirement.text) → \(requirement.matchedSkill ?? "-")")
+                print(
+                    "live:   \(requirement.kind.rawValue)/\(requirement.category?.rawValue ?? "-") \(requirement.text)"
+                        + " → \(requirement.effectiveMatch.rawValue) \(requirement.evidence ?? [])")
             }
             print(
                 "live:   years \(analysis.yearsRequired.map(String.init) ?? "-") · \(analysis.seniority?.rawValue ?? "-")"
