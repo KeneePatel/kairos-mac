@@ -106,7 +106,7 @@ struct RateLimiterTests {
 
     @Test func noMoreThanTheConcurrencyCapRunAtOnce() async throws {
         let limiter = RateLimiter(requestsPerMinute: 10_000, maxConcurrent: 2, clock: VirtualClock())
-        let gauge = Mutex((now: 0, peak: 0))
+        let gauge = Gauge((now: 0, peak: 0))
         await withThrowingTaskGroup(of: Void.self) { group in
             for _ in 0..<6 {
                 group.addTask {
@@ -133,6 +133,20 @@ struct RateLimiterTests {
         await #expect(throws: LLMError.cancelled) { try await waiter.value }
         await limiter.release()
         try await limiter.acquire()  // the slot wasn't handed to the cancelled waiter
+    }
+}
+
+/// A counter the task group's children share. It's a class so each child captures a reference:
+/// Swift 6.2 (Xcode 26, CI) won't send a closure that captures a local `Mutex` to `addTask`.
+private final class Gauge: Sendable {
+    private let state: Mutex<(now: Int, peak: Int)>
+
+    init(_ value: (now: Int, peak: Int)) {
+        state = Mutex(value)
+    }
+
+    func withLock<Result: Sendable>(_ body: (inout (now: Int, peak: Int)) -> Result) -> Result {
+        state.withLock { body(&$0) }
     }
 }
 
