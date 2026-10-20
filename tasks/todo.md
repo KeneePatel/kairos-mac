@@ -378,7 +378,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - **When analysis stops:** without an AI key, with the daily budget or the provider's quota used up, or with a rejected key, analysis stops and the remaining jobs wait for the next run without a verdict ("12 waiting for AI"). Any other error fails just that job, which also waits.
     - **Run stats** (`run` kind "screen"): screened, prefiltered and drop rate (S6), analysed, failed, waiting, and the new yes, maybe and no counts.
     - **Notifications** (step 8) aren't here yet; they come with the menu bar work.
-  - **Heads-up for your first run:** until T31's settings exist, the prefilter filters nothing, so every job already fetched goes to analysis, one AI call each (Flash-Lite by default, within your 300-a-day budget).
+  - **Heads-up for your first run:** the prefilter filters nothing until you set Settings › Search (T31), so set it first. Otherwise every job already fetched goes to analysis, one AI call each (Flash-Lite by default, within your 300-a-day budget). "Screen again" re-screens later without new AI calls for jobs already analysed.
 
 - [x] **T31 · Today screen and verdict explanations** (M) · deps: T30, T17
   - **Acceptance:**
