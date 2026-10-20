@@ -18,6 +18,23 @@ public struct BuildRecord: Sendable, Equatable, Identifiable {
     public let error: String?
     public let createdAt: Date
     public let finishedAt: Date?
+
+    public init(
+        id: UUID, jobID: String, mode: BuildMode, masterVersion: Int, status: BuildStatus, content: TailoredResume?,
+        score: MatchScore?, iterations: Int, error: String?, createdAt: Date, finishedAt: Date?
+    ) {
+        self.id = id
+        self.jobID = jobID
+        self.mode = mode
+        self.masterVersion = masterVersion
+        self.status = status
+        self.content = content
+        self.score = score
+        self.iterations = iterations
+        self.error = error
+        self.createdAt = createdAt
+        self.finishedAt = finishedAt
+    }
 }
 
 /// A file a build produced, in `artifact`.
@@ -92,8 +109,15 @@ public struct BuildRepository: Sendable {
     /// Newest first.
     public func builds(for job: JobID) async throws -> [BuildRecord] {
         try await db.query(
-            "SELECT * FROM build WHERE job_id = ? AND deleted = 0 ORDER BY created_at DESC, id DESC",
+            "SELECT * FROM build WHERE job_id = ? AND deleted = 0 ORDER BY created_at DESC, rowid DESC",
             [.text(job.rawValue)]
+        ).map(record)
+    }
+
+    /// Every job's builds, newest first, for the Build screen.
+    public func recent(limit: Int = 50) async throws -> [BuildRecord] {
+        try await db.query(
+            "SELECT * FROM build WHERE deleted = 0 ORDER BY created_at DESC, rowid DESC LIMIT ?", [SQLValue(limit)]
         ).map(record)
     }
 
@@ -101,7 +125,7 @@ public struct BuildRepository: Sendable {
     public func builds(status: Set<BuildStatus>) async throws -> [BuildRecord] {
         let placeholders = Array(repeating: "?", count: status.count).joined(separator: ", ")
         return try await db.query(
-            "SELECT * FROM build WHERE status IN (\(placeholders)) AND deleted = 0 ORDER BY created_at, id",
+            "SELECT * FROM build WHERE status IN (\(placeholders)) AND deleted = 0 ORDER BY created_at, rowid",
             status.map { .text($0.rawValue) }
         ).map(record)
     }

@@ -2,9 +2,11 @@
     import AppKit
     import LLM
     import MasterResume
+    import Render
     import Screening
     import Store
     import SwiftUI
+    import Tailoring
 
     /// Debug builds only: `Kairos --render-snapshots` draws screens offscreen, in light and dark, to
     /// PNGs in the app's temporary folder, then quits before any window opens. It lets screens be
@@ -75,6 +77,16 @@
                     SearchPreferencesView().environment(today.model).frame(width: 820, height: 1_500)
                         .background(Color(.surface)),
                     to: folder.appending(path: "search-settings-\(name).png"), appearance: appearance)
+            }
+            let build = sampleBuild(resume: resume.resume, job: today.selected)
+            let pdf = renderNow(ResumeDocument(build.content ?? TailoredResume(header: .init(name: ""))), in: folder)
+            for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+                render(
+                    BuildView(
+                        build: build, job: today.selected, pdf: pdf, step: nil, master: resume.resume, selected: 0
+                    )
+                    .frame(width: 1_340, height: 860),
+                    to: folder.appending(path: "build-\(name).png"), appearance: appearance)
             }
             print("snapshots: \(folder.path)")
             exit(0)
@@ -189,6 +201,73 @@
                 ], yearsRequired: 3, seniority: .mid, domains: ["logistics"],
                 flags: .init(sponsorship: .notOffered, clearance: .notMentioned, french: .asset, remoteScope: .hybrid))
             return (model, jobs[0], analysis)
+        }
+
+        /// A finished strict build of the sample resume for Northline's posting (fictional).
+        private static func sampleBuild(resume: MasterResume, job: Job) -> BuildRecord {
+            let role = resume.entries(.experience)[0]
+            let project = resume.entries(.project)[0]
+            let texts = [
+                "Built an event pipeline in Go and PostgreSQL handling 4.2M events a day at p99 under 120 ms.",
+                "Cut carrier onboarding from 3 weeks to 4 days for 11 carriers with a gRPC integration kit.",
+                "Moved 14 services to Kubernetes with Kafka event streaming.",
+            ]
+            let content = TailoredResume(
+                header: TailoredResume.Header(resume.header),
+                summary: "Backend developer with 6 years building Go and PostgreSQL services for logistics.",
+                skills: [
+                    SkillGroup(label: "Languages", skills: ["Go", "Python"]),
+                    SkillGroup(label: "Data and messaging", skills: ["PostgreSQL", "RabbitMQ", "gRPC"]),
+                ],
+                experience: [
+                    TailoredResume.Entry(
+                        entryID: role.id, title: "Software Developer, Backend", organization: "Harbourline Logistics",
+                        location: "Toronto, ON", dates: "Mar 2022 – Present",
+                        bullets: zip(texts, role.bullets).map { TailoredBullet(text: $0, sourceIDs: [$1.id]) })
+                ],
+                projects: [
+                    TailoredResume.Entry(
+                        entryID: project.id, title: "Dockyard", organization: "Go", dates: "Jan 2023 – Present",
+                        bullets: [
+                            TailoredBullet(
+                                text: "Open-source Go CLI for cleaning up local Docker resources.",
+                                sourceIDs: [project.bullets[0].id])
+                        ])
+                ],
+                certifications: [
+                    TailoredResume.Entry(entryID: UUID(), title: "AWS Solutions Architect Associate", dates: "2024")
+                ],
+                languages: "French (conversational)")
+            let requirements = JobRequirements(
+                musts: [
+                    "3+ years building services in Go", "Strong PostgreSQL", "Message queues such as RabbitMQ or Kafka",
+                ],
+                nices: ["Kubernetes", "Terraform"], domains: ["logistics"])
+            return BuildRecord(
+                id: UUID(), jobID: job.id.rawValue, mode: .strict, masterVersion: 11, status: .done, content: content,
+                score: MatchScore.score(content, for: requirements, pages: 1), iterations: 1, error: nil,
+                createdAt: Date(), finishedAt: Date())
+        }
+
+        /// Renders with the bundled typst, blocking: fine for a debug snapshot, never for the app.
+        private static func renderNow(_ document: ResumeDocument, in folder: URL) -> URL? {
+            guard let typst = Bundle.main.url(forAuxiliaryExecutable: "typst"), let fonts = TypstRunner.bundledFonts,
+                let template = try? ResumeTemplate.classic.source(), let data = try? JSONEncoder().encode(document)
+            else { return nil }
+            let work = folder.appending(path: "build-render")
+            try? FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+            try? Data(template.utf8).write(to: work.appending(path: "template.typ"))
+            try? data.write(to: work.appending(path: "data.json"))
+            let output = work.appending(path: "build.pdf")
+            let process = Process()
+            process.executableURL = typst
+            process.arguments = [
+                "compile", "--root", work.path, "--input", "data=data.json", "--ignore-system-fonts", "--font-path",
+                fonts.path, work.appending(path: "template.typ").path, output.path,
+            ]
+            try? process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0 ? output : nil
         }
 
         /// Sample keys are made-up strings shown masked; nothing here is a real key.

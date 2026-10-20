@@ -164,6 +164,16 @@ struct BuildQueueTests {
         #expect(message.hasPrefix("Your master resume isn't ready"))
         #expect(try await BuildRepository(notReady).build(id)?.status == .failed)
 
+        // A key added after the queue started: the next build uses it.
+        let late = BuildQueue(db: db, router: nil, folder: folder(), render: render)
+        await late.setRouter(router(db, FakeProvider(replies)))
+        try await analyse(job, in: db)
+        let afterKey = try await late.enqueue(job: job.id)
+        guard case .finished? = await outcome(of: afterKey, in: late) else {
+            Issue.record("the build with the new router didn't finish")
+            return
+        }
+
         let noAI = BuildQueue(db: db, router: nil, folder: folder(), render: render)
         try await analyse(job, in: db)
         let without = try await noAI.enqueue(job: job.id)

@@ -192,5 +192,8 @@ struct BuildRepositoryTests {
         try await repo.fail(second, error: "Daily AI budget reached")
         #expect(try await repo.builds(for: job).map(\.id) == [second, id])  // newest first
         #expect(try await repo.build(second)?.error == "Daily AI budget reached")
+        let other = try await repo.create(
+            job: JobID(canonicalURL: "https://jobs.example.com/maplepay"), mode: .strict, masterVersion: 8)
+        #expect(try await repo.recent(limit: 2).map(\.id) == [other, second])  // every job, newest first
     }
 }

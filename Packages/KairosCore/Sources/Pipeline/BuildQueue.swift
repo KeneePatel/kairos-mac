@@ -43,7 +43,7 @@ public actor BuildQueue {
     public nonisolated let events: AsyncStream<Event>
     private let continuation: AsyncStream<Event>.Continuation
     private let db: Database
-    private let router: LLMRouter?
+    private var router: LLMRouter?
     private let folder: URL
     private let workers: Int
     private let render: Render
@@ -58,6 +58,11 @@ public actor BuildQueue {
         self.folder = folder
         self.workers = max(1, workers)
         self.render = render
+    }
+
+    /// The router later builds use, such as after you add an AI key.
+    public func setRouter(_ router: LLMRouter?) {
+        self.router = router
     }
 
     /// Records a build for `job` and starts it as soon as a worker is free.

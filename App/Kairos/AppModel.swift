@@ -4,9 +4,11 @@ import LLM
 import OSLog
 import Observation
 import Pipeline
+import Render
 import Screening
 import Secrets
 import Store
+import Tailoring
 
 /// What the screens show for the open account, and the actions they call. One per window scene.
 @MainActor
@@ -24,6 +26,8 @@ final class AppModel {
     }
 
     private(set) var phase: Phase = .opening
+    /// The sidebar's selection; a build switches it to Builds.
+    var section: AppSection = .today
     private(set) var sources: [Source] = []
     private(set) var jobs: [Job] = []
     private(set) var lastFetch: Run?
@@ -37,6 +41,10 @@ final class AppModel {
     /// What you're looking for (synced) and where you may work (this Mac only).
     private(set) var searchPreferences = SearchPreferences()
     private(set) var workProfile = WorkProfile()
+    /// Every job's builds, newest first, and where each running one is.
+    private(set) var builds: [BuildRecord] = []
+    private(set) var buildSteps: [UUID: BuildStep] = [:]
+    var selectedBuild: UUID?
     private(set) var isFetching = false
     /// The master resume editor's state; there once the database is open.
     private(set) var resume: ResumeModel?
@@ -61,6 +69,8 @@ final class AppModel {
     #endif
 
     @ObservationIgnored private var db: Database?
+    @ObservationIgnored private var buildQueue: BuildQueue?
+    @ObservationIgnored private var buildEvents: Task<Void, Never>?
     @ObservationIgnored private var fetchTask: Task<Void, Never>?
     @ObservationIgnored private let http = URLSessionHTTPClient()
     @ObservationIgnored private let log = Logger(subsystem: "com.keneepatel.kairos", category: "model")
@@ -100,6 +110,7 @@ final class AppModel {
             lastFetch = try await RunRepository(db).runs(kind: "fetch", limit: 1).first
             lastScreening = try await RunRepository(db).runs(kind: "screen", limit: 1).first
             screenings = try await ScreeningRepository(db).latestByJob()
+            builds = try await BuildRepository(db).recent()
             searchPreferences =
                 try await SettingsRepository(db).value(SearchPreferences.storageKey, as: SearchPreferences.self)
                 ?? SearchPreferences()
@@ -278,6 +289,85 @@ final class AppModel {
         guard let db else { return }
         try? await JobRepository(db).setState(.skipped, for: job.id)
         await reload()
+    }
+
+    // MARK: - Builds
+
+    /// Starts a build for `job`, once your master resume is ready (S14), and shows it.
+    func startBuild(for job: Job, mode: BuildMode = .strict) async -> String? {
+        guard let db else { return "The database isn't open." }
+        guard let resume, resume.readiness.isReady else {
+            return
+                "Finish your master resume first: \(resume?.readiness.missing.map(\.message).joined(separator: " ") ?? "")"
+        }
+        let queue = queue(db)
+        await queue.setRouter(ai?.router())
+        do {
+            let id = try await queue.enqueue(job: job.id, mode: mode)
+            selectedBuild = id
+            section = .builds
+            await reload()
+            return nil
+        } catch {
+            log.error("Starting a build failed: \(String(describing: error), privacy: .public)")
+            return "The build couldn't start."
+        }
+    }
+
+    func build(_ id: UUID?) -> BuildRecord? {
+        id.flatMap { id in builds.first { $0.id == id } }
+    }
+
+    /// The PDF a finished build saved.
+    func pdf(of build: BuildRecord) async -> URL? {
+        guard let db, let path = try? await BuildRepository(db).artifacts(for: build.id).first?.localPath else {
+            return nil
+        }
+        return URL(fileURLWithPath: path)
+    }
+
+    /// You applied with this build: the job leaves Today.
+    func markApplied(_ job: Job) async {
+        guard let db else { return }
+        try? await JobRepository(db).setState(.applied, for: job.id)
+        await reload()
+    }
+
+    /// The build queue, made on first use: it renders with the typst in the app bundle, keeps PDFs
+    /// beside the database, and restarts any build a quit left unfinished.
+    private func queue(_ db: Database) -> BuildQueue {
+        if let buildQueue { return buildQueue }
+        let renderer = Bundle.main.url(forAuxiliaryExecutable: "typst").map {
+            ResumeRenderer(runner: TypstRunner(executable: $0))
+        }
+        let folder =
+            ((try? AccountStore.applicationSupport().databaseURL(for: .local))?.deletingLastPathComponent()
+            ?? FileManager.default.temporaryDirectory).appending(path: "Builds")
+        let queue = BuildQueue(db: db, router: ai?.router(), folder: folder) { document in
+            guard let renderer else { throw RenderError.launch("typst isn't in the app bundle") }
+            return try await renderer.render(document)
+        }
+        buildQueue = queue
+        buildEvents = Task { [weak self] in
+            for await event in queue.events { await self?.handle(event) }
+        }
+        Task { _ = try? await queue.resumeInterrupted() }
+        return queue
+    }
+
+    private func handle(_ event: BuildQueue.Event) async {
+        switch event {
+        case .step(let id, let step):
+            buildSteps[id] = step
+        case .finished(let id, _, _):
+            buildSteps[id] = nil
+            await reload()
+        case .failed:
+            // The last step stays, so the screen can show where it stopped.
+            await reload()
+        case .queued:
+            await reload()
+        }
     }
 
     // MARK: - Screening settings

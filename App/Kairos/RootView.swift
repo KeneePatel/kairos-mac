@@ -39,11 +39,14 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
-    @State private var selection: AppSection? = .today
+
+    private var selection: Binding<AppSection?> {
+        Binding(get: { model.section }, set: { if let section = $0 { model.section = section } })
+    }
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selection) {
+            List(selection: selection) {
                 ForEach(AppSection.workflow) { section in
                     Label(section.title, systemImage: section.symbol).tag(section)
                         .badge(badge(section))
@@ -56,7 +59,7 @@ struct RootView: View {
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 232)
         } detail: {
-            switch (model.phase, selection ?? .jobs) {
+            switch (model.phase, model.section) {
             case (.opening, _):
                 ProgressView()
             case (.failed(let message), _):
@@ -67,6 +70,8 @@ struct RootView: View {
                 TodayView()
             case (.ready, .jobs):
                 JobsView()
+            case (.ready, .builds):
+                BuildsView()
             case (.ready, .sources):
                 SourcesView()
             case (.ready, .masterResume):

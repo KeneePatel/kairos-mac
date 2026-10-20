@@ -475,13 +475,27 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - **Live:** a whole build on Gemini Flash-Lite with the real typst took 3.5 s: score 87, one rewrite (projects, which then scored 75), one page, nothing fell back. Weak spots for later prompt versions: the summary repeats a bullet word for word, and the skills writer grouped oddly (Go and Java under "Backend", Python alone under "Languages").
     - **Dependencies:** Render now depends on Tailoring (types only, as SPEC §4 maps it) to lay out a build.
 
-- [ ] **T36 · Build screen** (M) · deps: T35, T31
+- [x] **T36 · Build screen** (M) · deps: T35, T31
   - **Acceptance:**
-    - [ ] Build is blocked until the master resume is ready (success criterion S14). Mode picker: strict or lite (stretch appears only when it's on).
-    - [ ] Progress, PDF preview (PDFKit), and a bullet trace linking each bullet to its master-resume entries.
-    - [ ] "Built from version N" note; Reveal in Finder; export.
+    - [x] Build is blocked until the master resume is ready (success criterion S14). Mode picker: strict or lite (stretch appears only when it's on).
+    - [x] Progress, PDF preview (PDFKit), and a bullet trace linking each bullet to its master-resume entries.
+    - [x] "Built from version N" note; Reveal in Finder; export.
   - **Verify:** `app-build`; manual strict build on a real job
   - **Files:** `App/Kairos/Screens/BuildView.swift`, `App/Kairos/Screens/PDFPreview.swift`, `App/Kairos/Screens/BulletTraceView.swift`
+  - **Done 2026-10-20:** app builds; the core changes have tests (`BuildRepository.recent`, `BuildQueue.setRouter`). The manual strict build on a real job is yours: open a Yes job in Today and choose Build resume.
+    - **Starting a build:** a job's explanation in Today has a primary "Build resume" button. It's disabled, with the reason as its tooltip, until your master resume is ready (S14) and the job has an analysis; `startBuild` checks readiness again before queueing. A started build opens the Builds section.
+    - **Builds section:** the toolbar has the Builds menu (every recent build, newest first), the mode picker (Full, Lite), the primary "Build again", Save PDF (a save panel), Reveal in Finder and Mark applied (the job leaves Today). Stretch joins the picker once T37's setting is on.
+    - **Left column:** the six build steps (done, running, waiting or failed), live from the queue's events; the match score with SPEC's components out of their weights; "Missing from your bullets"; and "Built from master resume version N", which warns when you've changed your resume since.
+    - **Middle:** the PDF in PDFKit, scaled to fit. Selecting text in it selects the matching line in the trace.
+    - **Right column:** every line of the build, and the chosen one traced to the master-resume bullets it cites ("Acme · Engineer · bullet 2 of 4", the text, its metric and skill chips). Its checks are the strict verifier run again against your resume as it is now, so an edit since the build shows up. "Be ready to discuss" says it's empty while Stretch is off.
+    - **PDFs** are saved in `Builds/` beside the database; the queue renders with the bundled typst and restarts unfinished builds at launch.
+    - **Visual differences from `Build.dc.html`:**
+      - The score breakdown shows SPEC §5.3's components (must-haves, nice-to-haves, evidence, domain, metrics, language, structure); the mockup's Seniority and Location rows aren't in SPEC's score.
+      - The list of lines sits above the trace in the right column; the mockup only shows the trace, with lines chosen by clicking the PDF. Clicking a line in a PDF isn't reliable in PDFKit, so selecting text works too.
+      - No "What changed" text per line. The build doesn't store a diff, and the trace shows the source bullets beside the line instead.
+      - Choosing another build is a toolbar menu, not the mockup's header tabs, to keep one toolbar.
+      - The PDF pane can't be checked in `--render-snapshots`, because PDFView draws asynchronously; the PDF itself was checked by page count.
+    - **Undrawn cases, decided here:** no builds yet (an empty state pointing to Today); a running build (a spinner where the PDF goes); a failed build (the step it stopped at in error colour with the message, and the message where the PDF goes; after a relaunch only the latter, since steps aren't stored); a source bullet since deleted (a sentence saying so); dark mode reuses the tokens.
 
 - [ ] **T37 · Stretch mode** (M) · deps: T36
   - **Acceptance:**

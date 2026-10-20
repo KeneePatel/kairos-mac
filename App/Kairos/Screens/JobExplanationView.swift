@@ -12,6 +12,10 @@ struct JobExplanationView: View {
     let score: Int?
     var overrule: (Verdict) -> Void = { _ in }
     var skip: () -> Void = {}
+    /// Starts a build; nil until builds can run.
+    var build: (() -> Void)?
+    /// Why Build is blocked, such as an unfinished master resume (S14).
+    var buildBlocked: String?
 
     var body: some View {
         ScrollView {
@@ -131,9 +135,10 @@ struct JobExplanationView: View {
 
     private var actions: some View {
         HStack(spacing: Spacing.space2) {
-            Button("Build resume") {}
-                .disabled(true)
-                .help("Resume builds arrive with the next part of Kairos.")
+            Button("Build resume") { build?() }
+                .buttonStyle(.borderedProminent)
+                .disabled(build == nil || buildBlocked != nil)
+                .help(buildBlocked ?? "Tailor a resume for this job from your master resume.")
             if let url = URL(string: job.url) {
                 Link(destination: url) { Label("Open posting", systemImage: "arrow.up.right.square") }
             }

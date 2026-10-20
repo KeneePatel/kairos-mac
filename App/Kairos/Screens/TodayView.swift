@@ -118,14 +118,30 @@ private struct JobExplanationLoader: View {
     @Environment(AppModel.self) private var model
     let job: Job
     @State private var analysis: JobAnalysis?
+    @State private var problem: String?
 
     var body: some View {
         JobExplanationView(
             job: job, source: model.source(job.sourceID), record: model.screening(for: job), analysis: analysis,
             score: model.matchScore(for: job),
             overrule: { verdict in Task { await model.overrule(job, to: verdict) } },
-            skip: { Task { await model.skip(job) } }
+            skip: { Task { await model.skip(job) } },
+            build: { Task { problem = await model.startBuild(for: job) } },
+            buildBlocked: buildBlocked
         )
         .task(id: job.id) { analysis = await model.analysis(for: job) }
+        .alert("Can't build", isPresented: Binding(get: { problem != nil }, set: { if !$0 { problem = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(problem ?? "")
+        }
+    }
+
+    /// S14: Build waits for a ready master resume, and for this job's analysis.
+    private var buildBlocked: String? {
+        if let readiness = model.resume?.readiness, !readiness.isReady {
+            return "Finish your master resume first: \(readiness.missing.map(\.message).joined(separator: " "))"
+        }
+        return analysis == nil ? "This job needs an analysis first: run screening with an AI key." : nil
     }
 }
