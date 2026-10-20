@@ -27,7 +27,7 @@ final class AppModel {
 
     private(set) var phase: Phase = .opening
     /// The sidebar's selection; a build switches it to Builds.
-    var section: AppSection = .today
+    var section: AppSection = .review
     private(set) var sources: [Source] = []
     private(set) var jobs: [Job] = []
     private(set) var lastFetch: Run?
@@ -261,6 +261,80 @@ final class AppModel {
 
     func todayCount(_ verdict: Verdict?) -> Int {
         todayJobs.count { verdict == nil || $0.verdict == verdict }
+    }
+
+    // MARK: - Review
+
+    /// Review's three views (polish P3): the Yes and Maybe jobs you haven't acted on, every No with
+    /// its reason, and everything fetched.
+    enum ReviewFilter: String, CaseIterable, Identifiable {
+        case toReview, rejected, all
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .toReview: "To review"
+            case .rejected: "Rejected"
+            case .all: "All"
+            }
+        }
+    }
+
+    func reviewJobs(_ filter: ReviewFilter) -> [Job] {
+        switch filter {
+        case .toReview: todayJobs.filter { $0.verdict == .yes || $0.verdict == .maybe }
+        case .rejected: jobs.filter { $0.verdict == .no }.sorted { ($0.rank ?? 0, $1.title) > ($1.rank ?? 0, $0.title) }
+        case .all: jobs.sorted { ($0.rank ?? -1, $1.title) > ($1.rank ?? -1, $0.title) }
+        }
+    }
+
+    func reviewCount(_ filter: ReviewFilter) -> Int { reviewJobs(filter).count }
+
+    /// `filter`'s jobs grouped by country in your order.
+    func reviewSections(_ filter: ReviewFilter) -> [JobSection] {
+        let shown = reviewJobs(filter)
+        let countries: [Country?] =
+            searchPreferences.countries + Country.allCases.filter { !searchPreferences.countries.contains($0) } + [nil]
+        return countries.compactMap { country in
+            let matching = shown.filter { $0.country == country }
+            guard !matching.isEmpty else { return nil }
+            return JobSection(
+                id: country?.rawValue ?? "none", title: country?.displayName ?? "Location not stated", jobs: matching)
+        }
+    }
+
+    /// How many jobs each prefilter rule dropped, most first: what Fetch shows under the run.
+    var droppedByRule: [(rule: PrefilterRule, count: Int)] {
+        let rules = screenings.values.filter { $0.stage == .prefilter }.compactMap {
+            $0.ruleID.flatMap(PrefilterRule.init(rawValue:))
+        }
+        return Dictionary(grouping: rules) { $0 }.map { ($0.key, $0.value.count) }.sorted { $0.1 > $1.1 }
+    }
+
+    /// The analysis behind a job's verdict, whichever prompt made it.
+    func storedAnalysis(for job: Job) async -> StoredAnalysis? {
+        guard let db else { return nil }
+        return try? await AnalysisRepository(db).latest(for: job.id)
+    }
+
+    /// Screens one job again from scratch (P2). Nil when it worked; otherwise why not, in words.
+    func reevaluate(_ job: Job) async -> String? {
+        guard let db else { return "The database isn't open." }
+        let outcome = await ScreeningRun(db: db, router: ai?.router()).reevaluate(job.id)
+        await reload()
+        switch outcome {
+        case .verdict: return nil
+        case .failed: return "The AI couldn't analyse this posting just now. Try again in a moment."
+        case .stopped(let reason): return reason
+        }
+    }
+
+    /// S14: why Build is blocked for `job`, or nil when it isn't.
+    func buildBlocked(_ job: Job, analysed: Bool) -> String? {
+        if let readiness = resume?.readiness, !readiness.isReady {
+            return "Finish your master resume first: \(readiness.missing.map(\.message).joined(separator: " "))"
+        }
+        return analysed ? nil : "This job needs an analysis first: Re-evaluate it, with an AI key set."
     }
 
     /// New jobs that passed the prefilter and still wait for an analysis.

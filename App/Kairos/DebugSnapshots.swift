@@ -60,34 +60,31 @@
                     ProvidersView().environment(ai).frame(width: 980, height: 1_640).background(Color(.surface)),
                     to: folder.appending(path: "ai-settings-\(name).png"), appearance: appearance)
             }
-            let today = sampleToday()
+            let today = sampleToday(resume: resume)
+            // S14: a resume without a phone or LinkedIn keeps Build blocked, and says why.
+            var unfinished = resume.resume
+            unfinished.header.phone = ""
+            unfinished.header.linkedInURL = ""
+            let blocked = AppModel(
+                preview: today.model.jobs, screenings: today.model.screenings, sources: today.model.sources,
+                resume: ResumeModel(preview: unfinished, db: db))
+            let stored = StoredAnalysis(
+                analysis: today.analysis, model: "gemini-flash-lite-latest", promptVersion: 2,
+                analyzedAt: Date().addingTimeInterval(-3_600))
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 render(
-                    NavigationStack { TodayView() }.environment(today.model).frame(width: 1_440, height: 520),
-                    to: folder.appending(path: "today-\(name).png"), appearance: appearance)
+                    ReviewView().environment(today.model).frame(width: 1_440, height: 560),
+                    to: folder.appending(path: "review-\(name).png"), appearance: appearance)
                 render(
-                    JobExplanationView(
-                        job: today.selected, source: today.model.sources.first,
-                        record: today.model.screening(for: today.selected), analysis: today.analysis,
-                        score: today.model.matchScore(for: today.selected), build: {},
-                        coverLetter: .constant(true)
-                    )
-                    .frame(width: 420, height: 980),
-                    to: folder.appending(path: "job-explanation-\(name).png"), appearance: appearance)
-                // S14: a resume without a phone or LinkedIn keeps Build blocked, and says why.
-                var unfinished = resume.resume
-                unfinished.header.phone = ""
-                unfinished.header.linkedInURL = ""
-                let readiness = Validator.readiness(unfinished, now: YearMonth.containing(Date()))
+                    NavigationStack { FetchView() }.environment(today.model).frame(width: 1_440, height: 640),
+                    to: folder.appending(path: "fetch-\(name).png"), appearance: appearance)
                 render(
-                    JobExplanationView(
-                        job: today.selected, source: today.model.sources.first,
-                        record: today.model.screening(for: today.selected), analysis: today.analysis,
-                        score: today.model.matchScore(for: today.selected), build: {}, coverLetter: .constant(false),
-                        buildBlocked:
-                            "Finish your master resume first: \(readiness.missing.map(\.message).joined(separator: " "))"
-                    )
-                    .frame(width: 420, height: 1_040),
+                    NavigationStack { JobScreen(id: today.selected.id, preview: stored) }.environment(today.model)
+                        .frame(width: 1_200, height: 1_500),
+                    to: folder.appending(path: "job-\(name).png"), appearance: appearance)
+                render(
+                    NavigationStack { JobScreen(id: today.selected.id, preview: stored) }.environment(blocked)
+                        .frame(width: 1_200, height: 700),
                     to: folder.appending(path: "job-blocked-\(name).png"), appearance: appearance)
                 render(
                     SearchPreferencesView().environment(today.model).frame(width: 820, height: 1_500)
@@ -162,7 +159,9 @@
         }
 
         /// Today with the design's sample companies (fictional), screened as screening would.
-        @MainActor private static func sampleToday() -> (model: AppModel, selected: Job, analysis: JobAnalysis) {
+        @MainActor private static func sampleToday(resume: ResumeModel) -> (
+            model: AppModel, selected: Job, analysis: JobAnalysis
+        ) {
             let source = Source(id: UUID(), kind: .greenhouse, config: "{}")
             func job(
                 _ title: String, _ company: String, _ city: String, _ region: String, _ country: Country,
@@ -204,8 +203,9 @@
                 jobs[1].id.rawValue: record(
                     .maybe, .analysis, ["Missing Java", "Covers 2 of 3 must-haves and 0 of 1 nice-to-haves."],
                     Coverage(mustCovered: 2, mustTotal: 3, niceCovered: 0, niceTotal: 1)),
-                jobs[2].id.rawValue: record(
-                    .no, .prefilter, ["Written in French, which isn't among your languages."], nil),
+                jobs[2].id.rawValue: ScreeningRecord(
+                    stage: .prefilter, verdict: .no, ruleID: "french", coverage: nil,
+                    reasons: ["Written in French, which isn't among your languages."], at: Date()),
                 jobs[3].id.rawValue: record(
                     .yes, .analysis, ["Covers 3 of 3 must-haves and 1 of 3 nice-to-haves."],
                     Coverage(mustCovered: 3, mustTotal: 3, niceCovered: 1, niceTotal: 3)),
@@ -224,17 +224,27 @@
             preferences.maxYearsRequired = 8
             let model = AppModel(
                 preview: jobs, screenings: screenings, sources: [source], preferences: preferences,
-                profile: WorkProfile(authorization: [.canada: .citizen, .unitedStates: .needsSponsorship]))
+                profile: WorkProfile(authorization: [.canada: .citizen, .unitedStates: .needsSponsorship]),
+                resume: resume)
+            // Prompt v2's shape. Ids follow the sample resume's screening profile: s1 Go, s3 PostgreSQL,
+            // s4 RabbitMQ, s5 gRPC, c2 Terraform, x1b1 the event pipeline, x1b3 Kubernetes.
+            func requirement(
+                _ text: String, _ kind: JobAnalysis.Requirement.Kind, _ category: JobAnalysis.Requirement.Category,
+                _ match: JobAnalysis.Requirement.Match, _ evidence: [String] = []
+            ) -> JobAnalysis.Requirement {
+                .init(text: text, kind: kind, category: category, match: match, evidence: evidence)
+            }
             let analysis = JobAnalysis(
                 requirements: [
-                    .init(text: "3+ years building services in Go or Java", kind: .must, matchedSkill: "Go"),
-                    .init(text: "PostgreSQL in production", kind: .must, matchedSkill: "PostgreSQL"),
-                    .init(text: "Message queues such as RabbitMQ or Kafka", kind: .must, matchedSkill: "Kafka"),
-                    .init(text: "Designing REST or gRPC APIs", kind: .must, matchedSkill: "gRPC"),
-                    .init(text: "Legally entitled to work in Canada", kind: .must),
-                    .init(text: "Kubernetes", kind: .nice, matchedSkill: "Kubernetes"),
-                    .init(text: "Terraform", kind: .nice),
-                    .init(text: "French", kind: .nice),
+                    requirement("3+ years building services in Go or Java", .must, .experience, .yes, ["s1", "x1b1"]),
+                    requirement("PostgreSQL in production", .must, .skill, .yes, ["s3"]),
+                    requirement("Message queues such as RabbitMQ or Kafka", .must, .skill, .yes, ["s4"]),
+                    requirement("Designing REST or gRPC APIs", .must, .experience, .partial, ["s5"]),
+                    requirement("Legally entitled to work in Canada", .must, .authorization, .notJudged),
+                    requirement("Clear written communication", .must, .soft, .notJudged),
+                    requirement("Kubernetes", .nice, .skill, .partial, ["x1b3"]),
+                    requirement("Terraform", .nice, .skill, .partial, ["c2"]),
+                    requirement("French", .nice, .language, .no),
                 ], yearsRequired: 3, seniority: .mid, domains: ["logistics"],
                 flags: .init(sponsorship: .notOffered, clearance: .notMentioned, french: .asset, remoteScope: .hybrid))
             return (model, jobs[0], analysis)

@@ -25,7 +25,7 @@ struct RunControls: ToolbarContent {
                 .buttonStyle(.borderedProminent)
                 .disabled(model.sources.allSatisfy { !$0.enabled })
                 .help(
-                    model.sources.isEmpty ? "Add a company in Sources first" : "Check every enabled board, then screen")
+                    model.sources.isEmpty ? "Add a company in Fetch first" : "Check every enabled board, then screen")
             }
         }
     }

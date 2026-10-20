@@ -140,7 +140,7 @@ Module ids are stable and will not be renamed.
 | `backend` | The Supabase project as code: SQL migrations, row-level security policies, `sync_push`, account deletion, invite hook, storage policies, auth settings checklist | — (deployed separately) |
 | `account` | Sign-up, sign-in (password, Google, GitHub), email confirmation, password reset, session refresh, sign-out, invites, export, account deletion | `secrets`, `backend` (contract) |
 | `sync` | Outbox, push through `sync_push`, pull over REST, PDF upload and download, command queue | `store`, `account` |
-| `app-mac` | SwiftUI screens, menu bar, WebKit hosts, master-resume editor, account screens, notifications | `pipeline`, `sync`, `account`, `master-resume` |
+| `app-mac` | SwiftUI screens (since 2026-10-20 the workflow reads Fetch · Review · Builds · Applications, a job opens full width with its requirements and evidence, and there's no side inspector), menu bar, WebKit hosts, master-resume editor, account screens, notifications | `pipeline`, `sync`, `account`, `master-resume` |
 | `cli` | Headless `kairos` commands (API sources only) | `pipeline`, `sync`, `account` |
 | `web-companion` | PWA: sign-in, today's list, job detail, verdict override, queue builds, open PDFs, application tracking | `backend` (contract) |
 
@@ -239,7 +239,7 @@ flowchart LR
    - Coverage counts only skill, experience, education and language requirements: a yes is worth 1, a partial ½.
    - Soft skills are never judged, and location, authorization and availability requirements are taken as met. The prefilter and the authorization flags still apply your settings.
    - A job can be re-evaluated on its own, with a fresh analysis (P2).
-7. **Rank:** verdict first, then country priority (CA before US), then match. Today's list and notifications follow this order.
+7. **Rank:** verdict first, then country priority (CA before US), then match. Review's list (Today's until 2026-10-20) and notifications follow this order.
 8. **Notify:** one notification with the counts of new `yes` and `maybe` jobs.
 
 Job descriptions are **untrusted input** (OWASP LLM01). They sit inside clearly delimited data blocks in prompts. The model never chooses actions, and all of its output goes through schema validation and the verifier before use.

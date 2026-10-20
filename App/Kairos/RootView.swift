@@ -1,23 +1,23 @@
 import SwiftUI
 
-/// The app's sections in sidebar order (SPEC §4), grouped the way the Today mockup groups them.
+/// The app's sections in sidebar order (polish P3): the workflow, fetch to review to build, then
+/// your profile.
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case today, jobs, builds, applications
-    case masterResume, sources, settings, activity
+    case fetch, review, builds, applications
+    case masterResume, settings, activity
 
     var id: Self { self }
 
-    static let workflow: [AppSection] = [.today, .jobs, .builds, .applications]
-    static let profile: [AppSection] = [.masterResume, .sources, .settings, .activity]
+    static let workflow: [AppSection] = [.fetch, .review, .builds, .applications]
+    static let profile: [AppSection] = [.masterResume, .settings, .activity]
 
     var title: String {
         switch self {
-        case .today: "Today"
-        case .jobs: "Jobs"
+        case .fetch: "Fetch"
+        case .review: "Review"
         case .builds: "Builds"
         case .applications: "Applications"
         case .masterResume: "Master resume"
-        case .sources: "Sources"
         case .settings: "Settings"
         case .activity: "Activity"
         }
@@ -25,12 +25,11 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 
     var symbol: String {
         switch self {
-        case .today: "sun.max"
-        case .jobs: "briefcase"
+        case .fetch: "arrow.down.circle"
+        case .review: "checklist"
         case .builds: "doc.text"
         case .applications: "paperplane"
         case .masterResume: "person.text.rectangle"
-        case .sources: "antenna.radiowaves.left.and.right"
         case .settings: "gearshape"
         case .activity: "clock.arrow.circlepath"
         }
@@ -66,14 +65,12 @@ struct RootView: View {
                 ContentUnavailableView(
                     "Kairos couldn't start", systemImage: "exclamationmark.triangle",
                     description: Text(message).foregroundStyle(Color(.inkSecondary)))
-            case (.ready, .today):
-                TodayView()
-            case (.ready, .jobs):
-                JobsView()
+            case (.ready, .fetch):
+                FetchView()
+            case (.ready, .review):
+                ReviewView()
             case (.ready, .builds):
                 BuildsView()
-            case (.ready, .sources):
-                SourcesView()
             case (.ready, .masterResume):
                 if let resume = model.resume, let ai = model.ai {
                     MasterResumeView().environment(resume).environment(ai)
@@ -90,13 +87,9 @@ struct RootView: View {
 }
 
 extension RootView {
-    /// Today counts the jobs worth a look; Jobs counts everything stored.
+    /// Review counts the jobs worth a look.
     func badge(_ section: AppSection) -> Int {
-        switch section {
-        case .today: model.todayCount(.yes) + model.todayCount(.maybe)
-        case .jobs: model.jobs.count
-        default: 0
-        }
+        section == .review ? model.reviewCount(.toReview) : 0
     }
 }
 

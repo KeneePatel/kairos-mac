@@ -2,28 +2,12 @@ import JobSources
 import Store
 import SwiftUI
 
-/// The company watchlist: add a company by its careers page, see each board's status, pause or remove one.
-struct SourcesView: View {
+/// The company watchlist (part of Fetch since polish P3): each board's status, pause or remove one.
+struct SourcesTable: View {
     @Environment(AppModel.self) private var model
-    @State private var addingCompany = false
     @State private var selection: Source.ID?
 
-    var body: some View {
-        content
-            .navigationTitle("Sources")
-            .navigationSubtitle(subtitle)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        addingCompany = true
-                    } label: {
-                        Label("Add company", systemImage: "plus").labelStyle(.titleAndIcon)
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-            }
-            .sheet(isPresented: $addingCompany) { AddCompanySheet() }
-    }
+    var body: some View { content }
 
     @ViewBuilder private var content: some View {
         if model.sources.isEmpty {
@@ -31,6 +15,7 @@ struct SourcesView: View {
                 Label("No companies yet", systemImage: "antenna.radiowaves.left.and.right")
             } description: {
                 Text("Choose Add company and paste a careers page from Greenhouse, Lever or Ashby.")
+                    .foregroundStyle(Color(.inkSecondary))
             }
         } else {
             Table(model.sources, selection: $selection) {
@@ -71,12 +56,6 @@ struct SourcesView: View {
         }
     }
 
-    private var subtitle: String {
-        let count = model.sources.count
-        let watched = "\(count) compan\(count == 1 ? "y" : "ies") watched"
-        guard let checked = model.sources.compactMap(\.lastRunAt).max() else { return watched }
-        return "\(watched) · checked \(checked.formatted(date: .omitted, time: .shortened))"
-    }
 }
 
 /// A dot or a warning, always with words: never colour alone.
@@ -114,7 +93,7 @@ private struct SourceStatus: View {
 
 /// Paste a careers page; Kairos says which board it found before you add it. Labels sit above
 /// full-width bordered fields, so each one reads as a box to type or paste into.
-private struct AddCompanySheet: View {
+struct AddCompanySheet: View {
     private enum Field { case careersURL, name }
 
     @Environment(AppModel.self) private var model

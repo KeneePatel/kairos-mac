@@ -609,15 +609,32 @@ Your decisions:
       - The eval baseline meets every threshold: precision 100%, recall 100%, first-write pass rate 100% over 145 bullets, and no analysis needed a repair.
       - On your 31 analysed postings: 6 Yes, 9 Maybe and 16 No, up from 0 Yes and 2 Maybe; 6 of 31 needed one repair. Every No is a non-engineering role or one asking far more years.
       - On the sample posting: perfect on Flash-Lite and on qwen3.5:4B with thinking on. With thinking off, the 4B model misses "Go or Java"; that's recorded as a known issue.
-    - **Floor-guard exception, waiting on you:** four assertions pinned prompt v1 (its version, its "skill names only" message, and `matched_skill` in a reply). They're replaced with their v2 equivalents. The recorded-replay test's must-have checks for the 4B thinking-off fixture are now a known issue.
+    - **Student status (your request, made general):** Settings, Search has a student status (not set, currently a student, graduated), kept on this Mac with your work authorization. Prompt v2 has an `enrolment` category for requirements like "currently enrolled" or "returning to studies". When it's a must-have: graduated is a No ("Asks for a current student…"), student meets it, and not set takes it as met with a note.
+    - **A rule restored:** v1's "the job's own location isn't a requirement" had been lost when location became a category. Without it, the 4B model listed "Toronto, ON" and "hybrid" as must-haves. It's back, worded for v2: only conditions on where the person must live count as location.
+    - **Final reruns:** the eval is 100% precision, recall and first-write pass over 150 bullets, with no repairs. Of your postings, 26 of 31 finished before the key's daily Flash-Lite quota ran out: 4 Yes and 8 Maybe. Single verdicts move a little between runs.
+    - **Floor-guard exception, approved as E1 in CONSTRAINTS.md:** four assertions pinned prompt v1 (its version, its "skill names only" message, and `matched_skill` in a reply). They're replaced with their v2 equivalents. The recorded-replay test's must-have checks for the 4B thinking-off fixture are now a known issue.
 - [x] **P2 · Re-evaluate one job, re-screen all** (S) · deps: P1
   - **Acceptance:** a job's Re-evaluate runs a fresh analysis, bypassing the cache, and records the new verdict. Re-screen all applies the current settings to every job and analyses those without a current analysis.
   - **Done 2026-10-20 (core):** `ScreeningRun.reevaluate(job)` runs the prefilter with your current settings, then a fresh analysis: never the stored one, and never a cached reply (`CallContext.fresh`). It records the new verdict on top of the job's history. Re-screen all is the existing "Screen again" run. Its buttons arrive with P3's screens.
-- [ ] **P3 · Fetch · Review · Builds, and a full-screen Job page** (M) · deps: P1
+- [x] **P3 · Fetch · Review · Builds, and a full-screen Job page** (M) · deps: P1
   - **Acceptance:**
-    - [ ] The sidebar reads Fetch (sources, runs, what the last run dropped and why), Review (To review / Rejected / All, replacing Today and Jobs), Builds and Applications.
-    - [ ] A job opens full width: header, verdict and its reason, every requirement with category, match and the evidence quoted, the full posting, and Re-evaluate, Change verdict, Build resume (with cover letter), Open posting and Not for me. No side inspector.
-    - [ ] SPEC §4 and §5.2 and the design notes are updated; snapshots are checked in light and dark.
+    - [x] The sidebar reads Fetch (sources, runs, what the last run dropped and why), Review (To review / Rejected / All, replacing Today and Jobs), Builds and Applications.
+    - [x] A job opens full width: header, verdict and its reason, every requirement with category, match and the evidence quoted, the full posting, and Re-evaluate, Change verdict, Build resume (with cover letter), Open posting and Not for me. No side inspector.
+    - [x] SPEC §4 and §5.2 and the design notes are updated; snapshots are checked in light and dark.
+  - **Done 2026-10-20:**
+    - **Sidebar:** Fetch, Review (badge: jobs to review), Builds, Applications; then Master resume, Settings and Activity. Sources lives in Fetch now; Today, Jobs and their inspectors are gone.
+    - **Fetch:** the primary Fetch now button and Add company. Three panels: the last run, what the prefilter dropped and why (by rule, most first, e.g. "Level you've turned off 1,537"), and what's waiting for the AI. Then the sources table.
+    - **Review:** the ranked table grouped by country, with To review (Yes and Maybe you haven't acted on), Rejected (every No, with its reason) and All, plus Re-screen all. Choosing a row pushes the Job page, with Back.
+    - **Job page:** company and source; title; location, arrangement and age; Open posting. The verdict card has the score, the deciding reason, who decided, and why Build waits if it does. "What the AI read" shows years, level, sponsorship, clearance, French, domains, the model and prompt version, and when. Must-haves and nice-to-haves list each requirement's category and match, with its evidence quoted from your master resume. Notes, then the posting in full.
+      - Toolbar: Re-evaluate (with "Asking the AI again…"), Change verdict, Not for me, Cover letter, and the primary Build resume.
+      - It shows the analysis behind the verdict whichever prompt made it (`AnalysisRepository.latest`).
+    - **Visual differences:**
+      - From `Main.dc.html` (closest to Review): no inspector (your decision), and To review / Rejected / All instead of Yes / Maybe / No. Fetch now moved to Fetch, and the Source column went, since the company shows in the role line.
+      - From `Sources.dc.html` (closest to Fetch): the run panels are new. The side panel of titles and countries isn't here; they live in Settings, Search. The opt-in boards section waits for tier C.
+      - From `PhoneJob.dc.html` (closest to the Job page): full width, actions in the toolbar rather than pinned at the bottom, and the posting shown in full rather than collapsed. Requirement rows add the category and quoted evidence.
+    - **Undrawn, decided here:**
+      - Partial is a half-filled circle in the Maybe amber; a requirement that doesn't count is a minus circle in secondary ink, with the words "Taken as met" or "Not judged: a personal quality". Colour never stands alone.
+      - The Fetch panels reuse the grouped-surface card; the Job page is capped at 880 pt wide and centred.
 
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 
