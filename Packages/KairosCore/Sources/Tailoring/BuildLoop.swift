@@ -224,6 +224,11 @@ public struct BuildLoop: Sendable {
 
     // MARK: - Writers
 
+    /// Every call goes out with your contact details removed from its data.
+    private func run<T: LLMTask>(_ task: T, _ input: T.Input) async throws(LLMError) -> LLMResult<T.Output> {
+        try await router.run(Redacted(task, header: master.header), input: input, context: context)
+    }
+
     /// The writer's bullets, or your own word for word: in lite mode, or when the writer's reply
     /// still fails its checks after the repair call.
     private func section<T: LLMTask>(_ task: T, _ input: WriteSectionInput, lite: Bool) async throws -> (
@@ -232,7 +237,7 @@ public struct BuildLoop: Sendable {
         guard !input.entries.isEmpty else { return ([], false) }
         guard !lite else { return (Self.originals(input), false) }
         do {
-            let result = try await router.run(task, input: input, context: context)
+            let result = try await run(task, input)
             return (SectionWriter.written(result.output, input: input), false)
         } catch .invalidOutput {
             return (Self.originals(input), true)
@@ -241,7 +246,7 @@ public struct BuildLoop: Sendable {
 
     private func summary(_ input: WriteSummaryInput) async throws -> String? {
         do {
-            return try await router.run(WriteSummaryTask(), input: input, context: context).output.summary
+            return try await run(WriteSummaryTask(), input).output.summary
         } catch .invalidOutput {
             return nil
         }
@@ -249,7 +254,7 @@ public struct BuildLoop: Sendable {
 
     private func skills(_ input: WriteSkillsInput) async throws -> [SkillGroup]? {
         do {
-            let result = try await router.run(WriteSkillsTask(), input: input, context: context)
+            let result = try await run(WriteSkillsTask(), input)
             return WriteSkillsTask.groups(result.output, input: input)
         } catch .invalidOutput {
             return nil
@@ -259,7 +264,7 @@ public struct BuildLoop: Sendable {
     /// Nil when the rewrite fails its checks: the section keeps its current bullets.
     private func rewrite(_ input: RewriteSectionInput) async throws -> SectionOutput? {
         do {
-            return try await router.run(RewriteSectionTask(), input: input, context: context).output
+            return try await run(RewriteSectionTask(), input).output
         } catch .invalidOutput {
             return nil
         }
@@ -268,7 +273,7 @@ public struct BuildLoop: Sendable {
     /// Nil when the reply still fails its checks after the repair: the build has no letter.
     private func coverLetter(_ input: CoverLetterInput, header: TailoredResume.Header) async throws -> CoverLetter? {
         do {
-            let result = try await router.run(CoverLetterTask(), input: input, context: context)
+            let result = try await run(CoverLetterTask(), input)
             return CoverLetterTask.letter(result.output, input: input, header: header, date: settings.selector.now)
         } catch .invalidOutput {
             return nil
@@ -278,7 +283,7 @@ public struct BuildLoop: Sendable {
     /// Nil when the reply still fails its checks after the repair: the build has no gap bullets.
     private func gapBullets(_ input: GapBulletsInput) async throws -> [UUID: [TailoredBullet]]? {
         do {
-            let result = try await router.run(GapBulletsTask(), input: input, context: context)
+            let result = try await run(GapBulletsTask(), input)
             return GapBulletsTask.written(result.output, input: input)
         } catch .invalidOutput {
             return nil

@@ -194,6 +194,9 @@ public struct GapBulletsTask: LLMTask {
             if text.count > Polish.maxBulletLength {
                 problems.append("\(quoted) is over \(Polish.maxBulletLength) characters.")
             }
+            if text.contains(ContactRedactor.marker) {
+                problems.append("\(quoted) contains \(ContactRedactor.marker); leave that detail out.")
+            }
             if Keywords.technologies(in: text).isDisjoint(with: target.technologies) {
                 problems.append(
                     "\(quoted) covers \(bullet.covers) but names none of: \(target.skills.joined(separator: ", ")).")

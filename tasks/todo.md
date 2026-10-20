@@ -538,11 +538,24 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
 
 - [ ] **T39 · Prompt privacy tests and eval harness** (M) · deps: T38
   - **Acceptance:**
-    - [ ] `PromptPrivacyTests` renders every task's prompt for a fixture user and fails if any contact value or private setting appears.
-    - [ ] `PromptEvals` (opt-in live) has 30 labelled postings and reports must-have precision and recall and the first-write verifier pass rate to `evals/<date>-<model>.json`.
-    - [ ] The first baseline report is committed and meets the `CONSTRAINTS.md` thresholds, or the gap is raised with you.
+    - [x] `PromptPrivacyTests` renders every task's prompt for a fixture user and fails if any contact value or private setting appears.
+    - [x] `PromptEvals` (opt-in live) has 30 labelled postings and reports must-have precision and recall and the first-write verifier pass rate to `evals/<date>-<model>.json`.
+    - [ ] The first baseline report is committed and meets the `CONSTRAINTS.md` thresholds, or the gap is raised with you. *Waiting on your go-ahead for the live run (about 60 Flash-Lite calls).*
   - **Verify:** `core-test PromptPrivacyTests`; `KAIROS_LIVE_LLM=1 core-test PromptEvals`
   - **Files:** `Tests/LLMTests/PromptPrivacyTests.swift`, `Tests/LLMTests/PromptEvals.swift`, `Tests/Fixtures/evals/`, `evals/README.md`
+  - **Progress 2026-10-20:** 7 new tests (privacy 4, eval fixtures 2, the redaction wrapper through the privacy suite) plus the opt-in eval. LLMTests now also depend on Store, MasterResume, Screening and Tailoring, so one target reaches every task.
+    - **Privacy test:** a fixture user, Avery Quill, has every contact field filled in. Their contact details also appear where people write them anyway: a bullet linking their GitHub, a business named after them, and a resume whose top line reads "Canadian citizen · Secret clearance · Will need sponsorship". Avery's private settings say citizen in Canada, needs sponsorship in the US, and has clearance.
+      - **What it checks:** the import tasks and `analyzeJob` are rendered directly. Every build task is checked as a whole Stretch build with a letter sends it, through the fake provider, with unusable replies so each writer also falls back and the rewrite pass runs.
+      - **Pass conditions:** no message of any task may contain a contact value in any common format; no data message may contain a private setting; every task with a prompt must be checked (`triage` and `select` have none yet).
+    - **Two gaps it found, now fixed:**
+      - **Contact details inside bullets:** contact details typed into a bullet or an employer name went to the writers as-is. Every build-loop call now goes through `Redacted`, which removes your contact details from the data it sends (instructions untouched). The writers' checks reject a reply that copies the `[removed]` marker. I checked that the test fails without the wrapper.
+      - **Work status in imported resumes:** a resume's own "Canadian citizen", "permanent resident", "requires sponsorship", "eligible to work in the US" or "Secret clearance" was sent to `importResume`. `ContactRedactor.redactWorkStatus` now removes those status phrases (only those: "built a visa appointment tracker" stays) before the import and the GitHub README are sent.
+    - **Eval harness:**
+      - **Postings:** 30 fictional postings across backend, frontend, data, DevOps, mobile, ML, QA, security, .NET, embedded, games, support and management, in Canada and the US. 123 must-haves and 56 nice-to-haves are hand-labelled, conditions included.
+      - **Run:** for each posting it runs `analyzeJob`, then `writeExperience` for a fictional generalist (Robin Ashford). It takes the writer's first reply (no repair) and runs the strict verifier on every bullet.
+      - **Scoring:** a prediction matches a label by a shared technology or most of the words either way.
+      - **Report:** `evals/<date>-<model>.json` has the totals, the thresholds, and each posting's wrong must-haves, missed labels and verifier findings. The test fails below 0.85 precision, 0.80 recall or 95% first-write passes.
+      - **Models:** Flash-Lite by default for both tasks (`KAIROS_EVAL_MODEL`, `KAIROS_EVAL_WRITER_MODEL`), so Flash's 20-a-day free allowance isn't spent. `evals/README.md` explains running and reading it.
 
 ### Checkpoint E: R1 exit
 - [ ] Stories 4, 5 and 8 pass; success criteria S8, S9, S14 and S15 (privacy half) pass

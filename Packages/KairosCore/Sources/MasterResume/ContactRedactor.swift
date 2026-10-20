@@ -30,6 +30,25 @@ public enum ContactRedactor {
         return result
     }
 
+    /// Work authorization and clearance, which stay on this Mac (SPEC §5.5, Privacy): "Canadian
+    /// citizen", "permanent resident", "requires sponsorship", "Secret clearance". Only these status
+    /// phrases go; a bullet about building a visa portal stays as written.
+    public static func redactWorkStatus(_ text: String) -> String {
+        let country = #"(?:canada|the\s+us|the\s+u\.s\.|the\s+united\s+states|the\s+usa)"#
+        let patterns = [
+            #"\b(?:canadian|american|u\.s\.|us)\s+citizen(?:ship)?\b"#,
+            #"\bcitizen(?:ship)?\s+of\s+"# + country,
+            #"\bpermanent\s+resident(?:\s+of\s+canada)?\b"#,
+            #"\b(?:open\s+|closed\s+|post-graduation\s+)?work\s+permit(?:\s+holder)?\b"#,
+            #"\b(?:tn|h-?1b|l-?1)\s+(?:visa|status)\b"#,
+            #"\b(?:require|requires|need|needs|will\s+need|without)\s+(?:visa\s+)?sponsorship\b"#,
+            #"\b(?:eligible|authori[sz]ed|legally\s+entitled)\s+to\s+work\s+in\s+"# + country,
+            #"\b(?:top\s+secret|secret|enhanced\s+reliability|reliability)\s+(?:security\s+)?clearance\b"#,
+            #"\bsecurity\s+clearance\b"#,
+        ]
+        return patterns.reduce(text) { replace($1, in: $0) }
+    }
+
     /// Digit runs shaped like a phone number: 10–15 digits in two to four groups, an optional
     /// "+country" and an area code in brackets. Year ranges, metrics and versions don't qualify.
     private static func replacePhones(in text: String) -> String {

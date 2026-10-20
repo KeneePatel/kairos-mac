@@ -19,7 +19,8 @@ public struct ImportGitHubRepoTask: LLMTask {
             description = ContactRedactor.redact(repo.description ?? "", header: header)
             self.languages = Array(languages.prefix(8))
             topics = repo.topics ?? []
-            self.readme = ContactRedactor.redact(String((readme ?? "").prefix(Self.readmeLimit)), header: header)
+            self.readme = ContactRedactor.redactWorkStatus(
+                ContactRedactor.redact(String((readme ?? "").prefix(Self.readmeLimit)), header: header))
         }
     }
 

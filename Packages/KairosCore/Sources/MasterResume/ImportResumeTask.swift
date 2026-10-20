@@ -302,14 +302,15 @@ public enum ImportError: Error, Equatable, Sendable {
 }
 
 public enum ResumeImporter {
-    /// Checks the order of onboarding and returns the text that may be sent: contact details removed.
+    /// Checks the order of onboarding and returns the text that may be sent: contact details, work
+    /// authorization and clearance removed.
     public static func prepare(_ text: String, header: ResumeHeader) throws(ImportError) -> String {
         let missing = Validator.validate(header).issues.filter { $0.kind == .missing && $0.field != .totalYears }.map(
             \.field)
         guard missing.isEmpty else { throw .contactIncomplete(missing) }
         let cleaned = text.trimmed
         guard cleaned.count >= 40 else { throw .emptyText }
-        return ContactRedactor.redact(cleaned, header: header)
+        return ContactRedactor.redactWorkStatus(ContactRedactor.redact(cleaned, header: header))
     }
 }
 

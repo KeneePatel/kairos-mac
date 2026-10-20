@@ -179,6 +179,9 @@ enum SectionWriter {
             problems.append("“\(text.prefix(40))…” is over \(Polish.maxBulletLength) characters.")
         }
         if bullet.sourceIds.isEmpty { problems.append("“\(text.prefix(40))…” cites no bullet.") }
+        if text.contains(ContactRedactor.marker) {
+            problems.append("“\(text.prefix(40))…” contains \(ContactRedactor.marker); leave that detail out.")
+        }
         var sources: [UUID] = []
         for id in bullet.sourceIds {
             guard let source = input.bulletIDs[id] else {
@@ -340,6 +343,9 @@ public struct WriteSummaryTask: LLMTask {
         var problems: [String] = []
         if summary.isEmpty { problems.append("The summary is blank.") }
         if summary.count > Self.maxLength { problems.append("The summary is over \(Self.maxLength) characters.") }
+        if summary.contains(ContactRedactor.marker) {
+            problems.append("The summary contains \(ContactRedactor.marker); leave that detail out.")
+        }
         for id in output.sourceIds where input.highlights.bulletIDs[id] == nil {
             problems.append("It cites \(id), which isn't one of the highlights given.")
         }
