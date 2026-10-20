@@ -11,8 +11,11 @@ import Tailoring
 struct BuildsView: View {
     @Environment(AppModel.self) private var model
     @State private var pdf: URL?
+    @State private var letterPDF: URL?
+    @State private var showing = BuildDocument.resume
     /// The finished build's PDF was looked for and isn't there.
     @State private var pdfMissing = false
+    @AppStorage("buildCoverLetter") private var coverLetter = false
     @State private var mode = BuildMode.strict
     @State private var problem: String?
 
@@ -23,8 +26,9 @@ struct BuildsView: View {
         Group {
             if let build {
                 BuildView(
-                    build: build, job: job, pdf: pdf, step: model.buildSteps[build.id],
-                    master: model.resume?.resume, pdfMissing: pdfMissing)
+                    build: build, job: job, pdf: shown, step: model.buildSteps[build.id],
+                    master: model.resume?.resume, pdfMissing: pdfMissing, letter: letterPDF != nil,
+                    showing: $showing)
             } else {
                 ContentUnavailableView {
                     Label("No builds yet", systemImage: "doc.text")
@@ -38,10 +42,17 @@ struct BuildsView: View {
         .toolbar { toolbar }
         .task(id: "\(build?.id.uuidString ?? "")-\(build?.status.rawValue ?? "")") {
             pdf = nil
+            letterPDF = nil
+            showing = .resume
             pdfMissing = false
             if let build, build.status == .done {
                 pdf = await model.pdf(of: build).flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
                 pdfMissing = pdf == nil
+                if build.coverLetter?.status == .done {
+                    letterPDF = await model.pdf(of: build, kind: "cover_letter").flatMap {
+                        FileManager.default.fileExists(atPath: $0.path) ? $0 : nil
+                    }
+                }
             }
             if let build { mode = build.mode == .stretch && !model.stretch.enabled ? .strict : build.mode }
         }
@@ -54,6 +65,9 @@ struct BuildsView: View {
             Text(problem ?? "")
         }
     }
+
+    /// The PDF in the middle pane.
+    private var shown: URL? { showing == .letter ? letterPDF : pdf }
 
     private var subtitle: String {
         guard let build else { return "" }
@@ -102,24 +116,29 @@ struct BuildsView: View {
                     + "; Lite copies them word for word and writes only the summary and skills."
             )
             Button {
-                Task { if let job { problem = await model.startBuild(for: job, mode: mode) } }
+                Task { if let job { problem = await model.startBuild(for: job, mode: mode, coverLetter: coverLetter) } }
             } label: {
                 Label("Build again", systemImage: "arrow.clockwise").labelStyle(.titleAndIcon)
             }
             .buttonStyle(.borderedProminent)
             .disabled(job == nil || build?.status == .running || build?.status == .queued)
+            Toggle(isOn: $coverLetter) {
+                Label("Cover letter", systemImage: "envelope")
+            }
+            .help("Also write a cover letter when you build again.")
             Button {
-                if let pdf { save(pdf) }
+                if let shown { save(shown) }
             } label: {
                 Label("Save PDF", systemImage: "square.and.arrow.down")
             }
-            .disabled(pdf == nil)
+            .disabled(shown == nil)
+            .help(showing == .letter ? "Save the cover letter" : "Save the resume")
             Button {
-                if let pdf { NSWorkspace.shared.activateFileViewerSelecting([pdf]) }
+                if let shown { NSWorkspace.shared.activateFileViewerSelecting([shown]) }
             } label: {
                 Label("Reveal in Finder", systemImage: "folder")
             }
-            .disabled(pdf == nil)
+            .disabled(shown == nil)
             Button {
                 Task { if let job { await model.markApplied(job) } }
             } label: {
@@ -134,7 +153,8 @@ struct BuildsView: View {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.pdf]
         panel.nameFieldStringValue =
-            [model.resume?.resume.header.fullName, job?.company].compactMap { $0 }.joined(separator: " - ") + ".pdf"
+            ([model.resume?.resume.header.fullName, job?.company] + [showing == .letter ? "Cover letter" : nil])
+            .compactMap { $0 }.joined(separator: " - ") + ".pdf"
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         try? FileManager.default.removeItem(at: destination)
         try? FileManager.default.copyItem(at: pdf, to: destination)
@@ -147,10 +167,14 @@ struct BuildsView: View {
         case .scoring: "scoring"
         case .rewriting(let section, let pass): "rewriting \(section.rawValue), pass \(pass)"
         case .gapBullets: "adding gap bullets"
+        case .coverLetter: "writing the cover letter"
         case .fitting(let pages): "fitting \(pages) pages onto one"
         }
     }
 }
+
+/// Which of a build's PDFs the middle pane shows.
+enum BuildDocument: Hashable { case resume, letter }
 
 /// One build in three columns: steps and score, the PDF, and the trace.
 struct BuildView: View {
@@ -160,11 +184,14 @@ struct BuildView: View {
     let step: BuildStep?
     let master: MasterResume?
     let pdfMissing: Bool
+    /// The build has a cover letter to show.
+    let letter: Bool
+    @Binding var showing: BuildDocument
     @State private var selected: Int?
 
     init(
         build: BuildRecord, job: Job?, pdf: URL?, step: BuildStep?, master: MasterResume?, pdfMissing: Bool = false,
-        selected: Int? = nil
+        letter: Bool = false, showing: Binding<BuildDocument> = .constant(.resume), selected: Int? = nil
     ) {
         self.build = build
         self.job = job
@@ -172,6 +199,8 @@ struct BuildView: View {
         self.step = step
         self.master = master
         self.pdfMissing = pdfMissing
+        self.letter = letter
+        _showing = showing
         _selected = State(initialValue: selected)
     }
 
@@ -179,26 +208,16 @@ struct BuildView: View {
         HStack(spacing: 0) {
             BuildStepsColumn(build: build, step: step, pdf: pdf, job: job, master: master).frame(width: 280)
             Divider()
-            Group {
-                if let pdf {
-                    PDFPreview(url: pdf) { text in select(text) }
-                } else if build.status == .failed {
-                    ContentUnavailableView(
-                        "This build didn't finish", systemImage: "exclamationmark.triangle",
-                        description: Text(build.error ?? "Something went wrong."))
-                } else if pdfMissing {
-                    ContentUnavailableView(
-                        "The PDF isn't there", systemImage: "doc.questionmark",
-                        description: Text("It was moved or deleted. Build again to make a new one."))
-                } else if build.status == .done {
-                    Color.clear
-                } else {
-                    VStack(spacing: Spacing.space3) {
-                        ProgressView()
-                        Text("Building your resume…").font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+            VStack(spacing: 0) {
+                if letter {
+                    Picker("Document", selection: $showing) {
+                        Text("Resume").tag(BuildDocument.resume)
+                        Text("Cover letter").tag(BuildDocument.letter)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .pickerStyle(.segmented).labelsHidden().fixedSize()
+                    .padding(.vertical, Spacing.space2)
                 }
+                preview
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.surfaceGrouped))
@@ -206,6 +225,32 @@ struct BuildView: View {
             BulletTraceView(build: build, master: master, company: job?.company, selected: $selected).frame(width: 340)
         }
         .onChange(of: build.id) { selected = nil }
+    }
+
+    /// The PDF shown, or why there isn't one yet.
+    @ViewBuilder private var preview: some View {
+        Group {
+            if let pdf {
+                PDFPreview(url: pdf) { text in if showing == .resume { select(text) } }
+            } else if build.status == .failed {
+                ContentUnavailableView(
+                    "This build didn't finish", systemImage: "exclamationmark.triangle",
+                    description: Text(build.error ?? "Something went wrong."))
+            } else if pdfMissing {
+                ContentUnavailableView(
+                    "The PDF isn't there", systemImage: "doc.questionmark",
+                    description: Text("It was moved or deleted. Build again to make a new one."))
+            } else if build.status == .done {
+                Color.clear
+            } else {
+                VStack(spacing: Spacing.space3) {
+                    ProgressView()
+                    Text("Building your resume…").font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// Text selected in the PDF picks the line it belongs to.
@@ -240,7 +285,9 @@ private struct BuildStepsColumn: View {
                             .foregroundStyle(Color(.inkSecondary))
                     }
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                        row(step.title, step.detail, state: state(of: index))
+                        row(
+                            step.title, step.detail, state: state(of: index),
+                            problem: index == letterIndex ? build.coverLetter?.error : build.error)
                     }
                 }
                 if let score = build.score { scoreCard(score) }
@@ -288,8 +335,18 @@ private struct BuildStepsColumn: View {
             ("Scored", build.score.map { "\(Int($0.total.rounded())) of 100" } ?? ""),
         ] + stretch + [
             ("Rendered", pages.map { "Letter PDF, \($0) page\($0 == 1 ? "" : "s")" } ?? "Letter PDF")
-        ]
+        ] + letter
     }
+
+    /// The cover letter's step, when the build was asked for one.
+    private var letter: [(title: String, detail: String)] {
+        guard let record = build.coverLetter else { return [] }
+        let paragraphs = record.letter?.paragraphs.count ?? 0
+        return [("Wrote cover letter", paragraphs == 0 ? "" : "\(paragraphs) paragraphs, every claim checked")]
+    }
+
+    private var letterIndex: Int? { build.coverLetter == nil ? nil : steps.count - 1 }
+    private var renderedIndex: Int { steps.count - (build.coverLetter == nil ? 1 : 2) }
 
     private enum StepState { case done, running, waiting, failed }
 
@@ -302,10 +359,13 @@ private struct BuildStepsColumn: View {
             case .writing?: 1
             case .scoring?, .rewriting?: 4
             case .gapBullets?: 5
-            case .fitting?: steps.count - 1
+            case .fitting?: renderedIndex
+            case .coverLetter?: letterIndex ?? renderedIndex
             }
         switch build.status {
-        case .done: return .done
+        case .done:
+            // A letter that couldn't be written doesn't fail the build, only its own step.
+            return index == letterIndex && build.coverLetter?.status == .failed ? .failed : .done
         case .failed:
             guard step != nil else { return .waiting }
             return index < current ? .done : index == current ? .failed : .waiting
@@ -315,7 +375,7 @@ private struct BuildStepsColumn: View {
 
     private var doneCount: Int { steps.indices.count { state(of: $0) == .done } }
 
-    private func row(_ title: String, _ detail: String, state: StepState) -> some View {
+    private func row(_ title: String, _ detail: String, state: StepState, problem: String?) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
             Group {
                 switch state {
@@ -331,7 +391,7 @@ private struct BuildStepsColumn: View {
                 if state == .done, !detail.isEmpty {
                     Text(detail).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
                         .fixedSize(horizontal: false, vertical: true)
-                } else if state == .failed, let error = build.error {
+                } else if state == .failed, let error = problem {
                     Text(error).font(TypeStyle.callout).foregroundStyle(Color(.error)).fixedSize(
                         horizontal: false, vertical: true)
                 }

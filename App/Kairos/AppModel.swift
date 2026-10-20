@@ -305,7 +305,7 @@ final class AppModel {
     var defaultBuildMode: BuildMode { stretch.enabled ? .stretch : .strict }
 
     /// Starts a build for `job`, once your master resume is ready (S14), and shows it.
-    func startBuild(for job: Job, mode: BuildMode? = nil) async -> String? {
+    func startBuild(for job: Job, mode: BuildMode? = nil, coverLetter: Bool = false) async -> String? {
         let mode = mode ?? defaultBuildMode
         guard let db else { return "The database isn't open." }
         guard let resume, resume.readiness.isReady else {
@@ -315,7 +315,7 @@ final class AppModel {
         let queue = queue(db)
         await queue.setRouter(ai?.router())
         do {
-            let id = try await queue.enqueue(job: job.id, mode: mode)
+            let id = try await queue.enqueue(job: job.id, mode: mode, coverLetter: coverLetter)
             selectedBuild = id
             section = .builds
             await reload()
@@ -330,11 +330,13 @@ final class AppModel {
         id.flatMap { id in builds.first { $0.id == id } }
     }
 
-    /// The PDF a finished build saved.
-    func pdf(of build: BuildRecord) async -> URL? {
-        guard let db, let path = try? await BuildRepository(db).artifacts(for: build.id).first?.localPath else {
-            return nil
-        }
+    /// A PDF a finished build saved: its resume, or its cover letter (`cover_letter`). The latest,
+    /// if a restarted build saved one twice.
+    func pdf(of build: BuildRecord, kind: String = "resume") async -> URL? {
+        guard let db,
+            let path = try? await BuildRepository(db).artifacts(for: build.id).last(where: { $0.kind == kind })?
+                .localPath
+        else { return nil }
         return URL(fileURLWithPath: path)
     }
 
@@ -355,9 +357,9 @@ final class AppModel {
         let folder =
             ((try? AccountStore.applicationSupport().databaseURL(for: .local))?.deletingLastPathComponent()
             ?? FileManager.default.temporaryDirectory).appending(path: "Builds")
-        let queue = BuildQueue(db: db, router: ai?.router(), folder: folder) { document in
+        let queue = BuildQueue(db: db, router: ai?.router(), folder: folder) { printable in
             guard let renderer else { throw RenderError.launch("typst isn't in the app bundle") }
-            return try await renderer.render(document)
+            return try await renderer.render(printable)
         }
         buildQueue = queue
         buildEvents = Task { [weak self] in

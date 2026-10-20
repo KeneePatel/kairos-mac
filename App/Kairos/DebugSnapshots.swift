@@ -69,7 +69,8 @@
                     JobExplanationView(
                         job: today.selected, source: today.model.sources.first,
                         record: today.model.screening(for: today.selected), analysis: today.analysis,
-                        score: today.model.matchScore(for: today.selected)
+                        score: today.model.matchScore(for: today.selected), build: {},
+                        coverLetter: .constant(true)
                     )
                     .frame(width: 420, height: 980),
                     to: folder.appending(path: "job-explanation-\(name).png"), appearance: appearance)
@@ -90,7 +91,8 @@
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 render(
                     BuildView(
-                        build: build, job: today.selected, pdf: pdf, step: nil, master: resume.resume, selected: 0
+                        build: build, job: today.selected, pdf: pdf, step: nil, master: resume.resume, letter: true,
+                        selected: 0
                     )
                     .environment(today.model)
                     .frame(width: 1_340, height: 860),
@@ -276,7 +278,16 @@
                 status: .done,
                 content: content,
                 score: MatchScore.score(content, for: requirements, pages: 1), iterations: 1, error: nil,
-                createdAt: Date(), finishedAt: Date())
+                createdAt: Date(), finishedAt: Date(),
+                coverLetter: stretch
+                    ? nil
+                    : CoverLetterRecord(
+                        status: .done,
+                        letter: CoverLetter(
+                            header: content.header, date: "October 20, 2026", company: job.company,
+                            jobTitle: job.title, greeting: "Dear \(job.company) hiring team,",
+                            paragraphs: ["One.", "Two.", "Three."], closing: "Sincerely,",
+                            signature: content.header.name)))
         }
 
         /// Renders with the bundled typst, blocking: fine for a debug snapshot, never for the app.

@@ -185,6 +185,21 @@ public struct Verifier: Sendable {
             + hiringCompany(in: text)
     }
 
+    /// A cover letter's text (SPEC §5.3, Cover letter): the summary's rules, except that it may name
+    /// the company you're writing to (never its products), and it may not claim a degree,
+    /// certification or licence your master resume doesn't list.
+    public func check(letter text: String) -> [Violation] {
+        let personal = personalFields(in: text)
+        guard personal.isEmpty else { return personal }
+        let years = Numbers.yearsClaims(in: text)
+        return technologies(
+            in: text, allowed: provenTechnologies.union(resumeTechnologies), source: "your Proven skills or bullets")
+            + overstated(years.map(\.value), in: text)
+            + numbers(in: text, excluding: years.map(\.range), known: resumeNumbers, source: "your master resume")
+            + hiringCompany(in: text, names: companyProducts)
+            + inventedCredential(in: text)
+    }
+
     /// An experience as the build shows it: employer, title and dates as in your master resume.
     public func check(employer: String, title: String, start: YearMonth?, end: YearMonth?) -> [Violation] {
         let shown = "\(title), \(employer)"
@@ -246,8 +261,8 @@ public struct Verifier: Sendable {
     }
 
     /// One violation at most: the first name it finds.
-    private func hiringCompany(in text: String) -> [Violation] {
-        let names = ([hiringCompany].compactMap { $0 } + companyProducts).filter { !$0.isEmpty }
+    private func hiringCompany(in text: String, names: [String]? = nil) -> [Violation] {
+        let names = (names ?? [hiringCompany].compactMap { $0 } + companyProducts).filter { !$0.isEmpty }
         guard
             let name = names.first(where: { Keywords.contains($0, in: text) && !Keywords.contains($0, in: resumeText) })
         else { return [] }
@@ -261,14 +276,7 @@ public struct Verifier: Sendable {
     /// A gap bullet cites nothing, so it may not claim a credential (unless it names one of yours
     /// exactly), a title or a promotion: those are hard limits (SPEC §5.3).
     private func inventedClaims(in text: String) -> [Violation] {
-        var violations: [Violation] = []
-        let normalizedText = Self.normalized(text)
-        if text.contains(Self.credentialClaim), !credentials.contains(where: { normalizedText.contains($0) }) {
-            violations.append(
-                Violation(
-                    rule: .credential, text: text,
-                    detail: "It claims a degree, certification or licence your master resume doesn't list."))
-        }
+        var violations = inventedCredential(in: text)
         if text.contains(Self.titleClaim) {
             violations.append(
                 Violation(
@@ -276,6 +284,17 @@ public struct Verifier: Sendable {
                     detail: "It claims a title or promotion; titles stay as your master resume has them."))
         }
         return violations
+    }
+
+    private func inventedCredential(in text: String) -> [Violation] {
+        let normalizedText = Self.normalized(text)
+        guard text.contains(Self.credentialClaim), !credentials.contains(where: { normalizedText.contains($0) })
+        else { return [] }
+        return [
+            Violation(
+                rule: .credential, text: text,
+                detail: "It claims a degree, certification or licence your master resume doesn't list.")
+        ]
     }
 
     private static var credentialClaim: Regex<Substring> {

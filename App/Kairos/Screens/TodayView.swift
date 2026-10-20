@@ -116,6 +116,8 @@ struct TodayView: View {
 /// Loads the analysis behind the selected job's verdict, then shows the explanation.
 private struct JobExplanationLoader: View {
     @Environment(AppModel.self) private var model
+    /// Shared with the Build screen's toggle: a per-Mac convenience, not a synced setting.
+    @AppStorage("buildCoverLetter") private var coverLetter = false
     let job: Job
     @State private var analysis: JobAnalysis?
     @State private var problem: String?
@@ -126,7 +128,8 @@ private struct JobExplanationLoader: View {
             score: model.matchScore(for: job),
             overrule: { verdict in Task { await model.overrule(job, to: verdict) } },
             skip: { Task { await model.skip(job) } },
-            build: { Task { problem = await model.startBuild(for: job) } },
+            build: { Task { problem = await model.startBuild(for: job, coverLetter: coverLetter) } },
+            coverLetter: $coverLetter,
             buildBlocked: buildBlocked
         )
         .task(id: job.id) { analysis = await model.analysis(for: job) }

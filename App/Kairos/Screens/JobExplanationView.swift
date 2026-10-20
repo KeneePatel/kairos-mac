@@ -14,6 +14,8 @@ struct JobExplanationView: View {
     var skip: () -> Void = {}
     /// Starts a build; nil until builds can run.
     var build: (() -> Void)?
+    /// Write a cover letter with the build.
+    var coverLetter: Binding<Bool>?
     /// Why Build is blocked, such as an unfinished master resume (S14).
     var buildBlocked: String?
 
@@ -133,20 +135,40 @@ struct JobExplanationView: View {
         }
     }
 
+    /// One row when it fits; in a narrow inspector, building on one row and the rest under it.
     private var actions: some View {
-        HStack(spacing: Spacing.space2) {
-            Button("Build resume") { build?() }
-                .buttonStyle(.borderedProminent)
-                .disabled(build == nil || buildBlocked != nil)
-                .help(buildBlocked ?? "Tailor a resume for this job from your master resume.")
-            if let url = URL(string: job.url) {
-                Link(destination: url) { Label("Open posting", systemImage: "arrow.up.right.square") }
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Spacing.space2) {
+                buildActions
+                otherActions
             }
-            Button("Not for me", action: skip)
-                .help("Takes it off Today. The verdict stays.")
+            VStack(alignment: .leading, spacing: Spacing.space2) {
+                HStack(spacing: Spacing.space2) { buildActions }
+                HStack(spacing: Spacing.space2) { otherActions }
+            }
         }
         .buttonStyle(.bordered)
         .controlSize(.large)
+    }
+
+    @ViewBuilder private var buildActions: some View {
+        Button("Build resume") { build?() }
+            .buttonStyle(.borderedProminent)
+            .disabled(build == nil || buildBlocked != nil)
+            .help(buildBlocked ?? "Tailor a resume for this job from your master resume.")
+        if let coverLetter {
+            Toggle("Cover letter", isOn: coverLetter).toggleStyle(.checkbox).fixedSize()
+                .help("Also write a cover letter, from the same entries.")
+        }
+    }
+
+    @ViewBuilder private var otherActions: some View {
+        if let url = URL(string: job.url) {
+            Link(destination: url) { Label("Open posting", systemImage: "arrow.up.right.square") }.fixedSize()
+        }
+        Button("Not for me", action: skip)
+            .fixedSize()
+            .help("Takes it off Today. The verdict stays.")
     }
 
     /// The reason that decided the verdict, or the coverage line for a plain match.

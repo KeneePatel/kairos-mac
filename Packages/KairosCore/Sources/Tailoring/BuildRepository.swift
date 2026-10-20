@@ -18,10 +18,13 @@ public struct BuildRecord: Sendable, Equatable, Identifiable {
     public let error: String?
     public let createdAt: Date
     public let finishedAt: Date?
+    /// Nil when the build wasn't asked for one.
+    public let coverLetter: CoverLetterRecord?
 
     public init(
         id: UUID, jobID: String, mode: BuildMode, masterVersion: Int, status: BuildStatus, content: TailoredResume?,
-        score: MatchScore?, iterations: Int, error: String?, createdAt: Date, finishedAt: Date?
+        score: MatchScore?, iterations: Int, error: String?, createdAt: Date, finishedAt: Date?,
+        coverLetter: CoverLetterRecord? = nil
     ) {
         self.id = id
         self.jobID = jobID
@@ -34,6 +37,7 @@ public struct BuildRecord: Sendable, Equatable, Identifiable {
         self.error = error
         self.createdAt = createdAt
         self.finishedAt = finishedAt
+        self.coverLetter = coverLetter
     }
 }
 
@@ -55,16 +59,20 @@ public struct BuildRepository: Sendable {
         self.db = db
     }
 
-    public func create(job: JobID, mode: BuildMode, masterVersion: Int) async throws -> UUID {
+    /// `coverLetter` records that the build should write one, so a restarted build still does.
+    public func create(job: JobID, mode: BuildMode, masterVersion: Int, coverLetter: Bool = false) async throws
+        -> UUID
+    {
         let id = UUID.v7()
+        let letter: SQLValue = coverLetter ? .text(try Self.json(CoverLetterRecord.requested)) : .null
         try await db.write { connection, stamp in
             try connection.execute(
                 """
-                INSERT INTO build (id, job_id, mode, master_version, status, created_at, updated_hlc)
-                VALUES (?, ?, ?, ?, 'queued', ?, ?)
+                INSERT INTO build (id, job_id, mode, master_version, status, cover_letter, created_at, updated_hlc)
+                VALUES (?, ?, ?, ?, 'queued', ?, ?, ?)
                 """,
                 [
-                    .text(id.lowercased), .text(job.rawValue), .text(mode.rawValue), SQLValue(masterVersion),
+                    .text(id.lowercased), .text(job.rawValue), .text(mode.rawValue), SQLValue(masterVersion), letter,
                     .integer(stamp.milliseconds), .text(stamp.hlc.description),
                 ])
         }
@@ -75,23 +83,33 @@ public struct BuildRepository: Sendable {
         try await set(id, "status = 'running', error = NULL")
     }
 
-    public func finish(_ id: UUID, content: TailoredResume, score: MatchScore, iterations: Int) async throws {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .sortedKeys
-        let content = String(decoding: try encoder.encode(content), as: UTF8.self)
-        let breakdown = String(decoding: try encoder.encode(score), as: UTF8.self)
+    /// `coverLetter` replaces the request with the letter, or why there isn't one; nil leaves it.
+    public func finish(
+        _ id: UUID, content: TailoredResume, score: MatchScore, iterations: Int,
+        coverLetter: CoverLetterRecord? = nil
+    ) async throws {
+        let content = try Self.json(content)
+        let breakdown = try Self.json(score)
+        let letter = try coverLetter.map(Self.json)
         try await db.write { connection, stamp in
             try connection.execute(
                 """
                 UPDATE build SET status = 'done', content = ?, match_score = ?, breakdown = ?, iterations = ?,
-                    error = NULL, finished_at = ?, updated_hlc = ?
+                    cover_letter = coalesce(?, cover_letter), error = NULL, finished_at = ?, updated_hlc = ?
                 WHERE id = ?
                 """,
                 [
                     .text(content), .real(score.total), .text(breakdown), SQLValue(iterations),
-                    .integer(stamp.milliseconds), .text(stamp.hlc.description), .text(id.lowercased),
+                    letter.map(SQLValue.text) ?? .null, .integer(stamp.milliseconds), .text(stamp.hlc.description),
+                    .text(id.lowercased),
                 ])
         }
+    }
+
+    private static func json(_ value: some Encodable) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return String(decoding: try encoder.encode(value), as: UTF8.self)
     }
 
     public func fail(_ id: UUID, error: String) async throws {
@@ -171,6 +189,7 @@ public struct BuildRepository: Sendable {
             content: try reader.json("content", as: TailoredResume.self),
             score: try reader.json("breakdown", as: MatchScore.self), iterations: try reader.int("iterations"),
             error: row.string("error"), createdAt: try reader.date("created_at"),
-            finishedAt: reader.optionalDate("finished_at"))
+            finishedAt: reader.optionalDate("finished_at"),
+            coverLetter: try reader.json("cover_letter", as: CoverLetterRecord.self))
     }
 }

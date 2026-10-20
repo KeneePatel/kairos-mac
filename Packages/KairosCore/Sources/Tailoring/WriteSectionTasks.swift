@@ -90,6 +90,14 @@ public struct SectionOutput: Decodable, Sendable, Equatable {
 public struct WrittenEntry: Sendable, Equatable {
     public let entryID: UUID
     public let bullets: [TailoredBullet]
+    /// Your bullets word for word (lite mode, or a writer that failed): polish leaves them alone.
+    public let verbatim: Bool
+
+    public init(entryID: UUID, bullets: [TailoredBullet], verbatim: Bool = false) {
+        self.entryID = entryID
+        self.bullets = bullets
+        self.verbatim = verbatim
+    }
 }
 
 /// The shared work of the experience and projects writers (SPEC §5.3, Write).

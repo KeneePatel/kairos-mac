@@ -38,20 +38,23 @@ private let summary =
 private let skills =
     #"{"groups":[{"label":"Languages","skills":["Go","Java","Python"]},{"label":"Data and infrastructure","skills":["PostgreSQL","Kafka","Kubernetes","Docker","Helm"]}]}"#
 
-private func loop(_ scripts: [TaskID: [FakeProvider.Reply]]) throws -> (BuildLoop, FakeProvider) {
+private func loop(_ scripts: [TaskID: [FakeProvider.Reply]], master: MasterResume = Sample.resume) throws -> (
+    BuildLoop, FakeProvider
+) {
     let fake = FakeProvider(scripts)
     let db = try Database(path: ":memory:")
     let client = LLMClient(keys: [fake], policy: ClientPolicy(requestsPerMinute: 6_000), jitter: { 1 })
     let routes = Dictionary(
         uniqueKeysWithValues: [
             TaskID.writeExperience, .writeProjects, .writeSummary, .writeSkills, .rewriteSection, .gapBullets,
+            .coverLetter,
         ].map {
             ($0, [ModelRef(provider: "fake", model: "flash")])
         })
     let router = LLMRouter(clients: ["fake": client], routes: routes, budget: Budget(), log: CallLog(db), cache: nil)
     var settings = BuildLoop.Settings()
     settings.selector = Selector(now: Date(timeIntervalSince1970: 1_790_000_000))
-    return (BuildLoop(router: router, master: Sample.resume, settings: settings), fake)
+    return (BuildLoop(router: router, master: master, settings: settings), fake)
 }
 
 private func migrated() async throws -> Database {

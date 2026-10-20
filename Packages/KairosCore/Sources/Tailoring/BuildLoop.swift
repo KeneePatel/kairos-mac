@@ -19,11 +19,13 @@ public struct BuildRequest: Sendable, Equatable {
     public var pageBudget: Int
     /// Stretch mode's cap per role (your setting, 0 to 2).
     public var gapBulletsPerRole: Int
+    /// Write a cover letter too (optional per build).
+    public var coverLetter: Bool
 
     public init(
         jobTitle: String, company: String, companyProducts: [String] = [], requirements: JobRequirements,
         locale: SpellingLocale, mode: BuildMode = .strict, pageBudget: Int = 1,
-        gapBulletsPerRole: Int = StretchSettings().limit
+        gapBulletsPerRole: Int = StretchSettings().limit, coverLetter: Bool = false
     ) {
         self.jobTitle = jobTitle
         self.company = company
@@ -33,6 +35,7 @@ public struct BuildRequest: Sendable, Equatable {
         self.mode = mode
         self.pageBudget = pageBudget
         self.gapBulletsPerRole = gapBulletsPerRole
+        self.coverLetter = coverLetter
     }
 }
 
@@ -43,6 +46,7 @@ public enum BuildStep: Sendable, Equatable {
     /// Stretch mode only.
     case gapBullets
     case fitting(pages: Int)
+    case coverLetter
 }
 
 public struct BuildOutcome: Sendable, Equatable {
@@ -55,13 +59,16 @@ public struct BuildOutcome: Sendable, Equatable {
     public var pages: Int?
     /// Bullets dropped to fit the page budget.
     public var dropped: Int
+    /// When one was asked for; nil if it still failed its checks after the repair.
+    public var coverLetter: CoverLetter?
 }
 
 /// One build (SPEC §5.3): select, write the four sections in parallel, polish, score, rewrite any
 /// section under 70 (at most 3 passes, keeping the best version), add Stretch mode's gap bullets
-/// for what's still uncovered, then fit the page budget by dropping the lowest-ranked bullets.
-/// Every bullet the writers return has passed the verifier; a section whose writer still fails
-/// after its repair falls back to your bullets, word for word, and failed gap bullets are dropped.
+/// for what's still uncovered, then fit the page budget by dropping the lowest-ranked bullets, and
+/// write the cover letter if asked. Every bullet the writers return has passed the verifier; a
+/// section whose writer still fails after its repair falls back to your bullets, word for word,
+/// and failed gap bullets or a failed letter are left out.
 public struct BuildLoop: Sendable {
     public struct Settings: Sendable {
         /// The one pass mark (SPEC §5.3).
@@ -200,8 +207,19 @@ public struct BuildLoop: Sendable {
             }
         }
         score = MatchScore.score(resume, for: request.requirements, pages: pages, pageBudget: request.pageBudget)
+
+        var letter: CoverLetter?
+        if request.coverLetter {
+            progress(.coverLetter)
+            let input = CoverLetterInput(
+                brief: brief, company: request.company, entries: selection.experience + selection.projects,
+                skills: selection.skills, totalYears: master.header.totalYears,
+                verifier: Verifier(resume: master, companyProducts: request.companyProducts))
+            letter = try await coverLetter(input, header: resume.header)
+        }
         return BuildOutcome(
-            resume: resume, score: score, rewrites: rewrites, fellBack: fellBack, pages: pages, dropped: dropped)
+            resume: resume, score: score, rewrites: rewrites, fellBack: fellBack, pages: pages, dropped: dropped,
+            coverLetter: letter)
     }
 
     // MARK: - Writers
@@ -247,6 +265,16 @@ public struct BuildLoop: Sendable {
         }
     }
 
+    /// Nil when the reply still fails its checks after the repair: the build has no letter.
+    private func coverLetter(_ input: CoverLetterInput, header: TailoredResume.Header) async throws -> CoverLetter? {
+        do {
+            let result = try await router.run(CoverLetterTask(), input: input, context: context)
+            return CoverLetterTask.letter(result.output, input: input, header: header, date: settings.selector.now)
+        } catch .invalidOutput {
+            return nil
+        }
+    }
+
     /// Nil when the reply still fails its checks after the repair: the build has no gap bullets.
     private func gapBullets(_ input: GapBulletsInput) async throws -> [UUID: [TailoredBullet]]? {
         do {
@@ -261,7 +289,8 @@ public struct BuildLoop: Sendable {
         input.entries.map { selected in
             WrittenEntry(
                 entryID: selected.entry.id,
-                bullets: selected.bullets.map { TailoredBullet(text: $0.bullet.text, sourceIDs: [$0.bullet.id]) })
+                bullets: selected.bullets.map { TailoredBullet(text: $0.bullet.text, sourceIDs: [$0.bullet.id]) },
+                verbatim: true)
         }
     }
 
@@ -271,8 +300,9 @@ public struct BuildLoop: Sendable {
         _ written: [WrittenEntry], from selected: [SelectedEntry], polish: Polish, ranks: [UUID: Double]
     ) -> [TailoredResume.Entry] {
         selected.compactMap { chosen in
-            guard let bullets = written.first(where: { $0.entryID == chosen.entry.id })?.bullets else { return nil }
-            let texts = polish.bullets(bullets.map(\.text))
+            guard let entry = written.first(where: { $0.entryID == chosen.entry.id }) else { return nil }
+            let bullets = entry.bullets
+            let texts = entry.verbatim ? bullets.map(\.text) : polish.bullets(bullets.map(\.text))
             let tailored = zip(bullets, texts).map { bullet, text in
                 TailoredBullet(
                     text: text, sourceIDs: bullet.sourceIDs, gap: bullet.gap,
@@ -295,17 +325,18 @@ public struct BuildLoop: Sendable {
         }
     }
 
-    /// Gap bullets go after a role's own, polished with them so no two open on the same verb.
+    /// Gap bullets go after a role's own, polished so none opens on a verb the role already used.
+    /// The role's own bullets stay exactly as they were.
     static func adding(_ gaps: [TailoredBullet], to entry: TailoredResume.Entry, polish: Polish)
         -> TailoredResume.Entry
     {
         guard !gaps.isEmpty else { return entry }
         var entry = entry
-        let bullets = entry.bullets + gaps
-        entry.bullets = zip(bullets, polish.bullets(bullets.map(\.text))).map { bullet, text in
-            var bullet = bullet
-            bullet.text = text
-            return bullet
+        let polished = polish.bullets(entry.bullets.map(\.text) + gaps.map(\.text)).suffix(gaps.count)
+        entry.bullets += zip(gaps, polished).map { gap, text in
+            var gap = gap
+            gap.text = text
+            return gap
         }
         return entry
     }

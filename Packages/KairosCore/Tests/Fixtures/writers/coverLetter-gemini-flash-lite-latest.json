@@ -1,0 +1,7 @@
+{
+  "paragraphs": [
+    "I am writing to express my interest in the Backend Developer II position at Northline Freight. With five years of professional experience building backend systems and a strong technical foundation in languages such as Go and Java, alongside extensive work with PostgreSQL, my background closely aligns with the core requirements of this role.",
+    "Throughout my career, I have successfully met complex technical demands using the technologies specified for this position. At Harbourline Logistics, I built an event pipeline in Go handling 4.2M events a day with p99 under 120 ms, demonstrating my ability to deliver high-performance backend services. Additionally, earlier in my career as a Developer Intern at Maplepay, I wrote reconciliation jobs in Java that matched 2M card transactions nightly. Beyond core service development, I have actively worked with the secondary technologies highlighted in your posting, including migrating 14 services to Kubernetes with a shared Helm chart and designing a gRPC integration kit that successfully onboarded 11 carriers in 4 days instead of 3 weeks.",
+    "This role interests me because it directly corresponds with my expertise in designing and optimizing high-throughput backend services and infrastructure. I would welcome a conversation to discuss how my technical skills and professional background can benefit the team at Northline Freight."
+  ]
+}

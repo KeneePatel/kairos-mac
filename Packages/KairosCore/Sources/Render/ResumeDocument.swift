@@ -131,9 +131,14 @@ public enum ResumeTemplate: String, Sendable, CaseIterable {
     case classic
 
     public func source() throws(RenderError) -> String {
-        guard let url = Bundle.module.url(forResource: rawValue, withExtension: "typ", subdirectory: "Templates"),
+        try Self.source(named: rawValue)
+    }
+
+    /// A template file in `Templates/`, such as `cover` for the letter.
+    static func source(named name: String) throws(RenderError) -> String {
+        guard let url = Bundle.module.url(forResource: name, withExtension: "typ", subdirectory: "Templates"),
             let text = try? String(contentsOf: url, encoding: .utf8)
-        else { throw .workspace("the \(rawValue) template is missing from the bundle") }
+        else { throw .workspace("the \(name) template is missing from the bundle") }
         return text
     }
 }
@@ -156,7 +161,22 @@ public struct ResumeRenderer: Sendable {
         } catch {
             throw .workspace("the resume couldn't be encoded: \(error.localizedDescription)")
         }
-        let pdf = try await runner.compile(template: try template.source(), data: data, createdAt: createdAt)
+        return try await compile(template.source(), data: data, createdAt: createdAt)
+    }
+
+    /// A cover letter with `cover.typ`.
+    public func render(letter: LetterDocument, createdAt: Date? = nil) async throws(RenderError) -> RenderedPDF {
+        let data: Data
+        do {
+            data = try JSONEncoder().encode(letter)
+        } catch {
+            throw .workspace("the letter couldn't be encoded: \(error.localizedDescription)")
+        }
+        return try await compile(ResumeTemplate.source(named: "cover"), data: data, createdAt: createdAt)
+    }
+
+    private func compile(_ template: String, data: Data, createdAt: Date?) async throws(RenderError) -> RenderedPDF {
+        let pdf = try await runner.compile(template: template, data: data, createdAt: createdAt)
         guard let pages = PDFDocument(data: pdf)?.pageCount else {
             throw .compile("typst wrote a PDF PDFKit can't read")
         }

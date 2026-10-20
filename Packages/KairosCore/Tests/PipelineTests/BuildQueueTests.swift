@@ -4,6 +4,7 @@ import MasterResume
 import Render
 import Screening
 import Store
+import Synchronization
 import Tailoring
 import Testing
 
@@ -75,6 +76,7 @@ private func router(_ db: Database, _ fake: FakeProvider) -> LLMRouter {
     let routes = Dictionary(
         uniqueKeysWithValues: [
             TaskID.writeExperience, .writeProjects, .writeSummary, .writeSkills, .rewriteSection, .gapBullets,
+            .coverLetter,
         ].map {
             ($0, [ModelRef(provider: "fake", model: "flash")])
         })
@@ -98,6 +100,19 @@ private func outcome(of id: UUID, in queue: BuildQueue) async -> BuildQueue.Even
         }
     }
     return nil
+}
+
+/// What a fake render was asked to print, safe to share with the queue's workers.
+private final class Printed: Sendable {
+    private let kinds = Mutex<[String]>([])
+
+    func record(_ printable: Printable) {
+        kinds.withLock {
+            if case .letter = printable { $0.append("letter") } else { $0.append("resume") }
+        }
+    }
+
+    var last: String? { kinds.withLock { $0.last } }
 }
 
 @Suite("Build queue")
@@ -219,5 +234,60 @@ struct BuildQueueTests {
         #expect(content.contains(#""verified":false"#) && content.contains(#""covers":"Terraform""#))
         let stored = try #require(try await BuildRepository(db).build(on)?.content)
         #expect(stored.experience.first?.bullets.last?.gap == true)
+    }
+
+    /// A letter asked for with the build is saved as its own PDF, and its state stays on the build.
+    @Test func aBuildCanAlsoWriteItsCoverLetter() async throws {
+        let (db, job) = try await database()
+        try await analyse(job, in: db)
+        let paragraphs = [
+            "I'm applying for the Backend Developer II role at Northline Freight. For the past 5 years I've built backend services in Go and PostgreSQL for a logistics company, and the work in your posting is close to what I do every day.",
+            "At Harbourline Logistics I built an event pipeline in Go that handles 4.2M events a day with p99 under 120 ms. Before that I shipped REST APIs on PostgreSQL for 30+ client projects, so I'm used to owning a service from its schema to its API.",
+            "I care about services that are simple to run: clear interfaces, careful data models and measurements that show where the time goes. That habit is what kept the pipeline fast as its traffic grew, and it's how I'd approach the systems on your team.",
+            "This role interests me because reliable data sits at the centre of it. I'd welcome a conversation about how I could help your team.",
+        ]
+        let letter = String(decoding: try JSONEncoder().encode(["paragraphs": paragraphs]), as: UTF8.self)
+        var scripts = replies
+        scripts[.coverLetter] = [.reply(letter)]
+        let printed = Printed()
+        let render: BuildQueue.Render = { printable in
+            printed.record(printable)
+            return RenderedPDF(data: Data("%PDF-1.7 sample".utf8), pageCount: 1)
+        }
+        let queue = BuildQueue(db: db, router: router(db, FakeProvider(scripts)), folder: folder(), render: render)
+        let id = try await queue.enqueue(job: job.id, coverLetter: true)
+        #expect(try await BuildRepository(db).build(id)?.coverLetter == .requested)
+        let event = await outcome(of: id, in: queue)
+        guard case .finished? = event else {
+            Issue.record("the build didn't finish: \(String(describing: event))")
+            return
+        }
+        let record = try #require(try await BuildRepository(db).build(id))
+        #expect(record.coverLetter?.status == .done)
+        #expect(record.coverLetter?.letter?.greeting == "Dear Northline Freight hiring team,")
+        #expect(record.coverLetter?.letter?.header.contact.first?.text == "jordan.rivera@example.com")
+        let kinds = try await BuildRepository(db).artifacts(for: id).map(\.kind)
+        #expect(kinds == ["resume", "cover_letter"])
+        #expect(printed.last == "letter")
+
+        // A letter failing its checks twice is left out, and the build still finishes. A fresh
+        // database, so the first letter doesn't come back from the result cache.
+        let (other, otherJob) = try await database()
+        try await analyse(otherJob, in: other)
+        let invented = String(
+            decoding: try JSONEncoder().encode(["paragraphs": paragraphs + ["I also write Rust services."]]),
+            as: UTF8.self)
+        scripts[.coverLetter] = [.reply(invented), .reply(invented)]
+        let failing = BuildQueue(
+            db: other, router: router(other, FakeProvider(scripts)), folder: folder(), render: render)
+        let second = try await failing.enqueue(job: otherJob.id, coverLetter: true)
+        guard case .finished? = await outcome(of: second, in: failing) else {
+            Issue.record("a build whose letter failed didn't finish")
+            return
+        }
+        let left = try #require(try await BuildRepository(other).build(second))
+        #expect(left.status == .done && left.coverLetter?.status == .failed)
+        #expect(left.coverLetter?.error?.hasPrefix("The cover letter didn't pass its checks") == true)
+        #expect(try await BuildRepository(other).artifacts(for: second).map(\.kind) == ["resume"])
     }
 }

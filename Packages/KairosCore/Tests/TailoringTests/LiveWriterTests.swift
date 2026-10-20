@@ -40,6 +40,22 @@ struct LiveWriterTests {
         }
     }
 
+    /// The cover letter for the sample posting. `scripts/live-llm.sh coverLetterOnGemini`
+    @Test func coverLetterOnGemini() async throws {
+        guard let key = ProcessInfo.processInfo.environment["GEMINI_API_KEY"], !key.isEmpty else {
+            print("live: GEMINI_API_KEY not set; skipping")
+            return
+        }
+        let client = LLMClient(
+            keys: [OpenAICompatibleProvider(preset: .gemini, key: key)], policy: ClientPolicy(preset: .gemini))
+        let input = WriterFixtures.coverLetterInput()
+        let result = try await run(client, CoverLetterTask(), input)
+        let letter = CoverLetterTask.letter(
+            result.output, input: input, header: TailoredResume.Header(Sample.resume.header), date: Date())
+        print("live:   \(letter.greeting)")
+        for paragraph in letter.paragraphs { print("live:   \(paragraph)") }
+    }
+
     /// Stretch mode's gap bullets for the two requirements only Can-discuss skills answer.
     /// `scripts/live-llm.sh gapBulletsOnGemini`
     @Test func gapBulletsOnGemini() async throws {
@@ -119,6 +135,17 @@ enum WriterFixtures {
             ], projects: [], education: [], certifications: [], languages: nil)
     }
 
+    /// The letter for the same posting, with one of Northline's products to keep out.
+    static func coverLetterInput() -> CoverLetterInput {
+        let selection = Selector(now: Date(timeIntervalSince1970: 1_790_000_000)).select(
+            from: Sample.resume, for: requirements)
+        return CoverLetterInput(
+            brief: WriterBrief(jobTitle: "Backend Developer II", requirements: requirements, locale: .canada),
+            company: "Northline Freight", entries: selection.experience + selection.projects,
+            skills: selection.skills, totalYears: 5,
+            verifier: Verifier(resume: Sample.resume, companyProducts: ["FreightOS"]))
+    }
+
     static func gapInput(perRole: Int = 1, requirements: JobRequirements = stretchRequirements) -> GapBulletsInput {
         GapBulletsInput(
             brief: WriterBrief(jobTitle: "Backend Developer II", requirements: requirements, locale: .canada),
@@ -152,6 +179,9 @@ struct RecordedWriterTests {
                 try WriteSummaryTask().check(try decoder.decode(SummaryOutput.self, from: data), for: inputs.summary)
             } else if file.hasPrefix("writeSkills-") {
                 try WriteSkillsTask().check(try decoder.decode(SkillsOutput.self, from: data), for: inputs.skills)
+            } else if file.hasPrefix("coverLetter-") {
+                try CoverLetterTask().check(
+                    try decoder.decode(CoverLetterOutput.self, from: data), for: WriterFixtures.coverLetterInput())
             } else if file.hasPrefix("gapBullets-") {
                 try GapBulletsTask().check(
                     try decoder.decode(GapBulletsOutput.self, from: data), for: WriterFixtures.gapInput(perRole: 2))

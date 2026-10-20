@@ -40,7 +40,8 @@ public actor BuildQueue {
         case failed(UUID, String)
     }
 
-    public typealias Render = @Sendable (ResumeDocument) async throws -> RenderedPDF
+    /// Prints a resume or a cover letter (a `ResumeRenderer`).
+    public typealias Render = @Sendable (Printable) async throws -> RenderedPDF
 
     public nonisolated let events: AsyncStream<Event>
     private let continuation: AsyncStream<Event>.Continuation
@@ -68,9 +69,10 @@ public actor BuildQueue {
     }
 
     /// Records a build for `job` and starts it as soon as a worker is free.
-    public func enqueue(job: JobID, mode: BuildMode = .strict) async throws -> UUID {
+    public func enqueue(job: JobID, mode: BuildMode = .strict, coverLetter: Bool = false) async throws -> UUID {
         let version = try await MasterResumeRepository(db).load().version
-        let id = try await BuildRepository(db).create(job: job, mode: mode, masterVersion: version)
+        let id = try await BuildRepository(db).create(
+            job: job, mode: mode, masterVersion: version, coverLetter: coverLetter)
         pending.append(id)
         continuation.yield(.queued(id))
         startWorkers()
@@ -137,23 +139,53 @@ public actor BuildQueue {
             requirements: JobRequirements(
                 musts: analysis.requirements.filter { $0.kind == .must }.map(\.text),
                 nices: analysis.requirements.filter { $0.kind == .nice }.map(\.text), domains: analysis.domains),
-            locale: SpellingLocale(country: job.country), mode: record.mode, gapBulletsPerRole: stretch.limit)
+            locale: SpellingLocale(country: job.country), mode: record.mode, gapBulletsPerRole: stretch.limit,
+            coverLetter: record.coverLetter != nil)
         let loop = BuildLoop(
             router: router, master: master, context: CallContext(jobID: job.id.rawValue, buildID: id.lowercased))
         let render = self.render
         let continuation = self.continuation
         let outcome = try await loop.run(
-            request, measure: { try await render(ResumeDocument($0)).pageCount },
+            request, measure: { try await render(.resume(ResumeDocument($0))).pageCount },
             progress: { continuation.yield(.step(id, $0)) })
 
-        let pdf = try await render(ResumeDocument(outcome.resume))
+        let url = try await save(.resume(ResumeDocument(outcome.resume)), kind: "resume", name: id.lowercased, for: id)
+        var letter: CoverLetterRecord?
+        if request.coverLetter {
+            letter = await coverLetter(outcome.coverLetter, for: id)
+        }
+        try await builds.finish(
+            id, content: outcome.resume, score: outcome.score, iterations: outcome.rewrites, coverLetter: letter)
+        return (outcome, url)
+    }
+
+    /// The letter's PDF, or why there isn't one. A letter that can't be made never fails the build.
+    private func coverLetter(_ letter: CoverLetter?, for id: UUID) async -> CoverLetterRecord {
+        guard let letter else {
+            return CoverLetterRecord(
+                status: .failed,
+                error: "The cover letter didn't pass its checks after a second try, so it was left out. "
+                    + "Build again to retry."
+            )
+        }
+        do {
+            _ = try await save(
+                .letter(LetterDocument(letter)), kind: "cover_letter", name: "\(id.lowercased)-cover-letter", for: id)
+            return CoverLetterRecord(status: .done, letter: letter)
+        } catch {
+            return CoverLetterRecord(status: .failed, letter: letter, error: Self.message(for: error))
+        }
+    }
+
+    /// Renders, writes `<name>.pdf` to the builds folder, and records it with its sha256.
+    private func save(_ printable: Printable, kind: String, name: String, for id: UUID) async throws -> URL {
+        let pdf = try await render(printable)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let url = folder.appending(path: "\(id.lowercased).pdf")
+        let url = folder.appending(path: "\(name).pdf")
         try pdf.data.write(to: url)
         let sha256 = SHA256.hash(data: pdf.data).map { String(format: "%02x", $0) }.joined()
-        _ = try await builds.addArtifact(build: id, kind: "resume", sha256: sha256, localPath: url.path)
-        try await builds.finish(id, content: outcome.resume, score: outcome.score, iterations: outcome.rewrites)
-        return (outcome, url)
+        _ = try await BuildRepository(db).addArtifact(build: id, kind: kind, sha256: sha256, localPath: url.path)
+        return url
     }
 
     static func message(for error: any Error) -> String {
