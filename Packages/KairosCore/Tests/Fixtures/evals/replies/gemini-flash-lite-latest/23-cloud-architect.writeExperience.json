@@ -1,0 +1,56 @@
+{
+  "entries": [
+    {
+      "id": "e1",
+      "bullets": [
+        {
+          "text": "Migrated 9 services to Kubernetes on AWS using Terraform, reducing deploy time from 30 to 8 minutes.",
+          "source_ids": [
+            "b1"
+          ]
+        },
+        {
+          "text": "Developed Go services on PostgreSQL handling 3M API requests a day with p95 under 80 ms.",
+          "source_ids": [
+            "b2"
+          ]
+        },
+        {
+          "text": "Integrated Kafka event streaming between billing and shipping, retiring 4 nightly batch jobs.",
+          "source_ids": [
+            "b3"
+          ]
+        },
+        {
+          "text": "Mentored 3 junior developers and conducted the weekly on-call review.",
+          "source_ids": [
+            "b4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e2",
+      "bullets": [
+        {
+          "text": "Created Python and Airflow pipelines loading 40 GB a day into Snowflake.",
+          "source_ids": [
+            "b5"
+          ]
+        },
+        {
+          "text": "Optimized SQL reports, reducing the slowest from 6 minutes to 40 seconds.",
+          "source_ids": [
+            "b7"
+          ]
+        },
+        {
+          "text": "Developed React and TypeScript dashboards used by 120 analysts.",
+          "source_ids": [
+            "b6"
+          ]
+        }
+      ]
+    }
+  ]
+}

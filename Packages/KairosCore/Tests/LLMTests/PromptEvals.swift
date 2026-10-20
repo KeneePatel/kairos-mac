@@ -150,9 +150,132 @@ struct PromptEvalFixtureTests {
     }
 }
 
+/// One posting's scores, from its analysis and the writer's first reply. The live eval and the
+/// offline replay share this, so a recorded run scores exactly as it did live.
+struct PostingResult: Encodable {
+    let id: String
+    var predictedMusts: [String] = []
+    var labels: [String] = []
+    var wrongMusts: [String] = []
+    var missedLabels: [String] = []
+    var bullets = 0
+    var bulletsPassing = 0
+    var violations: [String] = []
+    var error: String?
+}
+
+struct EvalReport: Encodable {
+    let date: String
+    let models: [String: String]
+    let promptVersions: [String: Int]
+    var thresholds = ["mustPrecision": 0.85, "mustRecall": 0.80, "firstWritePassRate": 0.95]
+    var mustPrecision = 0.0
+    var mustRecall = 0.0
+    var firstWritePassRate = 0.0
+    var meetsThresholds = false
+    var postings: [PostingResult] = []
+
+    /// Totals over every posting, then whether they meet the thresholds.
+    mutating func total() {
+        let predicted = postings.reduce(0) { $0 + $1.predictedMusts.count }
+        let wrong = postings.reduce(0) { $0 + $1.wrongMusts.count }
+        let labels = postings.reduce(0) { $0 + $1.labels.count }
+        let missed = postings.reduce(0) { $0 + $1.missedLabels.count }
+        let bullets = postings.reduce(0) { $0 + $1.bullets }
+        let passing = postings.reduce(0) { $0 + $1.bulletsPassing }
+        mustPrecision = predicted == 0 ? 0 : Double(predicted - wrong) / Double(predicted)
+        mustRecall = labels == 0 ? 0 : Double(labels - missed) / Double(labels)
+        firstWritePassRate = bullets == 0 ? 0 : Double(passing) / Double(bullets)
+        meetsThresholds = mustPrecision >= 0.85 && mustRecall >= 0.80 && firstWritePassRate >= 0.95
+    }
+
+    var bullets: Int { postings.reduce(0) { $0 + $1.bullets } }
+}
+
+enum EvalScoring {
+    /// Fixed, so the selection (and so the writer's bullet ids) is the same when a recorded run is
+    /// replayed later.
+    static let selector = Selector(now: Date(timeIntervalSince1970: 1_792_497_600))
+
+    /// What `writeExperience` gets for a posting, from its analysis.
+    static func writerInput(for posting: EvalPosting, analysis: AnalyzeJobTask.Output) -> WriteSectionInput {
+        let requirements = JobRequirements(
+            musts: analysis.requirements.filter { $0.kind == .must }.map(\.text),
+            nices: analysis.requirements.filter { $0.kind == .nice }.map(\.text), domains: analysis.domains)
+        let selection = selector.select(from: EvalPersona.resume, for: requirements)
+        return WriteSectionInput(
+            brief: WriterBrief(
+                jobTitle: posting.title, requirements: requirements,
+                locale: SpellingLocale(country: posting.job.country)),
+            entries: selection.experience, skills: selection.skills,
+            verifier: Verifier(resume: EvalPersona.resume, hiringCompany: posting.company))
+    }
+
+    static func score(_ posting: EvalPosting, analysis: AnalyzeJobTask.Output, written: SectionOutput) -> PostingResult
+    {
+        var result = PostingResult(id: posting.id, labels: posting.musts)
+        let musts = analysis.requirements.filter { $0.kind == .must }.map(\.text)
+        let scored = RequirementMatch.score(predicted: musts, labels: posting.musts)
+        result.predictedMusts = musts
+        result.wrongMusts = musts.filter { !scored.correct.contains($0) }
+        result.missedLabels = posting.musts.filter { !scored.found.contains($0) }
+        let input = writerInput(for: posting, analysis: analysis)
+        for entry in WriteExperienceTask.written(written, input: input) {
+            for bullet in entry.bullets {
+                let found = input.verifier.check(bullet)
+                result.bullets += 1
+                if found.isEmpty {
+                    result.bulletsPassing += 1
+                } else {
+                    result.violations += found.map { "“\(bullet.text.prefix(50))…”: \($0.detail)" }
+                }
+            }
+        }
+        return result
+    }
+
+    /// `Fixtures/evals/replies/<model>/`: each posting's two replies, as the model sent them.
+    static func replies(_ model: String) -> URL {
+        URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appending(path: "Fixtures/evals/replies/\(model)")
+    }
+
+    static func decoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return decoder
+    }
+}
+
+/// Offline: the recorded run, scored again with today's matcher and verifier. It must still meet
+/// the thresholds, and every bullet must still pass: the 30 jobs of success criterion S9 (strict).
+@Suite("Recorded prompt eval")
+struct RecordedEvalTests {
+    @Test func theRecordedRunStillMeetsTheThresholds() throws {
+        let folder = EvalScoring.replies(PromptEvals.model)
+        var report = EvalReport(date: "", models: [:], promptVersions: [:])
+        for posting in try EvalPosting.all() {
+            let analysis = folder.appending(path: "\(posting.id).analyzeJob.json")
+            let written = folder.appending(path: "\(posting.id).writeExperience.json")
+            guard FileManager.default.fileExists(atPath: written.path()) else { continue }
+            report.postings.append(
+                EvalScoring.score(
+                    posting,
+                    analysis: try EvalScoring.decoder().decode(
+                        AnalyzeJobTask.Output.self, from: Data(contentsOf: analysis)),
+                    written: try EvalScoring.decoder().decode(SectionOutput.self, from: Data(contentsOf: written))))
+        }
+        report.total()
+        #expect(report.postings.count == 30, "record the run with scripts/live-llm.sh PromptEvals")
+        #expect(report.meetsThresholds)
+        #expect(report.postings.allSatisfy { $0.violations.isEmpty }, "\(report.postings.flatMap(\.violations))")
+    }
+}
+
 /// SPEC §5.5's prompt evals, against a real model: must-have extraction precision and recall over
 /// the 30 labelled postings, and the share of experience bullets that pass the strict verifier on
-/// the writer's first reply. Writes `evals/<date>-<model>.json`. Opt-in and live:
+/// the writer's first reply. Writes `evals/<date>-<model>.json` and records each reply under
+/// `Fixtures/evals/replies/<model>/` for the offline replay. Opt-in and live:
 /// `scripts/live-llm.sh PromptEvals` (about 60 calls; the model is `KAIROS_EVAL_MODEL`, Flash-Lite
 /// by default, so the free tier's Flash limit isn't spent).
 @Suite(
@@ -163,30 +286,6 @@ struct PromptEvals {
     static let model = ProcessInfo.processInfo.environment["KAIROS_EVAL_MODEL"] ?? "gemini-flash-lite-latest"
     static let writerModel = ProcessInfo.processInfo.environment["KAIROS_EVAL_WRITER_MODEL"] ?? model
 
-    struct PostingResult: Encodable {
-        let id: String
-        var predictedMusts: [String] = []
-        var labels: [String] = []
-        var wrongMusts: [String] = []
-        var missedLabels: [String] = []
-        var bullets = 0
-        var bulletsPassing = 0
-        var violations: [String] = []
-        var error: String?
-    }
-
-    struct Report: Encodable {
-        let date: String
-        let models: [String: String]
-        let promptVersions: [String: Int]
-        let thresholds: [String: Double]
-        var mustPrecision = 0.0
-        var mustRecall = 0.0
-        var firstWritePassRate = 0.0
-        var meetsThresholds = false
-        var postings: [PostingResult] = []
-    }
-
     @Test func extractionAndFirstWriteMeetTheThresholds() async throws {
         guard let key = ProcessInfo.processInfo.environment["GEMINI_API_KEY"], !key.isEmpty else {
             print("eval: GEMINI_API_KEY not set; skipping")
@@ -195,63 +294,27 @@ struct PromptEvals {
         let client = LLMClient(
             keys: [OpenAICompatibleProvider(preset: .gemini, key: key)], policy: ClientPolicy(preset: .gemini))
         let persona = EvalPersona.resume
-        var report = Report(
+        let folder = EvalScoring.replies(Self.model)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        var report = EvalReport(
             date: Date().formatted(.iso8601.year().month().day()),
             models: ["analyzeJob": Self.model, "writeExperience": Self.writerModel],
             promptVersions: [
                 "analyzeJob": AnalyzeJobTask.promptVersion, "writeExperience": WriteExperienceTask.promptVersion,
-            ],
-            thresholds: ["mustPrecision": 0.85, "mustRecall": 0.80, "firstWritePassRate": 0.95])
-        var predictedCount = 0
-        var correctCount = 0
-        var labelCount = 0
-        var foundCount = 0
-        var bullets = 0
-        var passing = 0
+            ])
 
         for posting in try EvalPosting.all() {
             var result = PostingResult(id: posting.id, labels: posting.musts)
             do {
                 let analysis = try await run(
                     client, AnalyzeJobTask(),
-                    AnalyzeJobTask.Input(job: posting.job, skills: persona.skills, languages: []), model: Self.model
-                ).output
-                let musts = analysis.requirements.filter { $0.kind == .must }.map(\.text)
-                let nices = analysis.requirements.filter { $0.kind == .nice }.map(\.text)
-                let scored = RequirementMatch.score(predicted: musts, labels: posting.musts)
-                result.predictedMusts = musts
-                result.wrongMusts = musts.filter { !scored.correct.contains($0) }
-                result.missedLabels = posting.musts.filter { !scored.found.contains($0) }
-                predictedCount += musts.count
-                correctCount += scored.correct.count
-                labelCount += posting.musts.count
-                foundCount += scored.found.count
-
-                let requirements = JobRequirements(musts: musts, nices: nices, domains: analysis.domains)
-                let selection = Selector().select(from: persona, for: requirements)
-                let verifier = Verifier(resume: persona, hiringCompany: posting.company)
-                let input = WriteSectionInput(
-                    brief: WriterBrief(
-                        jobTitle: posting.title, requirements: requirements,
-                        locale: SpellingLocale(country: posting.job.country)),
-                    entries: selection.experience, skills: selection.skills, verifier: verifier)
+                    AnalyzeJobTask.Input(job: posting.job, skills: persona.skills, languages: []), model: Self.model)
+                try Data(analysis.json.utf8).write(to: folder.appending(path: "\(posting.id).analyzeJob.json"))
                 let written = try await run(
-                    client, FirstWrite(task: Redacted(WriteExperienceTask(), header: persona.header)), input,
-                    model: Self.writerModel
-                ).output
-                for entry in WriteExperienceTask.written(written, input: input) {
-                    for bullet in entry.bullets {
-                        let found = verifier.check(bullet)
-                        result.bullets += 1
-                        if found.isEmpty {
-                            result.bulletsPassing += 1
-                        } else {
-                            result.violations += found.map { "“\(bullet.text.prefix(50))…”: \($0.detail)" }
-                        }
-                    }
-                }
-                bullets += result.bullets
-                passing += result.bulletsPassing
+                    client, FirstWrite(task: Redacted(WriteExperienceTask(), header: persona.header)),
+                    EvalScoring.writerInput(for: posting, analysis: analysis.output), model: Self.writerModel)
+                try Data(written.json.utf8).write(to: folder.appending(path: "\(posting.id).writeExperience.json"))
+                result = EvalScoring.score(posting, analysis: analysis.output, written: written.output)
             } catch {
                 result.error = String(describing: error)
             }
@@ -261,16 +324,12 @@ struct PromptEvals {
             report.postings.append(result)
         }
 
-        report.mustPrecision = predictedCount == 0 ? 0 : Double(correctCount) / Double(predictedCount)
-        report.mustRecall = labelCount == 0 ? 0 : Double(foundCount) / Double(labelCount)
-        report.firstWritePassRate = bullets == 0 ? 0 : Double(passing) / Double(bullets)
-        report.meetsThresholds =
-            report.mustPrecision >= 0.85 && report.mustRecall >= 0.80 && report.firstWritePassRate >= 0.95
+        report.total()
         try write(report)
         print(
             "eval: precision \(report.mustPrecision.formatted(.percent.precision(.fractionLength(1)))) · recall "
                 + "\(report.mustRecall.formatted(.percent.precision(.fractionLength(1)))) · first-write pass "
-                + "\(report.firstWritePassRate.formatted(.percent.precision(.fractionLength(1)))) over \(bullets) bullets"
+                + "\(report.firstWritePassRate.formatted(.percent.precision(.fractionLength(1)))) over \(report.bullets) bullets"
         )
 
         #expect(report.postings.allSatisfy { $0.error == nil }, "some postings failed; see the report")
@@ -291,7 +350,7 @@ struct PromptEvals {
     }
 
     /// `evals/<date>-<model>.json` at the repository root, committed for comparison.
-    private func write(_ report: Report) throws {
+    private func write(_ report: EvalReport) throws {
         let folder = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appending(path: "evals")

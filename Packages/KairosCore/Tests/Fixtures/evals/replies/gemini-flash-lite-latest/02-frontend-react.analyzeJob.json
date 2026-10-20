@@ -1,0 +1,42 @@
+{
+  "requirements": [
+    {
+      "text": "2+ years of professional React experience",
+      "kind": "must",
+      "matched_skill": "React"
+    },
+    {
+      "text": "Strong TypeScript",
+      "kind": "must",
+      "matched_skill": "TypeScript"
+    },
+    {
+      "text": "Experience writing accessible, responsive CSS",
+      "kind": "must"
+    },
+    {
+      "text": "Experience testing UIs with Jest or Testing Library",
+      "kind": "must"
+    },
+    {
+      "text": "Next.js",
+      "kind": "nice"
+    },
+    {
+      "text": "Design-system work",
+      "kind": "nice"
+    }
+  ],
+  "years_required": 2,
+  "seniority": "unspecified",
+  "domains": [
+    "retail",
+    "e-commerce"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

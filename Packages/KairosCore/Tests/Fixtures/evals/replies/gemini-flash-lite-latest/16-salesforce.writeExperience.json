@@ -1,0 +1,26 @@
+{
+  "entries": [
+    {
+      "id": "e1",
+      "bullets": [
+        {
+          "text": "Mentored 3 junior developers and ran the weekly on-call review.",
+          "source_ids": [
+            "b1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e2",
+      "bullets": [
+        {
+          "text": "Built React and TypeScript dashboards used by 120 analysts.",
+          "source_ids": [
+            "b6"
+          ]
+        }
+      ]
+    }
+  ]
+}

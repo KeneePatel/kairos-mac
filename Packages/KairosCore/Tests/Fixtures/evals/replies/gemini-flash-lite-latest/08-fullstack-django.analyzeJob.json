@@ -1,0 +1,48 @@
+{
+  "requirements": [
+    {
+      "text": "3+ years with Python",
+      "kind": "must",
+      "matched_skill": "Python"
+    },
+    {
+      "text": "Django",
+      "kind": "must"
+    },
+    {
+      "text": "React",
+      "kind": "must",
+      "matched_skill": "React"
+    },
+    {
+      "text": "PostgreSQL",
+      "kind": "must",
+      "matched_skill": "PostgreSQL"
+    },
+    {
+      "text": "Docker",
+      "kind": "must",
+      "matched_skill": "Docker"
+    },
+    {
+      "text": "Celery",
+      "kind": "nice"
+    },
+    {
+      "text": "Experience with payments",
+      "kind": "nice"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "bookkeeping",
+    "payments"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

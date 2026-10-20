@@ -1,0 +1,41 @@
+{
+  "requirements": [
+    {
+      "text": "3+ years building iOS apps in Swift",
+      "kind": "must",
+      "matched_skill": "Swift"
+    },
+    {
+      "text": "SwiftUI",
+      "kind": "must",
+      "matched_skill": "SwiftUI"
+    },
+    {
+      "text": "Experience shipping apps to the App Store",
+      "kind": "must"
+    },
+    {
+      "text": "Professional proficiency in French and English",
+      "kind": "must"
+    },
+    {
+      "text": "Core Data or SQLite",
+      "kind": "nice"
+    },
+    {
+      "text": "HealthKit",
+      "kind": "nice"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "healthcare"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "required",
+    "remote_scope": "unknown"
+  }
+}

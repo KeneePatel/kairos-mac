@@ -74,6 +74,21 @@
                     )
                     .frame(width: 420, height: 980),
                     to: folder.appending(path: "job-explanation-\(name).png"), appearance: appearance)
+                // S14: a resume without a phone or LinkedIn keeps Build blocked, and says why.
+                var unfinished = resume.resume
+                unfinished.header.phone = ""
+                unfinished.header.linkedInURL = ""
+                let readiness = Validator.readiness(unfinished, now: YearMonth.containing(Date()))
+                render(
+                    JobExplanationView(
+                        job: today.selected, source: today.model.sources.first,
+                        record: today.model.screening(for: today.selected), analysis: today.analysis,
+                        score: today.model.matchScore(for: today.selected), build: {}, coverLetter: .constant(false),
+                        buildBlocked:
+                            "Finish your master resume first: \(readiness.missing.map(\.message).joined(separator: " "))"
+                    )
+                    .frame(width: 420, height: 1_040),
+                    to: folder.appending(path: "job-blocked-\(name).png"), appearance: appearance)
                 render(
                     SearchPreferencesView().environment(today.model).frame(width: 820, height: 1_500)
                         .background(Color(.surface)),

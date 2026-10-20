@@ -1,0 +1,47 @@
+{
+  "requirements": [
+    {
+      "text": "Python",
+      "kind": "must",
+      "matched_skill": "Python"
+    },
+    {
+      "text": "FastAPI or Django",
+      "kind": "must"
+    },
+    {
+      "text": "PostgreSQL",
+      "kind": "must",
+      "matched_skill": "PostgreSQL"
+    },
+    {
+      "text": "Experience with HIPAA or similar compliance",
+      "kind": "must"
+    },
+    {
+      "text": "Must be authorized to work in the U.S. without sponsorship",
+      "kind": "must"
+    },
+    {
+      "text": "AWS",
+      "kind": "nice",
+      "matched_skill": "AWS"
+    },
+    {
+      "text": "Terraform",
+      "kind": "nice",
+      "matched_skill": "Terraform"
+    }
+  ],
+  "years_required": 4,
+  "seniority": "unspecified",
+  "domains": [
+    "healthcare"
+  ],
+  "flags": {
+    "sponsorship": "not_offered",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

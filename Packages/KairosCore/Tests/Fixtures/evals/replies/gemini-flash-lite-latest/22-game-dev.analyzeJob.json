@@ -1,0 +1,36 @@
+{
+  "requirements": [
+    {
+      "text": "3+ years of C# in Unity",
+      "kind": "must"
+    },
+    {
+      "text": "Shipped at least one mobile game",
+      "kind": "must"
+    },
+    {
+      "text": "Strong math for gameplay",
+      "kind": "must"
+    },
+    {
+      "text": "French is required",
+      "kind": "must"
+    },
+    {
+      "text": "Shader programming",
+      "kind": "nice"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "gaming",
+    "mobile"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "required",
+    "remote_scope": "unknown"
+  }
+}

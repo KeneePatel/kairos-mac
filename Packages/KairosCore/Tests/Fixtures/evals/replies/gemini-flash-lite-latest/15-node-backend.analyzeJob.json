@@ -1,0 +1,46 @@
+{
+  "requirements": [
+    {
+      "text": "3+ years of Node.js",
+      "kind": "must"
+    },
+    {
+      "text": "TypeScript",
+      "kind": "must",
+      "matched_skill": "TypeScript"
+    },
+    {
+      "text": "MongoDB or PostgreSQL",
+      "kind": "must",
+      "matched_skill": "PostgreSQL"
+    },
+    {
+      "text": "AWS",
+      "kind": "must",
+      "matched_skill": "AWS"
+    },
+    {
+      "text": "Authorized to work in the US",
+      "kind": "must"
+    },
+    {
+      "text": "GraphQL",
+      "kind": "nice"
+    },
+    {
+      "text": "Redis",
+      "kind": "nice"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "education"
+  ],
+  "flags": {
+    "sponsorship": "not_offered",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "remote_country"
+  }
+}

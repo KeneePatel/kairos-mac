@@ -1,0 +1,40 @@
+{
+  "requirements": [
+    {
+      "text": "2+ years in technical support",
+      "kind": "must"
+    },
+    {
+      "text": "SQL for investigating data",
+      "kind": "must",
+      "matched_skill": "SQL"
+    },
+    {
+      "text": "Reading logs and debugging web apps",
+      "kind": "must"
+    },
+    {
+      "text": "Bilingual in English and French",
+      "kind": "must"
+    },
+    {
+      "text": "Zendesk",
+      "kind": "nice"
+    },
+    {
+      "text": "Accounting knowledge",
+      "kind": "nice"
+    }
+  ],
+  "years_required": 2,
+  "seniority": "unspecified",
+  "domains": [
+    "accounting"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "required",
+    "remote_scope": "unknown"
+  }
+}

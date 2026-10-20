@@ -1,0 +1,46 @@
+{
+  "requirements": [
+    {
+      "text": "MS or PhD in computer science, statistics or a related field, or equivalent experience",
+      "kind": "must"
+    },
+    {
+      "text": "Python",
+      "kind": "must",
+      "matched_skill": "Python"
+    },
+    {
+      "text": "PyTorch or TensorFlow",
+      "kind": "must"
+    },
+    {
+      "text": "Experience deploying models to production",
+      "kind": "must"
+    },
+    {
+      "text": "Must be authorized to work in the United States",
+      "kind": "must"
+    },
+    {
+      "text": "MLflow",
+      "kind": "nice"
+    },
+    {
+      "text": "Kubernetes",
+      "kind": "nice",
+      "matched_skill": "Kubernetes"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "Machine Learning",
+    "Education"
+  ],
+  "flags": {
+    "sponsorship": "not_offered",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "remote_country"
+  }
+}

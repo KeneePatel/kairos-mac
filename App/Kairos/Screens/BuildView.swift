@@ -73,8 +73,14 @@ struct BuildsView: View {
         guard let build else { return "" }
         switch build.status {
         case .done:
+            // How long it took, from queued to saved: S8's measure, so a week of builds can be judged.
+            let took = build.finishedAt.map {
+                " · took "
+                    + Duration.seconds($0.timeIntervalSince(build.createdAt).rounded())
+                    .formatted(.units(allowed: [.minutes, .seconds], width: .abbreviated))
+            }
             return "Resume build · finished \(build.finishedAt?.formatted(date: .omitted, time: .shortened) ?? "")"
-                + (build.mode == .lite ? " · lite" : "")
+                + (took ?? "") + (build.mode == .lite ? " · lite" : build.mode == .stretch ? " · stretch" : "")
         case .running, .queued:
             return "Building · \(model.buildSteps[build.id].map(Self.describe) ?? "waiting for a free worker")"
         case .failed:

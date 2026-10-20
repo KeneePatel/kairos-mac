@@ -27,6 +27,15 @@ A prediction matches a label when they share a technology (`Synonyms.json`) or m
 of one appear in the other. Labels include conditions such as work authorization and French, since
 `analyzeJob` reports those as must-haves too.
 
+## Recorded replies
+
+Each run also saves every reply under
+`Packages/KairosCore/Tests/Fixtures/evals/replies/<model>/` (`<posting>.analyzeJob.json`,
+`<posting>.writeExperience.json`). `RecordedEvalTests` scores them again offline on every test run,
+so a change to the verifier or the matcher is checked against real output without a call, and the
+30 recorded jobs are success criterion S9's strict suite. The selection date is fixed, so replies
+stay valid.
+
 ## Reports
 
 `<date>-<model>.json` holds the three numbers, whether they meet the thresholds, and for each

@@ -1,0 +1,38 @@
+{
+  "requirements": [
+    {
+      "text": "3+ years of systems programming in Rust or C++",
+      "kind": "must",
+      "matched_skill": "Rust"
+    },
+    {
+      "text": "Linux",
+      "kind": "must"
+    },
+    {
+      "text": "Experience with networking protocols",
+      "kind": "must"
+    },
+    {
+      "text": "ROS",
+      "kind": "nice"
+    },
+    {
+      "text": "Embedded experience",
+      "kind": "nice"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "robotics",
+    "warehouse",
+    "systems programming"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

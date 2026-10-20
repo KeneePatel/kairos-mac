@@ -536,14 +536,14 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - **Live on Flash-Lite** (`scripts/live-llm.sh coverLetterOnGemini`): repaired once, 2 calls, 2.7 s. Grounded: every number and technology is in the sample resume. Weak spot for a later prompt version: the tone is stock ("I am writing to express my interest…", "secondary technologies highlighted in your posting").
     - **Visual differences:** no mockup draws a cover letter. Undrawn, decided here: the Resume / Cover letter switch is a segmented picker above the PDF, the toolbar toggle and Today's checkbox use system controls, and the letter's step reuses the step rows. In a narrow inspector, Today's actions now wrap to two rows (build and its checkbox, then Open posting and Not for me) instead of truncating. The right column keeps tracing resume lines while the letter is shown.
 
-- [ ] **T39 · Prompt privacy tests and eval harness** (M) · deps: T38
+- [x] **T39 · Prompt privacy tests and eval harness** (M) · deps: T38
   - **Acceptance:**
     - [x] `PromptPrivacyTests` renders every task's prompt for a fixture user and fails if any contact value or private setting appears.
     - [x] `PromptEvals` (opt-in live) has 30 labelled postings and reports must-have precision and recall and the first-write verifier pass rate to `evals/<date>-<model>.json`.
-    - [ ] The first baseline report is committed and meets the `CONSTRAINTS.md` thresholds, or the gap is raised with you. *Waiting on your go-ahead for the live run (about 60 Flash-Lite calls).*
+    - [x] The first baseline report is committed and meets the `CONSTRAINTS.md` thresholds, or the gap is raised with you.
   - **Verify:** `core-test PromptPrivacyTests`; `KAIROS_LIVE_LLM=1 core-test PromptEvals`
   - **Files:** `Tests/LLMTests/PromptPrivacyTests.swift`, `Tests/LLMTests/PromptEvals.swift`, `Tests/Fixtures/evals/`, `evals/README.md`
-  - **Progress 2026-10-20:** 7 new tests (privacy 4, eval fixtures 2, the redaction wrapper through the privacy suite) plus the opt-in eval. LLMTests now also depend on Store, MasterResume, Screening and Tailoring, so one target reaches every task.
+  - **Done 2026-10-20:** 7 new tests (privacy 4, eval fixtures 2, the recorded eval 1) plus the opt-in live eval. LLMTests now also depend on Store, MasterResume, Screening and Tailoring, so one target reaches every task.
     - **Privacy test:** a fixture user, Avery Quill, has every contact field filled in. Their contact details also appear where people write them anyway: a bullet linking their GitHub, a business named after them, and a resume whose top line reads "Canadian citizen · Secret clearance · Will need sponsorship". Avery's private settings say citizen in Canada, needs sponsorship in the US, and has clearance.
       - **What it checks:** the import tasks and `analyzeJob` are rendered directly. Every build task is checked as a whole Stretch build with a letter sends it, through the fake provider, with unusable replies so each writer also falls back and the rewrite pass runs.
       - **Pass conditions:** no message of any task may contain a contact value in any common format; no data message may contain a private setting; every task with a prompt must be checked (`triage` and `select` have none yet).
@@ -556,10 +556,27 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
       - **Scoring:** a prediction matches a label by a shared technology or most of the words either way.
       - **Report:** `evals/<date>-<model>.json` has the totals, the thresholds, and each posting's wrong must-haves, missed labels and verifier findings. The test fails below 0.85 precision, 0.80 recall or 95% first-write passes.
       - **Models:** Flash-Lite by default for both tasks (`KAIROS_EVAL_MODEL`, `KAIROS_EVAL_WRITER_MODEL`), so Flash's 20-a-day free allowance isn't spent. `evals/README.md` explains running and reading it.
+      - **Recorded replies:** every run saves its 60 replies under `Tests/Fixtures/evals/replies/<model>/`. `RecordedEvalTests` scores them again offline on every test run, with the selection date fixed so they stay valid: the recorded run must still meet the thresholds and every bullet must still pass.
+    - **Baseline** (`evals/2026-10-20-gemini-flash-lite-latest.json`, Flash-Lite for both tasks, ~15 minutes, paced by the free tier's per-minute limit): must-have precision 100%, recall 100%, first-write pass rate 100% over 141 bullets. An earlier run the same day scored 99.2% recall (it dropped "Mentoring engineers"), so expect a point of noise. Raised with you:
+      - **The postings are tidy.** Each has a "Requirements" heading, and the model copies those lines nearly word for word. Real postings bury requirements in prose; Checkpoint D's real run is the better test of extraction.
+      - **Flash-Lite barely tailors.** I read all 141 bullets against their sources: none claims anything its source doesn't (S9 strict holds), but 129 are the source word for word. On Flash-Lite, Full mode is close to Lite, and the pass rate is high partly because copying can't fail. The writers' default is Flash, which this baseline didn't use.
 
 ### Checkpoint E: R1 exit
-- [ ] Stories 4, 5 and 8 pass; success criteria S8, S9, S14 and S15 (privacy half) pass
+- [x] Stories 4, 5 and 8 pass; success criteria S8, S9, S14 and S15 (privacy half) pass (checked 2026-10-20, evidence below)
+  - **Story 4, explained verdicts:** Today's explanation shows each requirement covered or missing with the skill that matched, the authorization, clearance and French flags, the deciding rule or score and who decided, and an overrule menu (T29–T31; ScreeningTests, snapshots).
+  - **Story 5, one-click resume:** Build resume gives a PDF within the page budget, plus an optional cover letter (T35–T38). A live Flash-Lite build took 3.5 s; a live letter 2.7 s.
+  - **Story 8, one master resume:** import from your resume, GitHub projects, required contact fields, editing any time; every build and letter draws only from it (T16–T24; Checkpoint C with your real resume).
+  - **S8:**
+    - Typst renders a resume or a letter in 9–11 ms (target 1 s).
+    - Page fitting keeps the page budget (BuildLoopTests).
+    - The build median over real use comes from your week: each build's subtitle now shows how long it took. Model latency is 1–3 s a call; the free tier's per-minute limit is what stretches a build, to roughly 30 s for about 8 calls.
+  - **S9:**
+    - Strict: 0 unsupported claims across 30 jobs: `RecordedEvalTests` (141 real bullets, all read against their sources) plus `VerifierSuite`'s hand-written cases.
+    - Stretch: `VerifierSuite`'s stretch job lets no hard limit through and flags every gap bullet.
+  - **S14:** Build stays blocked until your resume is ready, with the missing fields now written under the button, not only in its tooltip (MasterResumeTests, `BuildQueueTests.aBuildNeedsAnAnalysisAndAReadyResume`, snapshot `job-blocked`). The SPEC's "UI test" is a snapshot, since the project has no UI test target.
+  - **S15, privacy half:** `PromptPrivacyTests`. The calls half (≥ 98% valid over a week) comes from your week's `llm_call` outcomes.
 - [ ] You review a week of sample builds; Phase 2 tasks refined together
+  - **Worth knowing first:** on the free tier, Flash allows only 20 calls a day and a Full build uses 6–12, so the writers' default (Flash) allows two or three builds a day. Pick Flash-Lite for the writers in Settings, AI providers, or add more keys, for the review week. Builds on Flash-Lite will mostly copy your bullets (see T39's baseline).
 
 ---
 

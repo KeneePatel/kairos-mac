@@ -37,6 +37,12 @@ struct JobExplanationView: View {
                     }
                 }
                 actions
+                if let buildBlocked {
+                    // S14: what's missing, in view, not only in the button's tooltip.
+                    Label(buildBlocked, systemImage: "lock")
+                        .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if let description = job.descriptionMarkdown {
                     Divider()
                     DisclosureGroup("Posting") { MarkdownView(description).padding(.top, Spacing.space2) }

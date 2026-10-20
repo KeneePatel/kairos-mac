@@ -1,0 +1,32 @@
+{
+  "entries": [
+    {
+      "id": "e1",
+      "bullets": [
+        {
+          "text": "Added Kafka event streaming between billing and shipping, retiring 4 nightly batch jobs.",
+          "source_ids": [
+            "b2"
+          ]
+        },
+        {
+          "text": "Moved 9 services to Kubernetes on AWS with Terraform, cutting deploy time from 30 to 8 minutes.",
+          "source_ids": [
+            "b3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e2",
+      "bullets": [
+        {
+          "text": "Tuned SQL reports, cutting the slowest from 6 minutes to 40 seconds.",
+          "source_ids": [
+            "b5"
+          ]
+        }
+      ]
+    }
+  ]
+}

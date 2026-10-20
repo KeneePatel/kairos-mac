@@ -1,0 +1,42 @@
+{
+  "requirements": [
+    {
+      "text": "2+ years of analytics engineering",
+      "kind": "must"
+    },
+    {
+      "text": "dbt",
+      "kind": "must"
+    },
+    {
+      "text": "SQL",
+      "kind": "must",
+      "matched_skill": "SQL"
+    },
+    {
+      "text": "Snowflake",
+      "kind": "must",
+      "matched_skill": "Snowflake"
+    },
+    {
+      "text": "Looker",
+      "kind": "nice"
+    },
+    {
+      "text": "Healthcare data (HL7, FHIR)",
+      "kind": "nice"
+    }
+  ],
+  "years_required": 2,
+  "seniority": "unspecified",
+  "domains": [
+    "healthcare",
+    "analytics"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

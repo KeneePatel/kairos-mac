@@ -1,0 +1,37 @@
+{
+  "requirements": [
+    {
+      "text": "Up to 2 years of Python experience",
+      "kind": "must",
+      "matched_skill": "Python"
+    },
+    {
+      "text": "Git",
+      "kind": "must"
+    },
+    {
+      "text": "Basic SQL",
+      "kind": "must",
+      "matched_skill": "SQL"
+    },
+    {
+      "text": "Clear written communication",
+      "kind": "must"
+    },
+    {
+      "text": "FastAPI or Flask",
+      "kind": "nice"
+    }
+  ],
+  "years_required": 2,
+  "seniority": "junior",
+  "domains": [
+    "analytics"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "remote_country"
+  }
+}

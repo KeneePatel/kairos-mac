@@ -1,0 +1,41 @@
+{
+  "requirements": [
+    {
+      "text": "Master's degree in statistics, math or a related field",
+      "kind": "must"
+    },
+    {
+      "text": "3+ years of Python",
+      "kind": "must",
+      "matched_skill": "Python"
+    },
+    {
+      "text": "Experience with scikit-learn",
+      "kind": "must"
+    },
+    {
+      "text": "SQL",
+      "kind": "must",
+      "matched_skill": "SQL"
+    },
+    {
+      "text": "Actuarial background",
+      "kind": "nice"
+    },
+    {
+      "text": "Spark",
+      "kind": "nice"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "insurance"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}
