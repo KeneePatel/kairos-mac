@@ -71,7 +71,9 @@ struct ClassicTemplateTests {
         ResumeRenderer(runner: TypstRunner(executable: try #require(TypstBinary.url)))
     }
 
-    /// The golden file lists the resume's lines in reading order; each must appear, in order.
+    /// The golden file lists the resume's lines in reading order; each must appear, in order. Lines
+    /// marked "~" (the right-aligned dates) only need to be there: PDFKit on macOS 26 reads them after
+    /// the lines beside them, while macOS 27 reads them in place.
     @Test func theSampleResumeRendersOnOnePageInOrder() async throws {
         let rendered = try await renderer().render(jordan())
         #expect(rendered.pageCount == 1)
@@ -80,10 +82,12 @@ struct ClassicTemplateTests {
             contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
                 .appending(path: "Fixtures/render/classic-golden.txt"), encoding: .utf8)
         var cursor = text.startIndex
-        for line in golden.split(separator: "\n").map({ normalized(String($0)) }) {
-            let found = text.range(of: line, range: cursor..<text.endIndex)
+        for raw in golden.split(separator: "\n").map(String.init) {
+            let anywhere = raw.hasPrefix("~ ")
+            let line = normalized(anywhere ? String(raw.dropFirst(2)) : raw)
+            let found = anywhere ? text.range(of: line) : text.range(of: line, range: cursor..<text.endIndex)
             #expect(found != nil, "“\(line)” is missing or out of order")
-            if let found { cursor = found.upperBound }
+            if let found, !anywhere { cursor = found.upperBound }
         }
     }
 
