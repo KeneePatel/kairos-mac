@@ -227,6 +227,15 @@
                     case .step(_, let step): say("step \(step)")
                     case .finished(_, let score, _):
                         say("finished, score \(score)")
+                        // The dates Harvard prints, by section: no names or contact details.
+                        if let content = try await BuildRepository(db).build(id)?.content {
+                            for section in ResumeDocument(content, for: .standard).sections where !section.items.isEmpty
+                            {
+                                say(
+                                    "dates, \(section.title): \(section.items.map { $0.dates ?? "none" }.joined(separator: "; "))"
+                                )
+                            }
+                        }
                         watchdog.cancel()
                         return
                     case .failed(_, let message):

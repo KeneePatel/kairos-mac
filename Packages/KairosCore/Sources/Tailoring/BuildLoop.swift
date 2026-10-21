@@ -322,12 +322,13 @@ public struct BuildLoop: Sendable {
                 return TailoredResume.Entry(
                     entryID: chosen.entry.id, title: role.title, organization: role.employer,
                     location: role.location.isEmpty ? nil : role.location, dates: DisplayDates.range(chosen.entry),
-                    bullets: tailored)
+                    period: TailoredResume.Period(chosen.entry), bullets: tailored)
             case .project(let project):
                 return TailoredResume.Entry(
                     entryID: chosen.entry.id, title: project.name,
                     organization: project.tech.isEmpty ? nil : project.tech.joined(separator: ", "),
-                    dates: DisplayDates.range(chosen.entry), bullets: tailored)
+                    dates: DisplayDates.range(chosen.entry), period: TailoredResume.Period(chosen.entry),
+                    bullets: tailored)
             default:
                 return nil
             }
@@ -358,7 +359,7 @@ public struct BuildLoop: Sendable {
                 entryID: entry.id, title: title.isEmpty ? school.institution : title,
                 organization: title.isEmpty ? nil : school.institution,
                 location: school.location.isEmpty ? nil : school.location,
-                dates: DisplayDates.range(entry, monthNames: false))
+                dates: DisplayDates.range(entry, monthNames: false), period: TailoredResume.Period(entry))
         }
     }
 
@@ -366,7 +367,8 @@ public struct BuildLoop: Sendable {
         master.entries(.certification).compactMap { entry in
             guard case .certification(let certificate) = entry.fields else { return nil }
             return TailoredResume.Entry(
-                entryID: entry.id, title: certificate.name, dates: entry.start.map { "\($0.year)" })
+                entryID: entry.id, title: certificate.name, dates: entry.start.map { "\($0.year)" },
+                period: TailoredResume.Period(entry))
         }
     }
 

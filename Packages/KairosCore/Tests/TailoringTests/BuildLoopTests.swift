@@ -130,6 +130,26 @@ struct BuildLoopTests {
         #expect(outcome.resume.experience.flatMap(\.bullets).count == 7)
     }
 
+    /// Each entry carries its dates as numbers as well as text, so a template can write them its own
+    /// way: Harvard spells the months out on both ends, which parsers read exactly.
+    @Test func everyEntryCarriesItsDatesAsNumbers() async throws {
+        let (loop, _) = try loop([
+            .writeExperience: [.reply(goodExperience)], .writeProjects: [.reply(projects)],
+            .writeSummary: [.reply(summary)], .writeSkills: [.reply(skills)],
+        ])
+        let resume = try await loop.run(request).resume
+        typealias Month = TailoredResume.Period.Month
+        #expect(resume.experience[0].period == .init(start: Month(year: 2022, month: 3), isCurrent: true))
+        #expect(
+            resume.experience[1].period == .init(start: Month(year: 2020, month: 6), end: Month(year: 2022, month: 2)))
+        #expect(resume.projects.first?.period == .init(start: Month(year: 2023, month: 1), isCurrent: true))
+        #expect(
+            resume.education.first?.period
+                == .init(start: Month(year: 2015, month: 9), end: Month(year: 2019, month: 4)))
+        #expect(resume.education.first?.dates == "2015 – 2019")  // the text stays as it was
+        #expect(resume.certifications.first?.period == nil)  // no date, no period
+    }
+
     /// A template without a summary (Harvard's): no call is spent on one, and the score doesn't
     /// count words the PDF won't show.
     @Test func aBuildWithoutASummaryWritesNone() async throws {

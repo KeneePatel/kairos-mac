@@ -27,6 +27,40 @@ public struct TailoredResume: Codable, Sendable, Equatable {
         }
     }
 
+    /// When an entry ran, as numbers, so a template can write the dates its own way (Harvard spells
+    /// the months out on both ends). `Entry.dates` stays the text Classic prints.
+    public struct Period: Codable, Sendable, Equatable {
+        public struct Month: Codable, Sendable, Equatable {
+            public var year: Int
+            /// 1 to 12.
+            public var month: Int
+
+            public init(year: Int, month: Int) {
+                self.year = year
+                self.month = month
+            }
+        }
+
+        public var start: Month?
+        public var end: Month?
+        /// Still going: no end.
+        public var isCurrent: Bool
+
+        public init(start: Month? = nil, end: Month? = nil, isCurrent: Bool = false) {
+            self.start = start
+            self.end = end
+            self.isCurrent = isCurrent
+        }
+
+        /// From a master-resume entry; nil when it has no dates.
+        init?(_ entry: ResumeEntry) {
+            func month(_ value: YearMonth?) -> Month? { value.map { Month(year: $0.year, month: $0.month) } }
+            guard entry.start != nil || entry.end != nil || entry.isCurrent else { return nil }
+            self.init(
+                start: month(entry.start), end: entry.isCurrent ? nil : month(entry.end), isCurrent: entry.isCurrent)
+        }
+    }
+
     /// A role, project, degree or certification as the build shows it.
     public struct Entry: Codable, Sendable, Equatable {
         public var entryID: UUID
@@ -34,17 +68,20 @@ public struct TailoredResume: Codable, Sendable, Equatable {
         public var organization: String?
         public var location: String?
         public var dates: String?
+        /// The same dates as numbers; nil in builds from before it was kept.
+        public var period: Period?
         public var bullets: [TailoredBullet]
 
         public init(
             entryID: UUID, title: String, organization: String? = nil, location: String? = nil,
-            dates: String? = nil, bullets: [TailoredBullet] = []
+            dates: String? = nil, period: Period? = nil, bullets: [TailoredBullet] = []
         ) {
             self.entryID = entryID
             self.title = title
             self.organization = organization
             self.location = location
             self.dates = dates
+            self.period = period
             self.bullets = bullets
         }
     }

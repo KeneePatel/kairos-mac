@@ -692,6 +692,24 @@ Your decisions:
   - **Design:** `ResumeDocument(_:for:)` makes Harvard's choices in Swift (tested without typst), and documents carry their template. `BuildQueue(template:)` defaults to Classic, which its existing tests cover unchanged; the app passes `.standard`.
   - **Tests:** one size throughout; margins equal and at least ¾ in; the Times-style font only; the reading order; the plain contact line keeping its links; Harvard's arrangement and dates; no summary call in a Harvard build.
   - **Cover letter:** the same font and contact line. The name stays as typed, in bold, because Harvard's letter template sets no letterhead. Harvard's own letter template greets with a colon ("Dear …:"), but the greeting is unchanged, since your request was about the resume.
+- [x] **P5c · Dates both Harvard-like and exact for parsers** (S), from your question about education showing only a year (2026-10-21)
+  - **Findings:**
+    - Textkernel (formerly Sovren), the parser behind many ATS, stores dates as full dates: "if the day and/or month could not be found, they will be 01". So "2025" became 1 January 2025, seven months off for your master's.
+    - Workday-style forms have Education "From" and "To" fields, which an employer may require. With a year alone, "From" stays empty and "To" may show January.
+    - "2025" alone wasn't Harvard's doing. Kairos has printed education as years since T35, and Harvard's own sample prints "May 2027".
+    - P5b's shortened same-year range ("May – August 2025") left the start without a year. A parser may misread that and miscount months of experience.
+  - **Done:**
+    - Every build entry keeps its dates as numbers (`TailoredResume.Period`) next to the text. The Harvard layout writes them out with a year on every month: "January 2024 – August 2025", "September 2024 – Present", "March 2024".
+    - Same-year ranges are no longer shortened.
+    - Older builds, which have only text, get their months spelled out, and a year alone stays a year.
+    - Classic and its tests are unchanged: the text is the same as before.
+  - **Checked on a copy of your database:**
+    - Education: "January 2024 – August 2025; April 2019 – April 2023".
+    - Experience: "May 2025 – August 2025; March 2024 – December 2024; December 2022 – May 2023".
+  - **Found in your data, not changed:**
+    - The project chosen for that build reads "October 2026 – Present". Projects imported from GitHub take the repository's creation date, so a project you pushed this month looks brand new.
+    - One certification reads "October 2026". It may be real, or the editor's default, since picking a month with no year fills in this year.
+    - Both are in Master resume, under each entry's dates.
 
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 

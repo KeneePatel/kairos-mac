@@ -59,21 +59,22 @@ extension ResumeDocument {
     ///   examples, 2026), then Experience, Projects and Certifications. Spoken languages are a
     ///   "Language" row under Skills, as in Harvard's "Skills & Interests".
     /// - No summary: neither Harvard template nor any of its samples has one.
-    /// - Months spelled out ("Don't abbreviate"), a range within one year written once
-    ///   ("May – August 2025"), and a degree shown by when it was finished.
+    /// - Every date as month and year, spelled out ("Don't abbreviate"), with the year on both ends
+    ///   of a range, education included: "January 2024 – August 2025". A parser reads that exactly;
+    ///   a year alone it stores as 1 January (polish P5c).
     /// - The contact line in the order of its master's samples: place, phone, email, then links.
     static func harvard(_ resume: TailoredResume) -> ResumeDocument {
-        func item(_ entry: TailoredResume.Entry, graduation: Bool = false) -> Item {
+        func item(_ entry: TailoredResume.Entry) -> Item {
             Item(
                 title: entry.title, subtitle: entry.organization, location: entry.location,
-                dates: entry.dates.map { graduation ? HarvardDates.graduation($0) : HarvardDates.spelledOut($0) },
+                dates: entry.period.flatMap(HarvardDates.text) ?? entry.dates.map(HarvardDates.spelledOut),
                 bullets: entry.bullets.map(\.text))
         }
         var sections: [Section] = []
         if !resume.education.isEmpty {
             sections.append(
                 Section(
-                    kind: .education, title: "Education", items: resume.education.map { item($0, graduation: true) }))
+                    kind: .education, title: "Education", items: resume.education.map { item($0) }))
         }
         var groups = resume.skills.map { Group(label: $0.label, items: $0.skills) }
         if let languages = resume.languages, !languages.isEmpty {
@@ -108,31 +109,37 @@ extension ResumeDocument.ContactItem {
     }
 }
 
-/// Dates as Harvard writes them.
+/// Dates as Harvard writes them: months in full, and a year on every month.
 enum HarvardDates {
-    private static let months = [
+    private static let names = [
+        "January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+        "November", "December",
+    ]
+    private static let abbreviations = [
         "Jan": "January", "Feb": "February", "Mar": "March", "Apr": "April", "Jun": "June", "Jul": "July",
         "Aug": "August", "Sep": "September", "Sept": "September", "Oct": "October", "Nov": "November",
         "Dec": "December",
     ]
 
-    /// "Mar 2022 – Present" → "March 2022 – Present"; "May 2025 – Aug 2025" → "May – August 2025".
-    static func spelledOut(_ dates: String) -> String {
-        let words = dates.split(separator: " ", omittingEmptySubsequences: false).map { word in
-            months[String(word).trimmingCharacters(in: CharacterSet(charactersIn: "."))] ?? String(word)
+    /// "January 2024 – August 2025", "September 2024 – Present", or one date when there's one.
+    static func text(_ period: TailoredResume.Period) -> String? {
+        func month(_ value: TailoredResume.Period.Month) -> String {
+            names.indices.contains(value.month - 1) ? "\(names[value.month - 1]) \(value.year)" : "\(value.year)"
         }
-        // "Month Year – Month Year" in one year: the year once, at the end.
-        if words.count == 5, words[2] == "–", words[1] == words[4], Int(words[1]) != nil {
-            return "\(words[0]) – \(words[3]) \(words[4])"
+        let start = period.start.map(month)
+        let end = period.isCurrent ? "Present" : period.end.map(month)
+        switch (start, end) {
+        case (let start?, let end?): return start == end ? start : "\(start) – \(end)"
+        case (let only?, nil), (nil, let only?): return only
+        case (nil, nil): return nil
         }
-        return words.joined(separator: " ")
     }
 
-    /// A finished degree by when it ended ("2015 – 2019" → "2019"); one still under way keeps its range.
-    static func graduation(_ dates: String) -> String {
-        let spelled = spelledOut(dates)
-        guard let end = spelled.components(separatedBy: " – ").last, end != "Present", spelled.contains(" – ")
-        else { return spelled }
-        return end
+    /// Stored text from a build made before dates were kept as numbers: "Mar 2022 – Present" →
+    /// "March 2022 – Present". Years stay as they are; there's no month to add.
+    static func spelledOut(_ dates: String) -> String {
+        dates.split(separator: " ", omittingEmptySubsequences: false).map { word in
+            abbreviations[String(word).trimmingCharacters(in: CharacterSet(charactersIn: "."))] ?? String(word)
+        }.joined(separator: " ")
     }
 }

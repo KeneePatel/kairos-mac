@@ -7,7 +7,7 @@ EDUCATION
 University of Waterloo
 ~ Waterloo, ON
 BMath, Computer Science
-~ 2019
+~ September 2015 – April 2019
 SKILLS
 Languages:
 Go, Java, Python, SQL
@@ -27,8 +27,8 @@ Junior Developer
 Shipped REST APIs in Django and PostgreSQL for 30+ client projects.
 PROJECTS
 Dockyard
-~ 2023 – Present
+~ May 2023 – Present
 Finds and removes dangling Docker images and volumes; 400+ stars.
 CERTIFICATIONS
 AWS Solutions Architect – Associate
-~ 2024
+~ March 2024

@@ -13,8 +13,11 @@ private func normalized(_ text: String) -> String {
 
 private func bullet(_ text: String) -> TailoredBullet { TailoredBullet(text: text, sourceIDs: [UUID()]) }
 
+private func month(_ year: Int, _ month: Int) -> TailoredResume.Period.Month { .init(year: year, month: month) }
+
 /// The design's sample persona as a build (fixtures only), with everything Harvard rearranges: a
-/// summary, abbreviated months, a degree's range of years and spoken languages.
+/// summary, abbreviated date text (each entry's dates are also kept as numbers), a degree shown in
+/// years and spoken languages.
 func jordanBuild() -> TailoredResume {
     TailoredResume(
         header: .init(
@@ -34,26 +37,33 @@ func jordanBuild() -> TailoredResume {
             .init(
                 entryID: UUID(), title: "Software Developer, Backend", organization: "Harbourline Logistics",
                 location: "Toronto, ON", dates: "Mar 2022 – Present",
+                period: .init(start: month(2022, 3), isCurrent: true),
                 bullets: [
                     bullet("Built an event pipeline in Go handling 4.2M events a day with p99 under 120 ms."),
                     bullet("Onboarded 11 carriers in 4 days instead of 3 weeks with a gRPC integration kit."),
                 ]),
             .init(
                 entryID: UUID(), title: "Junior Developer", organization: "Rivet Studio", location: "Toronto, ON",
-                dates: "Jun 2020 – Feb 2022",
+                dates: "Jun 2020 – Feb 2022", period: .init(start: month(2020, 6), end: month(2022, 2)),
                 bullets: [bullet("Shipped REST APIs in Django and PostgreSQL for 30+ client projects.")]),
         ],
         projects: [
             .init(
-                entryID: UUID(), title: "Dockyard", organization: "Go", dates: "2023 – Present",
+                entryID: UUID(), title: "Dockyard", organization: "Go", dates: "May 2023 – Present",
+                period: .init(start: month(2023, 5), isCurrent: true),
                 bullets: [bullet("Finds and removes dangling Docker images and volumes; 400+ stars.")])
         ],
         education: [
             .init(
                 entryID: UUID(), title: "BMath, Computer Science", organization: "University of Waterloo",
-                location: "Waterloo, ON", dates: "2015 – 2019")
+                location: "Waterloo, ON", dates: "2015 – 2019",
+                period: .init(start: month(2015, 9), end: month(2019, 4)))
         ],
-        certifications: [.init(entryID: UUID(), title: "AWS Solutions Architect – Associate", dates: "2024")],
+        certifications: [
+            .init(
+                entryID: UUID(), title: "AWS Solutions Architect – Associate", dates: "2024",
+                period: .init(start: month(2024, 3)))
+        ],
         languages: "English (native), French (conversational)")
 }
 
@@ -102,25 +112,41 @@ struct HarvardArrangementTests {
             document.header.contact.map(\.text) == [
                 "Toronto, ON", "(416) 555-0123", "jordan.rivera@example.com", "linkedin.com/in/jordan-rivera",
             ])
-        #expect(document.sections[0].items[0].dates == "2019")
+        // Month and year on both ends, education included: parsers read these exactly.
+        #expect(document.sections[0].items[0].dates == "September 2015 – April 2019")
         #expect(document.sections[2].items.map(\.dates) == ["March 2022 – Present", "June 2020 – February 2022"])
+        #expect(document.sections[3].items[0].dates == "May 2023 – Present")
+        #expect(document.sections[4].items[0].dates == "March 2024")
         #expect(document.sections[2].items[0].subtitle == "Harbourline Logistics")
     }
 
-    /// Harvard: "Don't abbreviate". A range inside one year names the year once, and a degree is
-    /// shown by when it was finished.
-    @Test func datesAreWrittenTheWayHarvardWritesThem() {
+    /// Harvard: "Don't abbreviate". Every month comes with its year, so a range within one year
+    /// still names it twice: a parser stores a month it can't date, or a year alone, as January.
+    @Test func datesAreWrittenInFullWithAYearOnEveryMonth() {
+        let periods: [(TailoredResume.Period, String?)] = [
+            (.init(start: month(2025, 5), end: month(2025, 8)), "May 2025 – August 2025"),
+            (.init(start: month(2024, 1), end: month(2025, 8)), "January 2024 – August 2025"),
+            (.init(start: month(2024, 9), isCurrent: true), "September 2024 – Present"),
+            (.init(start: month(2024, 3)), "March 2024"), (.init(end: month(2025, 8)), "August 2025"),
+            (.init(start: month(2025, 8), end: month(2025, 8)), "August 2025"), (.init(), nil),
+            (.init(start: month(2025, 13)), "2025"),
+        ]
+        for (period, text) in periods { #expect(HarvardDates.text(period) == text, "\(period)") }
+    }
+
+    /// A build made before dates were kept as numbers: its text is spelled out, and a year alone
+    /// stays a year; there's no month to add.
+    @Test func anOlderBuildSpellsOutItsStoredText() {
+        var build = jordanBuild()
+        build.experience[0].period = nil
+        build.education[0].period = nil
+        let document = ResumeDocument(build, for: .harvard)
+        #expect(document.sections[2].items[0].dates == "March 2022 – Present")
+        #expect(document.sections[0].items[0].dates == "2015 – 2019")
         let spelled = [
-            ("May 2025 – Aug 2025", "May – August 2025"), ("Sep 2024 – Feb 2025", "September 2024 – February 2025"),
-            ("Mar 2022 – Present", "March 2022 – Present"), ("Sept. 2024", "September 2024"),
-            ("2023 – Present", "2023 – Present"), ("2024", "2024"),
+            ("May 2025 – Aug 2025", "May 2025 – August 2025"), ("Sept. 2024", "September 2024"), ("2024", "2024"),
         ]
-        for (dates, harvard) in spelled { #expect(HarvardDates.spelledOut(dates) == harvard, "\(dates)") }
-        let graduation = [
-            ("2015 – 2019", "2019"), ("Jan 2024 – Aug 2025", "August 2025"), ("2024 – Present", "2024 – Present"),
-            ("May 2025", "May 2025"),
-        ]
-        for (dates, harvard) in graduation { #expect(HarvardDates.graduation(dates) == harvard, "\(dates)") }
+        for (dates, text) in spelled { #expect(HarvardDates.spelledOut(dates) == text, "\(dates)") }
     }
 
     /// Classic keeps the Build mockup's arrangement, summary first.
