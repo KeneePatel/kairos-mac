@@ -453,7 +453,7 @@ New accounts start with the Gemini preset. Writing tasks use its newest Flash mo
 - `.typ` templates read `json(sys.inputs.data)`; style settings are inputs too.
 - `typst compile --root <tmp> --font-path <bundled fonts> --ignore-system-fonts --input data=resume.json template.typ out.pdf`
 - Templates are vendored, never fetched at compile time.
-- Two resume templates: **Harvard** (builds use it) follows Harvard's Mignone Center guides: Liberation Serif (Times New Roman metrics) at 11 pt throughout, equal ¾ in margins, Education then Skills first, organization before title, every date as month and year spelled out with a year on both ends of a range (education included, so parsers read it exactly), a plain contact line and no summary (a build for it doesn't write one). **Classic** (Source Serif 4, one-line entries, the Build mockup's order with a summary) stays for a later template choice. The cover letter shares Harvard's header.
+- Two resume templates: **Harvard** (builds use it) follows Harvard's Mignone Center guides: Liberation Serif (Times New Roman metrics) at 11 pt throughout, equal ¾ in margins, Education then Skills first, organization before title, every date as month and year spelled out with a year on both ends of a range (education included, so parsers read it exactly; a degree not yet finished is marked "(Expected)"), a plain contact line and no summary (a build for it doesn't write one). **Classic** (Source Serif 4, one-line entries, the Build mockup's order with a summary) stays for a later template choice. The cover letter shares Harvard's header.
 
 ### 5.7 Security and privacy
 - **No inbound network surface.** All server-side authorization lives in Supabase row-level security, never in the client.

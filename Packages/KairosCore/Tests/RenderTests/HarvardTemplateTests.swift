@@ -134,6 +134,21 @@ struct HarvardArrangementTests {
         for (period, text) in periods { #expect(HarvardDates.text(period) == text, "\(period)") }
     }
 
+    /// A degree that ends after the build's month is still under way: Harvard writes it "Expected".
+    /// The word goes after the range, so the range still reads as two dates. Jobs keep their dates.
+    @Test func aDegreeNotYetFinishedIsMarkedExpected() {
+        var build = jordanBuild()
+        build.education[0].period = .init(start: month(2024, 9), end: month(2026, 5))
+        build.experience[0].period = .init(start: month(2026, 9), end: month(2026, 12))
+        let february2026 = Date(timeIntervalSince1970: 1_770_000_000)
+        let before = ResumeDocument.harvard(build, now: february2026)
+        #expect(before.sections[0].items[0].dates == "September 2024 – May 2026 (Expected)")
+        #expect(before.sections[2].items[0].dates == "September 2026 – December 2026")  // jobs keep their dates
+        let october2026 = Date(timeIntervalSince1970: 1_792_000_000)
+        let after = ResumeDocument.harvard(build, now: october2026)
+        #expect(after.sections[0].items[0].dates == "September 2024 – May 2026")
+    }
+
     /// A build made before dates were kept as numbers: its text is spelled out, and a year alone
     /// stays a year; there's no month to add.
     @Test func anOlderBuildSpellsOutItsStoredText() {

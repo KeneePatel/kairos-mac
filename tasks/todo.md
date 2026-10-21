@@ -701,6 +701,7 @@ Your decisions:
   - **Done:**
     - Every build entry keeps its dates as numbers (`TailoredResume.Period`) next to the text. The Harvard layout writes them out with a year on every month: "January 2024 – August 2025", "September 2024 – Present", "March 2024".
     - Same-year ranges are no longer shortened.
+    - A degree whose end month is after the build is marked as Harvard writes it: "September 2024 – May 2026 (Expected)". The word goes after the range, so a parser still reads two dates. Before, it read as finished. Jobs keep their dates.
     - Older builds, which have only text, get their months spelled out, and a year alone stays a year.
     - Classic and its tests are unchanged: the text is the same as before.
   - **Checked on a copy of your database:**

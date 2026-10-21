@@ -6,7 +6,7 @@ extension ResumeDocument {
     public init(_ resume: TailoredResume, for template: ResumeTemplate) {
         switch template {
         case .classic: self.init(resume, style: template.style)
-        case .harvard: self = Self.harvard(resume)
+        case .harvard: self = Self.harvard(resume, now: Date())
         }
     }
 
@@ -61,20 +61,27 @@ extension ResumeDocument {
     /// - No summary: neither Harvard template nor any of its samples has one.
     /// - Every date as month and year, spelled out ("Don't abbreviate"), with the year on both ends
     ///   of a range, education included: "January 2024 – August 2025". A parser reads that exactly;
-    ///   a year alone it stores as 1 January (polish P5c).
+    ///   a year alone it stores as 1 January (polish P5c). A degree that ends after `now` is still
+    ///   under way, so it's marked "(Expected)", Harvard's word, after the range.
     /// - The contact line in the order of its master's samples: place, phone, email, then links.
-    static func harvard(_ resume: TailoredResume) -> ResumeDocument {
-        func item(_ entry: TailoredResume.Entry) -> Item {
-            Item(
-                title: entry.title, subtitle: entry.organization, location: entry.location,
-                dates: entry.period.flatMap(HarvardDates.text) ?? entry.dates.map(HarvardDates.spelledOut),
+    static func harvard(_ resume: TailoredResume, now: Date) -> ResumeDocument {
+        let today = Calendar(identifier: .gregorian).dateComponents([.year, .month], from: now)
+        func item(_ entry: TailoredResume.Entry, degree: Bool = false) -> Item {
+            var dates = entry.period.flatMap(HarvardDates.text) ?? entry.dates.map(HarvardDates.spelledOut)
+            if degree, let end = entry.period?.end, let year = today.year, let month = today.month,
+                (end.year, end.month) > (year, month), let text = dates
+            {
+                dates = text + " (Expected)"
+            }
+            return Item(
+                title: entry.title, subtitle: entry.organization, location: entry.location, dates: dates,
                 bullets: entry.bullets.map(\.text))
         }
         var sections: [Section] = []
         if !resume.education.isEmpty {
             sections.append(
                 Section(
-                    kind: .education, title: "Education", items: resume.education.map { item($0) }))
+                    kind: .education, title: "Education", items: resume.education.map { item($0, degree: true) }))
         }
         var groups = resume.skills.map { Group(label: $0.label, items: $0.skills) }
         if let languages = resume.languages, !languages.isEmpty {
