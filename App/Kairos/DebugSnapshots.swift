@@ -107,6 +107,22 @@
                         .frame(width: 1_200, height: 700),
                     to: folder.appending(path: "job-adzuna-\(name).png"), appearance: appearance)
             }
+            // T45: applications across the board, one with a follow-up due today.
+            let (tracked, timeline) = sampleApplications(jobs: today.model.jobs)
+            let tracking = AppModel(
+                preview: today.model.jobs, screenings: today.model.screenings, sources: today.model.sources,
+                resume: resume, applications: tracked)
+            for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+                render(
+                    ApplicationsView().environment(tracking).frame(width: 1_440, height: 520),
+                    to: folder.appending(path: "applications-\(name).png"), appearance: appearance)
+                if let first = tracked.first {
+                    render(
+                        NavigationStack { ApplicationScreen(id: first.id, preview: timeline) }.environment(tracking)
+                            .frame(width: 1_200, height: 1_100),
+                        to: folder.appending(path: "application-\(name).png"), appearance: appearance)
+                }
+            }
             let build = sampleBuild(resume: resume.resume, job: today.selected)
             let pdf = renderNow(
                 ResumeDocument(build.content ?? TailoredResume(header: .init(name: "")), for: .standard), in: folder)
@@ -335,6 +351,38 @@
         }
 
         /// Renders with the bundled typst, blocking: fine for a debug snapshot, never for the app.
+        /// Sample applications on the given jobs (sample persona, previews only), and the first one's
+        /// timeline.
+        private static func sampleApplications(jobs: [Job]) -> ([Application], [ApplicationEvent]) {
+            let now = Date()
+            func days(_ n: Double) -> Date { now.addingTimeInterval(n * 86_400) }
+            let plan: [(ApplicationStatus, Double, Date?, String?)] = [
+                (.interview, -7, days(0), "Send a thank-you note"), (.applied, -5, days(2), "Email the recruiter"),
+                (.applied, -9, nil, nil), (.screen, -3, nil, nil), (.offer, -6, days(4), "Reply to the offer"),
+                (.rejected, -12, nil, nil),
+            ]
+            let applications = zip(jobs, plan).map { job, step in
+                Application(
+                    id: UUID(), jobID: job.id, appliedAt: days(step.1 - 14), channel: "Greenhouse", status: step.0,
+                    statusAt: days(step.1), nextActionAt: step.2, nextAction: step.3,
+                    notes: step.0 == .interview
+                        ? "Team is splitting a monolith into event-driven services. Ask about on-call." : "")
+            }
+            guard let first = applications.first else { return ([], []) }
+            let timeline = [
+                ApplicationEvent(id: UUID(), applicationID: first.id, kind: .status(.applied), at: first.appliedAt),
+                ApplicationEvent(
+                    id: UUID(), applicationID: first.id, kind: .status(.screen), at: days(-12),
+                    note: "30 min with the recruiter"),
+                ApplicationEvent(
+                    id: UUID(), applicationID: first.id, kind: .status(.interview), at: days(-7),
+                    note: "Go and SQL pair-coding, 60 min"),
+                ApplicationEvent(
+                    id: UUID(), applicationID: first.id, kind: .note, at: days(-2), note: "System design next week"),
+            ]
+            return (applications, timeline)
+        }
+
         private static func renderNow(_ document: ResumeDocument, in folder: URL, name: String = "build") -> URL? {
             guard let typst = Bundle.main.url(forAuxiliaryExecutable: "typst"), let fonts = TypstRunner.bundledFonts,
                 let template = try? ResumeTemplate.standard.source(), let data = try? JSONEncoder().encode(document)

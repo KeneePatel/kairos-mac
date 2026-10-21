@@ -567,7 +567,7 @@ One per user. It's the complete record of everything they've done, longer than a
 | `screening` | yes | Verdict trail | job_id, stage, verdict, rule_id, coverage JSON, reasons |
 | `build` | yes | One tailoring run | job_id, mode (strict, stretch, lite), master_version, status, template_id, content JSON (bullets carry `source_ids` and `verified`), match_score, breakdown JSON, iterations, cover_letter JSON, error, timestamps |
 | `artifact` | yes (metadata) | A PDF | build_id, kind, sha256, storage_path, local_path |
-| `application` | yes | You applied | job_id, build_id, applied_at, channel, status, next_action_at, notes |
+| `application` | yes | You applied | job_id, build_id, applied_at, channel, status (applied, screen, interview, offer, then closed as accepted, rejected, ghosted or withdrawn), status_at, next_action_at, next_action, notes |
 | `application_event` | yes | Timeline, append-only | application_id, kind, at, note |
 | `template` | yes | Typst templates | name, source, style JSON, active |
 | `prompt_override` | yes | Instruction edits per task | task_id, body, base_version |

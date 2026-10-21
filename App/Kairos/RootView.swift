@@ -71,6 +71,8 @@ struct RootView: View {
                 ReviewView()
             case (.ready, .builds):
                 BuildsView()
+            case (.ready, .applications):
+                ApplicationsView()
             case (.ready, .masterResume):
                 if let resume = model.resume, let ai = model.ai {
                     MasterResumeView().environment(resume).environment(ai)

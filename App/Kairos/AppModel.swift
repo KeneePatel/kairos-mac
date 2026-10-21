@@ -29,6 +29,8 @@ final class AppModel {
     /// The sidebar's selection; a build switches it to Builds.
     var section: AppSection = .review
     private(set) var sources: [Source] = []
+    /// Jobs you applied to (T45), the most recently moved first.
+    private(set) var applications: [Application] = []
     private(set) var jobs: [Job] = []
     private(set) var lastFetch: Run?
     private(set) var lastScreening: Run?
@@ -61,12 +63,13 @@ final class AppModel {
         init(
             preview jobs: [Job], screenings: [String: ScreeningRecord], sources: [Source],
             preferences: SearchPreferences = SearchPreferences(), profile: WorkProfile = WorkProfile(),
-            stretch: StretchSettings = StretchSettings(), resume: ResumeModel? = nil
+            stretch: StretchSettings = StretchSettings(), resume: ResumeModel? = nil, applications: [Application] = []
         ) {
             self.resume = resume
             self.jobs = jobs
             self.screenings = screenings
             self.sources = sources
+            self.applications = applications
             searchPreferences = preferences
             workProfile = profile
             self.stretch = stretch
@@ -115,6 +118,7 @@ final class AppModel {
         do {
             sources = try await SourceRepository(db).sources()
             jobs = try await JobRepository(db).jobs()
+            applications = try await ApplicationRepository(db).applications()
             lastFetch = try await RunRepository(db).runs(kind: "fetch", limit: 1).first
             lastScreening = try await RunRepository(db).runs(kind: "screen", limit: 1).first
             screenings = try await ScreeningRepository(db).latestByJob()
@@ -486,9 +490,61 @@ final class AppModel {
     }
 
     /// You applied with this build: the job leaves Today.
-    func markApplied(_ job: Job) async {
+    /// Records that you applied: when, where (the job's board) and with which build, your latest
+    /// finished one unless `build` says.
+    func markApplied(_ job: Job, build: UUID? = nil) async {
         guard let db else { return }
-        try? await JobRepository(db).setState(.applied, for: job.id)
+        let sent = build ?? builds.first { $0.jobID == job.id.rawValue && $0.status == .done }?.id
+        _ = try? await ApplicationRepository(db).apply(
+            job: job.id, build: sent, channel: source(job.sourceID)?.kind.displayName, at: Date())
+        await reload()
+    }
+
+    // MARK: - Applications
+
+    func application(_ id: UUID) -> Application? { applications.first { $0.id == id } }
+
+    func application(for job: Job) -> Application? { applications.first { $0.jobID == job.id } }
+
+    /// The application's timeline, oldest first.
+    func events(for application: Application) async -> [ApplicationEvent] {
+        guard let db else { return [] }
+        return (try? await ApplicationRepository(db).events(for: application.id)) ?? []
+    }
+
+    func setStatus(_ status: ApplicationStatus, for application: Application, note: String? = nil) async {
+        guard let db, status != application.status else { return }
+        try? await ApplicationRepository(db).setStatus(status, for: application.id, at: Date(), note: note)
+        await reload()
+    }
+
+    func addNote(_ note: String, to application: Application) async {
+        guard let db else { return }
+        try? await ApplicationRepository(db).addNote(note, to: application.id, at: Date())
+        await reload()
+    }
+
+    /// Sets the follow-up and its notification, or clears both with nil.
+    func setFollowUp(_ date: Date?, _ text: String?, for application: Application) async {
+        guard let db else { return }
+        try? await ApplicationRepository(db).setFollowUp(date, text, for: application.id)
+        await reload()
+        if let updated = self.application(application.id) {
+            await FollowUpReminders.schedule(updated, job: job(updated.jobID))
+        }
+    }
+
+    func setNotes(_ notes: String, for application: Application) async {
+        guard let db, notes != application.notes else { return }
+        try? await ApplicationRepository(db).setNotes(notes, for: application.id)
+        await reload()
+    }
+
+    /// Forgets the application and its reminder; the job goes back to new.
+    func delete(_ application: Application) async {
+        guard let db else { return }
+        try? await ApplicationRepository(db).delete(application.id)
+        FollowUpReminders.cancel(application.id)
         await reload()
     }
 

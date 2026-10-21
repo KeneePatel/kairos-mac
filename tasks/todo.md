@@ -771,9 +771,25 @@ Refined with you on 2026-10-21:
   - **Acceptance:** a daily run at the set time while the menu bar app runs; launch at login; one notification with yes and maybe counts.
   - **Verify:** `app-build`; manual over two days
 
-- [ ] **T45 · Application tracking** (M) · deps: R1
+- [x] **T45 · Application tracking** (M) · deps: R1
   - **Acceptance:** `008_applications.sql`; status board; append-only timeline; notes; follow-up reminders as notifications.
   - **Verify:** `core-test StoreTests`; `app-build`
+  - **Done 2026-10-21:**
+    - **`008_applications.sql`:** `application` and `application_event`, both STRICT and syncable, with one application per job.
+    - **`ApplicationRepository`:** applying records when, where (the job's board, "Greenhouse") and with which build (the one on screen, else your latest finished one). It starts the timeline with "Applied" and marks the job applied; applying twice changes nothing. Every status change appends a timeline line with your note, and nothing edits one. Statuses: applied, screen, interview, offer, then closed as accepted, not selected, no reply or you withdrew. Deleting asks first, tombstones the application and its timeline, and puts the job back to new.
+    - **App:** Applications is a board with Applied, Screen, Interview, Offer and Closed columns. Each card shows its company, role, and either its status date or a follow-up ("Follow up today" in amber with a bell, never colour alone). Choosing one opens it full width:
+      - links to open the job and the posting, and where it stands with a Move to menu;
+      - a follow-up, with what to do and when, delivered as a macOS notification even when Kairos is closed (permission is asked when you set the first);
+      - the timeline, with "Add to the timeline" for calls and notes;
+      - notes, saved a second after you stop typing.
+    - **Mark applied:** on the Job page, and on the Build screen, which records that build.
+    - **Tests:** 6 store tests (tables, applying, timeline order, follow-up and notes, ordering, deleting). Snapshots of the board and an application, light and dark.
+    - **Visual differences from `Applications.dc.html`:**
+      - An application opens full width, not in a side panel, as you asked for jobs in P3.
+      - It has one follow-up rather than a list: SPEC's model has one `next_action_at`, and a list can come later if one isn't enough.
+      - There's no "Add application" for jobs Kairos didn't find yet.
+      - No avatar, sidebar counts or sync time; those wait for accounts.
+    - **Undrawn, decided here:** the status card reuses the grouped surface with a Move to menu. Timeline lines take each status's symbol. The follow-up row is a text field, a date and time, and Set reminder or Change and Clear.
 
 - [ ] **T46 · Retention and `kairos doctor`** (S) · deps: T45
   - **Acceptance:** archive after 60 days and tombstone after 120 for jobs never shortlisted; integrity checks report orphans.

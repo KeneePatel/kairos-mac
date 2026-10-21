@@ -146,7 +146,8 @@ struct BuildsView: View {
             }
             .disabled(shown == nil)
             Button {
-                Task { if let job { await model.markApplied(job) } }
+                // The build on screen is the one you sent.
+                Task { if let job { await model.markApplied(job, build: build?.id) } }
             } label: {
                 Label("Mark applied", systemImage: "paperplane")
             }

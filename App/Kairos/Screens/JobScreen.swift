@@ -72,6 +72,17 @@ struct JobScreen: View {
             } label: {
                 Label("Not for me", systemImage: "hand.thumbsdown")
             }
+            Button {
+                Task { await model.markApplied(job) }
+            } label: {
+                Label(model.application(for: job) == nil ? "Mark applied" : "Applied", systemImage: "paperplane")
+            }
+            .disabled(model.application(for: job) != nil)
+            .help(
+                model.application(for: job) == nil
+                    ? "Records that you applied, with your latest build. Track it in Applications."
+                    : "You applied. Track it in Applications."
+            )
             .help("Takes it off To review. The verdict stays.")
             Toggle(isOn: $coverLetter) { Label("Cover letter", systemImage: "envelope") }
                 .help("Also write a cover letter when you build.")
