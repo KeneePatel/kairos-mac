@@ -162,7 +162,9 @@ struct BuildQueueTests {
         let (db, job) = try await database()
         try await analyse(job, in: db)
         let stuck = StuckFirstPrint()
-        let limit = Duration.milliseconds(500)
+        // Every build in this queue gets the limit, including the one after the stuck build, so it
+        // must allow a normal build on a busy CI runner: 0.5 s failed there (2026-10-21).
+        let limit = Duration.seconds(3)
         let queue = BuildQueue(
             db: db, router: router(db, FakeProvider(replies)), folder: folder(), workers: 1, maxDuration: limit
         ) { printable in
