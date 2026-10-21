@@ -1,4 +1,5 @@
 import Foundation
+import Store
 
 /// A configured source's id: the `source` row's UUIDv7.
 public typealias SourceID = UUID
@@ -9,13 +10,26 @@ public protocol JobSource: Sendable {
     func fetch(_ query: SourceQuery) async throws -> [Posting]
 }
 
-/// What a fetch asks for. ATS boards list one company's jobs, so they only need its display name.
+/// What a fetch asks for. ATS boards list one company's jobs, so they only need its display name;
+/// a search source (Adzuna) asks by your job titles, countries and posting age.
 public struct SourceQuery: Sendable, Equatable {
     /// The name you gave the company; it wins over the name the board reports.
     public var companyName: String?
+    /// Your job titles from Settings, Search, in your order.
+    public var titles: [String]
+    /// Your countries, in your order (Canada first by default).
+    public var countries: [Country]
+    /// Postings older than this many days are left out, when set.
+    public var maxAgeDays: Int?
 
-    public init(companyName: String? = nil) {
+    public init(
+        companyName: String? = nil, titles: [String] = [], countries: [Country] = [.canada, .unitedStates],
+        maxAgeDays: Int? = nil
+    ) {
         self.companyName = companyName
+        self.titles = titles
+        self.countries = countries
+        self.maxAgeDays = maxAgeDays
     }
 }
 

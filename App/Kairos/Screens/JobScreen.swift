@@ -121,8 +121,18 @@ struct JobScreen: View {
 
     private func header(_ job: Job) -> some View {
         VStack(alignment: .leading, spacing: Spacing.space1) {
-            Text(model.source(job.sourceID).map { "\(job.company) · via \($0.kind.displayName)" } ?? job.company)
-                .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+            HStack(spacing: Spacing.space1) {
+                // Adzuna's terms ask that its listings name it, linked: the credit replaces "via".
+                if model.isSnippet(job) {
+                    Text("\(job.company) ·").font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                    AdzunaCredit()
+                } else {
+                    Text(
+                        model.source(job.sourceID).map { "\(job.company) · via \($0.kind.displayName)" } ?? job.company
+                    )
+                    .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                }
+            }
             Text(job.title).font(TypeStyle.title2).foregroundStyle(Color(.ink))
             HStack(spacing: Spacing.space3) {
                 Text(
@@ -164,6 +174,14 @@ struct JobScreen: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(decidedBy(record)).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                if model.isSnippet(job) {
+                    Label(
+                        "Only a snippet of this posting came from Adzuna. Open the posting to read it all before you build.",
+                        systemImage: "text.badge.minus"
+                    )
+                    .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).fixedSize(
+                        horizontal: false, vertical: true)
+                }
                 if let blocked = model.buildBlocked(job, analysed: stored != nil) {
                     Label(blocked, systemImage: "lock").font(TypeStyle.callout)
                         .foregroundStyle(Color(.inkSecondary)).fixedSize(horizontal: false, vertical: true)

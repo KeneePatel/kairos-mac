@@ -575,7 +575,7 @@ Plan: `tasks/plan.md` · Spec: `SPEC.md` · Bar: `CONSTRAINTS.md`
     - Stretch: `VerifierSuite`'s stretch job lets no hard limit through and flags every gap bullet.
   - **S14:** Build stays blocked until your resume is ready, with the missing fields now written under the button, not only in its tooltip (MasterResumeTests, `BuildQueueTests.aBuildNeedsAnAnalysisAndAReadyResume`, snapshot `job-blocked`). The SPEC's "UI test" is a snapshot, since the project has no UI test target.
   - **S15, privacy half:** `PromptPrivacyTests`. The calls half (≥ 98% valid over a week) comes from your week's `llm_call` outcomes.
-- [ ] You review a week of sample builds; Phase 2 tasks refined together
+- [x] You review a week of sample builds; Phase 2 tasks refined together (2026-10-21, your decision: your two days of real runs and the polish work they drove, P1–P6, count as the review; Phase 2's order is below)
   - **Worth knowing first:** on the free tier, Flash allows only 20 calls a day and a Full build uses 6–12, so the writers' default (Flash) allows two or three builds a day. Pick Flash-Lite for the writers in Settings, AI providers, or add more keys, for the review week. Builds on Flash-Lite will mostly copy your bullets (see T39's baseline).
 
 ---
@@ -724,9 +724,36 @@ Your decisions:
 
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 
-- [ ] **T40 · Adzuna source, Canada first** (S) · deps: R1
-  - **Acceptance:** queries `ca` before `us`; the key is in the Keychain; stays under the documented limits.
+Refined with you on 2026-10-21:
+- **Order:** T40 Adzuna, T45 application tracking, T41–T43 page runners, T46 retention, then T44.
+- **T44 (scheduler, menu bar, login item, notifications):** last, and possibly dropped. You don't want it now; it's up for debate.
+- **T41–T43 (page runners):** kept, opt-in, as SPEC says. Off by default, with a warning before turning one on, and logins in a visible window.
+
+- [x] **T40 · Adzuna source, Canada first** (S) · deps: R1
+  - **Acceptance:** queries `ca` before `us`; the key is in the Keychain (in the private key file until release, P6); stays under the documented limits.
+  - **Refined 2026-10-21:**
+    - **Snippets:** Adzuna's API returns a snippet of each posting, not the whole text. Kairos never follows an advert's link itself, because Adzuna's advertisers pay for those clicks.
+    - **Screening:** a snippet can rule a job out but not make it a Yes; a strong match is capped at Maybe.
+    - **Duplicates:** company boards run before Adzuna, so a job on both keeps the board's full posting.
+    - **Credit:** Adzuna's terms ask that listings name it, linked.
   - **Verify:** `core-test JobSourcesTests`
+  - **Done 2026-10-21:**
+    - **`AdzunaSource`:** one search per title in Settings, Search (`title_only`), newest first, 50 a page, using your posting-age limit. Countries go in your order, Canada first.
+    - **Limits:** at most 20 searches a fetch. The free plan allows about 25 a minute and 250 a day.
+    - **Cleanup:** Adzuna's highlighting tags and entities are removed. The same advert found by two titles is kept once. An advert keeps one identity across runs, because its link's tracking (`se`, `v`, `utm_*`) changes on every search.
+    - **Errors:** a wrong app ID or key reads as a settings problem, and the key never appears in a message.
+    - **Fetch:** a fetch runs company boards first, then search sources (`SourceKind.isSearch`).
+    - **Screening:** Adzuna's jobs are snippets. A strong match is a Maybe with the reason "Only a snippet of this posting came from Adzuna…", and a snippet naming no skills says the same. A weak match, French or a clearance can still make it a No.
+    - **App:** Fetch's Add menu has "Company board…" and "Adzuna search…".
+      - The Adzuna sheet takes the app ID and key, with a link to get a free key and Adzuna's credit.
+      - The keys go in the private key file, and are deleted when you remove the search.
+      - Its row reads "Your job titles", with "Change Adzuna keys…" in its menu.
+      - A job from Adzuna shows "Jobs by Adzuna", linked, and the snippet note under its verdict.
+    - **Tests:** 7 for the source and factory on recorded responses (fictional companies), 1 for the fetch order, 2 for the snippet cap. Snapshots of the sheet and the job page, light and dark.
+    - **Undrawn, decided here:** the sheet follows Add company (title, explanation, labelled fields, notes with icons, links, then Cancel and Save). The credit is an accent link beside the company name; the snippet note is a secondary-ink line with an icon, like the Build-blocked note.
+    - **Visual differences from `Sources.dc.html`:** its opt-in boards section isn't drawn for Adzuna. Adzuna is tier B, on once you add your keys, so it sits in the source list with the company boards.
+    - **Your step:** get a free app ID and key at developer.adzuna.com, then Fetch, Add, Adzuna search…. Your job titles must be in Settings, Search.
+    - **Not done:** a board copy of a job first stored from Adzuna in an earlier run doesn't replace it yet. Within one run the board's copy wins.
 
 - [ ] **T41 · WebKit page runner and Indeed Canada** (M) · deps: R1
   - **Acceptance:** offscreen `WKWebView`, a data store per source, a JavaScript extractor contract, timeouts and health tracking. The Indeed Canada extractor passes on saved HTML fixtures.

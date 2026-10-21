@@ -14,6 +14,8 @@ public struct ScreeningContext: Sendable {
     public var applied: [AppliedJob]
     /// Your master resume as the evidence `analyzeJob` matches against (contact details redacted).
     public var evidence: ScreeningProfile
+    /// Sources whose descriptions are snippets (Adzuna): their jobs can't be a Yes.
+    public var snippetSources: Set<UUID> = []
 
     /// `resume` gives `analyzeJob` your whole master resume to match against; without it, only
     /// your skill names and languages.
@@ -37,7 +39,7 @@ public struct ScreeningContext: Sendable {
     public static func load(from db: Database) async throws -> ScreeningContext {
         let resume = try await MasterResumeRepository(db).load()
         let applied = try await JobRepository(db).jobs(matching: JobFilter(states: [.applied]))
-        return ScreeningContext(
+        var context = ScreeningContext(
             preferences: try await SettingsRepository(db).value(
                 SearchPreferences.storageKey, as: SearchPreferences.self)
                 ?? SearchPreferences(),
@@ -49,7 +51,12 @@ public struct ScreeningContext: Sendable {
             },
             totalYears: resume.header.totalYears,
             applied: applied.map { AppliedJob(company: $0.company, title: $0.title) }, resume: resume)
+        context.snippetSources = Set(try await SourceRepository(db).sources().filter { $0.kind == .adzuna }.map(\.id))
+        return context
     }
+
+    /// Whether `job`'s description is only a search's snippet.
+    public func isSnippet(_ job: Job) -> Bool { snippetSources.contains(job.sourceID) }
 
     public func prefilter(now: Date) -> Prefilter {
         Prefilter(preferences: preferences, profile: profile, languages: languages, applied: applied, now: now)

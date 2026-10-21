@@ -59,6 +59,12 @@ public enum URLCanonicalizer {
         components.host = host
         if components.port == 443 || components.port == 80 { components.port = nil }
         components.fragment = nil
+        // An Adzuna advert's link carries tracking that changes with every search; the ad id is
+        // the path.
+        if let host, host.hasPrefix("www.adzuna.") || host.hasPrefix("adzuna."), components.path.hasPrefix("/land/ad/")
+        {
+            components.query = nil
+        }
         let kept = (components.percentEncodedQueryItems ?? []).filter { item in
             let name = item.name.lowercased()
             return !name.hasPrefix("utm_") && !trackingParameters.contains(name)

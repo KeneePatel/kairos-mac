@@ -10,6 +10,10 @@ public enum SourceKind: String, Sendable, CaseIterable {
     case googleJobs = "google_jobs"
     case wellfound
     case jobBank = "job_bank"
+
+    /// Searches across companies (Adzuna, the page runners) rather than one company's own board.
+    /// Boards run first in a fetch, so their full postings win over a search's copy.
+    public var isSearch: Bool { self != .greenhouse && self != .lever && self != .ashby }
 }
 
 public enum SourceHealth: String, Sendable, CaseIterable {

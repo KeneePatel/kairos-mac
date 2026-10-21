@@ -21,9 +21,10 @@ extension SourceKind {
 }
 
 extension Source {
-    /// The name you gave the company, else its board slug.
+    /// The name you gave the company, else its board slug; a search says what it searches.
     var displayName: String {
-        BoardConfig.decode(config).map { $0.company ?? $0.slug } ?? kind.displayName
+        if kind == .adzuna { return "Your job titles" }
+        return BoardConfig.decode(config).map { $0.company ?? $0.slug } ?? kind.displayName
     }
 }
 

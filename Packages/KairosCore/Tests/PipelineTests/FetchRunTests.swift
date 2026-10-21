@@ -133,6 +133,31 @@ struct FetchRunTests {
         #expect(last.sourcesTotal == 0 && last.phase == .finished)
     }
 
+    /// A search source (Adzuna) runs after every company board, so when both list a job the board's
+    /// full posting is the one kept, however fast the search answers.
+    @Test func searchSourcesRunAfterTheBoards() async throws {
+        let db = try await database()
+        let sources = SourceRepository(db)
+        let adzuna = try await sources.add(kind: .adzuna)
+        let board = try await sources.add(kind: .greenhouse)
+        let order = Mutex<[String]>([])
+        let replies: [UUID: FakeSource] = [
+            adzuna.id: FakeSource(id: adzuna.id) {
+                order.withLock { $0.append("adzuna") }
+                return [posting(adzuna.id, "Backend Developer", "Toronto, ON", path: "adzuna/1")]
+            },
+            board.id: FakeSource(id: board.id) {
+                try await Task.sleep(for: .milliseconds(50))
+                order.withLock { $0.append("board") }
+                return [posting(board.id, "Backend Developer", "Toronto, ON", path: "board/1")]
+            },
+        ]
+        let last = try #require(await collect(fetchRun(db, replies)).last)
+        #expect(order.withLock { $0 } == ["board", "adzuna"])
+        #expect(last.added == 1 && last.duplicates == 1 && last.sourcesDone == 2)
+        #expect(try await JobRepository(db).jobs().map(\.sourceID) == [board.id])
+    }
+
     @Test func noMoreThanTheLimitFetchAtOnce() async throws {
         let db = try await database()
         let gauge = Mutex((now: 0, peak: 0))

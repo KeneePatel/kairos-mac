@@ -8,6 +8,7 @@ import SwiftUI
 struct FetchView: View {
     @Environment(AppModel.self) private var model
     @State private var addingCompany = false
+    @State private var addingAdzuna = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -22,15 +23,17 @@ struct FetchView: View {
         .navigationSubtitle(subtitle)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    addingCompany = true
+                Menu {
+                    Button("Company board…") { addingCompany = true }
+                    Button(model.adzunaSource == nil ? "Adzuna search…" : "Change Adzuna keys…") { addingAdzuna = true }
                 } label: {
-                    Label("Add company", systemImage: "plus").labelStyle(.titleAndIcon)
+                    Label("Add", systemImage: "plus").labelStyle(.titleAndIcon)
                 }
             }
             RunControls(model: model, title: "Fetch now")
         }
         .sheet(isPresented: $addingCompany) { AddCompanySheet() }
+        .sheet(isPresented: $addingAdzuna) { AdzunaSheet() }
     }
 
     private var subtitle: String {

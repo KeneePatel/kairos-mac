@@ -75,19 +75,25 @@ public struct FetchRun: Sendable {
         progress.sourcesTotal = sources.count
         continuation.yield(progress)
 
-        await withTaskGroup(of: (Source, Result<[Posting], any Error>).self) { group in
-            var pending = sources[...]
-            func startNext() {
-                guard let source = pending.popFirst() else { return }
-                group.addTask { (source, await fetch(source)) }
-            }
-            for _ in 0..<maxConcurrent { startNext() }
-            for await (source, result) in group {
-                guard !Task.isCancelled else { break }
-                await record(result, from: source, into: &progress)
-                progress.sourcesDone += 1
-                continuation.yield(progress)
-                startNext()
+        // Company boards first, then search sources (Adzuna): a job on both keeps the board's full
+        // posting rather than a search's snippet, since the first copy stored wins.
+        let boards = sources.filter { !$0.kind.isSearch }
+        let searches = sources.filter(\.kind.isSearch)
+        for batch in [boards, searches] where !batch.isEmpty && !Task.isCancelled {
+            await withTaskGroup(of: (Source, Result<[Posting], any Error>).self) { group in
+                var pending = batch[...]
+                func startNext() {
+                    guard let source = pending.popFirst() else { return }
+                    group.addTask { (source, await fetch(source)) }
+                }
+                for _ in 0..<maxConcurrent { startNext() }
+                for await (source, result) in group {
+                    guard !Task.isCancelled else { break }
+                    await record(result, from: source, into: &progress)
+                    progress.sourcesDone += 1
+                    continuation.yield(progress)
+                    startNext()
+                }
             }
         }
 

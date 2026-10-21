@@ -22,9 +22,23 @@ public struct BoardConfig: Codable, Sendable, Equatable {
     }
 }
 
+/// What a search source needs besides its row: your search settings and its key.
+public struct SearchContext: Sendable, Equatable {
+    /// Titles, countries and posting age from Settings, Search.
+    public var query: SourceQuery
+    /// Your Adzuna app ID and key, when saved.
+    public var adzuna: AdzunaSource.Credentials?
+
+    public init(query: SourceQuery = SourceQuery(), adzuna: AdzunaSource.Credentials? = nil) {
+        self.query = query
+        self.adzuna = adzuna
+    }
+}
+
 /// Builds the fetcher for a configured source.
 public enum SourceFactory {
-    public static func make(_ source: Source, http: any HTTPClient) throws(SourceError) -> (any JobSource, SourceQuery)
+    public static func make(_ source: Source, http: any HTTPClient, search: SearchContext = SearchContext())
+        throws(SourceError) -> (any JobSource, SourceQuery)
     {
         switch source.kind {
         case .greenhouse, .lever, .ashby:
@@ -37,7 +51,12 @@ public enum SourceFactory {
             case .lever: return (LeverSource(id: source.id, slug: config.slug, http: http), query)
             default: return (AshbySource(id: source.id, organization: config.slug, http: http), query)
             }
-        case .adzuna, .linkedIn, .indeedCanada, .indeedUS, .glassdoor, .googleJobs, .wellfound, .jobBank:
+        case .adzuna:
+            guard let credentials = search.adzuna else {
+                throw .invalidConfiguration("add your Adzuna app ID and key in Fetch, Adzuna")
+            }
+            return (AdzunaSource(id: source.id, credentials: credentials, http: http), search.query)
+        case .linkedIn, .indeedCanada, .indeedUS, .glassdoor, .googleJobs, .wellfound, .jobBank:
             throw .invalidConfiguration("\(source.kind.rawValue) isn't available yet")
         }
     }

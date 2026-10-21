@@ -79,6 +79,8 @@ final class AppModel {
     @ObservationIgnored private var buildEvents: Task<Void, Never>?
     @ObservationIgnored private var fetchTask: Task<Void, Never>?
     @ObservationIgnored private let http = URLSessionHTTPClient()
+    /// API keys: the AI providers', Adzuna's and GitHub's, in the one store until release (P6).
+    @ObservationIgnored private let secrets = AppSecrets.store()
     @ObservationIgnored private let log = Logger(subsystem: "com.keneepatel.kairos", category: "model")
 
     /// Opens the signed-out local profile's database (accounts come with T27).
@@ -97,7 +99,7 @@ final class AppModel {
             let resume = ResumeModel(db: db)
             await resume.load()
             self.resume = resume
-            let ai = AISettingsModel(db: db, secrets: AppSecrets.store())
+            let ai = AISettingsModel(db: db, secrets: secrets)
             await ai.load()
             self.ai = ai
             await reload()
@@ -169,8 +171,49 @@ final class AppModel {
     func remove(_ source: Source) async {
         guard let db else { return }
         _ = try? await SourceRepository(db).tombstone(source.id)
+        if source.kind == .adzuna {
+            try? secrets.delete(Self.adzunaAppID)
+            try? secrets.delete(Self.adzunaAppKey)
+        }
         await reload()
     }
+
+    // MARK: - Adzuna
+
+    static let adzunaAppID = SecretKey("adzuna.app_id")
+    static let adzunaAppKey = SecretKey("adzuna.app_key")
+
+    /// Your Adzuna app ID and key, when both are saved.
+    var adzunaCredentials: AdzunaSource.Credentials? {
+        guard let id = (try? secrets.read(Self.adzunaAppID)) ?? nil,
+            let key = (try? secrets.read(Self.adzunaAppKey)) ?? nil
+        else { return nil }
+        return AdzunaSource.Credentials(appID: id, appKey: key)
+    }
+
+    /// The Adzuna search, if you've added it.
+    var adzunaSource: Source? { sources.first { $0.kind == .adzuna } }
+
+    /// Saves your Adzuna app ID and key, and adds the Adzuna search if it isn't there yet. Returns
+    /// why it couldn't, or nil once saved.
+    func saveAdzuna(appID: String, appKey: String) async -> String? {
+        guard let db else { return "The database isn't open." }
+        let id = appID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = appKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !id.isEmpty, !key.isEmpty else { return "Paste both the app ID and the app key." }
+        do {
+            try secrets.write(id, for: Self.adzunaAppID)
+            try secrets.write(key, for: Self.adzunaAppKey, hint: LLMSettings.masked(key))
+            if adzunaSource == nil { _ = try await SourceRepository(db).add(kind: .adzuna) }
+        } catch {
+            return "Couldn't save them on this Mac."
+        }
+        await reload()
+        return nil
+    }
+
+    /// Whether `job` came from a search's snippet (Adzuna), so its description is partial.
+    func isSnippet(_ job: Job) -> Bool { source(job.sourceID)?.kind == .adzuna }
 
     func source(_ id: UUID) -> Source? {
         sources.first { $0.id == id }
@@ -209,8 +252,14 @@ final class AppModel {
         isFetching = true
         screening = nil
         let http = self.http
+        // A search source (Adzuna) asks by your titles, countries and posting age.
+        let preferences = searchPreferences
+        let search = SearchContext(
+            query: SourceQuery(
+                titles: preferences.titleInclude, countries: preferences.countries, maxAgeDays: preferences.maxAgeDays),
+            adzuna: adzunaCredentials)
         let run = PipelineRun(
-            fetch: FetchRun(db: db, makeSource: { try SourceFactory.make($0, http: http) }),
+            fetch: FetchRun(db: db, makeSource: { try SourceFactory.make($0, http: http, search: search) }),
             screening: ScreeningRun(db: db, router: ai?.router()))
         fetchTask = Task { [weak self] in
             for await event in run.start() {

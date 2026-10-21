@@ -6,8 +6,11 @@ import SwiftUI
 struct SourcesTable: View {
     @Environment(AppModel.self) private var model
     @State private var selection: Source.ID?
+    @State private var changingAdzuna = false
 
-    var body: some View { content }
+    var body: some View {
+        content.sheet(isPresented: $changingAdzuna) { AdzunaSheet() }
+    }
 
     @ViewBuilder private var content: some View {
         if model.sources.isEmpty {
@@ -46,6 +49,9 @@ struct SourcesTable: View {
                 if let id = ids.first, let source = model.source(id) {
                     Button(source.enabled ? "Pause" : "Resume") {
                         Task { await model.setEnabled(!source.enabled, for: source) }
+                    }
+                    if source.kind == .adzuna {
+                        Button("Change Adzuna keys…") { changingAdzuna = true }
                     }
                     Divider()
                     Button("Remove \(source.displayName)", role: .destructive) {
@@ -194,6 +200,112 @@ struct AddCompanySheet: View {
             error = problem
         } else {
             dismiss()
+        }
+    }
+}
+
+/// Your Adzuna app ID and key (free from developer.adzuna.com). Kairos searches Adzuna for the
+/// titles in Settings, Search, Canada first. Adzuna's terms ask that its listings name it, linked.
+struct AdzunaSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var appID = ""
+    @State private var appKey = ""
+    @State private var error: String?
+    @State private var saving = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.space5) {
+            VStack(alignment: .leading, spacing: Spacing.space1) {
+                Text(model.adzunaSource == nil ? "Search Adzuna" : "Change your Adzuna keys")
+                    .font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                Text(
+                    "Adzuna lists jobs from many employers. Kairos searches it for the job titles in Settings, Search, Canada first, after your company boards."
+                )
+                .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
+            field("App ID") {
+                TextField("App ID", text: $appID, prompt: Text("8 characters, like 1a2b3c4d")).onSubmit(submit)
+            }
+            field("App key") {
+                SecureField("App key", text: $appKey, prompt: Text("32 characters")).onSubmit(submit)
+            }
+
+            VStack(alignment: .leading, spacing: Spacing.space2) {
+                Label {
+                    Text(
+                        "Adzuna sends a snippet of each posting, not the whole text, so its jobs are Maybe at most. Open one to read the rest before you build."
+                    )
+                } icon: {
+                    Image(systemName: "text.badge.minus")
+                }
+                Label {
+                    Text(
+                        "Your keys stay on this Mac. The free plan allows about 250 searches a day; a fetch uses at most \(AdzunaSource.maxCallsPerRun)."
+                    )
+                } icon: {
+                    Image(systemName: "lock")
+                }
+            }
+            .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+            .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: Spacing.space2) {
+                if let url = URL(string: "https://developer.adzuna.com/signup") {
+                    Link("Get a free key", destination: url).font(TypeStyle.callout)
+                }
+                Text("·").foregroundStyle(Color(.inkSecondary))
+                AdzunaCredit()
+            }
+
+            if let error {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(TypeStyle.callout).foregroundStyle(Color(.error))
+            }
+
+            HStack(spacing: Spacing.space2) {
+                Spacer()
+                Button("Cancel", role: .cancel) { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Save", action: submit)
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(saving || appID.isEmpty || appKey.isEmpty)
+            }
+            .controlSize(.large)
+        }
+        .padding(Spacing.space6)
+        .frame(width: 520)
+    }
+
+    private func field(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.space2) {
+            Text(title).font(TypeStyle.headline).foregroundStyle(Color(.ink))
+            content().labelsHidden().textFieldStyle(.roundedBorder).controlSize(.large)
+        }
+    }
+
+    private func submit() {
+        guard !saving, !appID.isEmpty, !appKey.isEmpty else { return }
+        Task {
+            saving = true
+            defer { saving = false }
+            if let problem = await model.saveAdzuna(appID: appID, appKey: appKey) {
+                error = problem
+            } else {
+                dismiss()
+            }
+        }
+    }
+}
+
+/// "Jobs by Adzuna", linked: Adzuna's terms ask every listing shown from it to name it.
+struct AdzunaCredit: View {
+    var body: some View {
+        if let url = URL(string: "https://www.adzuna.ca") {
+            Link("Jobs by Adzuna", destination: url).font(TypeStyle.callout)
         }
     }
 }

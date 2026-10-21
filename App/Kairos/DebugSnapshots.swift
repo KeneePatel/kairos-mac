@@ -68,6 +68,12 @@
             let blocked = AppModel(
                 preview: today.model.jobs, screenings: today.model.screenings, sources: today.model.sources,
                 resume: ResumeModel(preview: unfinished, db: db))
+            // T40: the same job as Adzuna found it, with its snippet note and credit.
+            let adzuna = Source(id: UUID(), kind: .adzuna, config: "{}")
+            var adzunaJob = today.selected
+            adzunaJob.sourceID = adzuna.id
+            let fromAdzuna = AppModel(
+                preview: [adzunaJob], screenings: today.model.screenings, sources: [adzuna], resume: resume)
             let stored = StoredAnalysis(
                 analysis: today.analysis, model: "gemini-flash-lite-latest", promptVersion: 2,
                 analyzedAt: Date().addingTimeInterval(-3_600))
@@ -93,6 +99,13 @@
                     SearchPreferencesView().environment(today.model).frame(width: 820, height: 1_500)
                         .background(Color(.surface)),
                     to: folder.appending(path: "search-settings-\(name).png"), appearance: appearance)
+                render(
+                    AdzunaSheet().environment(today.model).background(Color(.surface)),
+                    to: folder.appending(path: "adzuna-sheet-\(name).png"), appearance: appearance)
+                render(
+                    NavigationStack { JobScreen(id: adzunaJob.id, preview: stored) }.environment(fromAdzuna)
+                        .frame(width: 1_200, height: 700),
+                    to: folder.appending(path: "job-adzuna-\(name).png"), appearance: appearance)
             }
             let build = sampleBuild(resume: resume.resume, job: today.selected)
             let pdf = renderNow(
