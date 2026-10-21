@@ -125,4 +125,12 @@ struct TailoredHeaderTests {
             ])
         #expect(tailored.contact[0].url == "mailto:jordan.rivera@example.com")
     }
+
+    /// The phone number is a link too, so it can be tapped in the PDF; separators don't reach it.
+    @Test func thePhoneNumberIsATelLink() {
+        var header = Sample.resume.header
+        header.phone = "+14165550123"
+        #expect(TailoredResume.Header(header).contact.first { $0.text == "(416) 555-0123" }?.url == "tel:+14165550123")
+        #expect(TailoredResume.Header.telURL("(416) 555-0123") == "tel:4165550123")
+    }
 }

@@ -10,7 +10,7 @@ public enum Printable: Sendable, Equatable {
 extension ResumeRenderer {
     public func render(_ printable: Printable, createdAt: Date? = nil) async throws(RenderError) -> RenderedPDF {
         switch printable {
-        case .resume(let document): try await render(document, createdAt: createdAt)
+        case .resume(let document): try await render(document, template: .standard, createdAt: createdAt)
         case .letter(let letter): try await render(letter: letter, createdAt: createdAt)
         }
     }

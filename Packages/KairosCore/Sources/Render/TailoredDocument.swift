@@ -3,8 +3,9 @@ import Tailoring
 
 extension ResumeDocument {
     /// A build as the template reads it, in the Build mockup's order: summary, experience,
-    /// projects, skills, education, certifications, languages. Empty sections are left out.
-    public init(_ resume: TailoredResume, style: Style = Style()) {
+    /// projects, skills, education, certifications, languages. Empty sections are left out. The style
+    /// is the standard template's unless given.
+    public init(_ resume: TailoredResume, style: Style = ResumeTemplate.standard.style) {
         var sections: [Section] = []
         if let summary = resume.summary, !summary.isEmpty {
             sections.append(Section(kind: .summary, title: "Summary", text: summary))

@@ -453,6 +453,7 @@ New accounts start with the Gemini preset. Writing tasks use its newest Flash mo
 - `.typ` templates read `json(sys.inputs.data)`; style settings are inputs too.
 - `typst compile --root <tmp> --font-path <bundled fonts> --ignore-system-fonts --input data=resume.json template.typ out.pdf`
 - Templates are vendored, never fetched at compile time.
+- Two resume templates: **Harvard** (builds use it; New Computer Modern, two-line entries, contact icons) and **Classic** (Source Serif 4, one-line entries). The cover letter shares Harvard's header. Contact icons are drawings, never characters, so the PDF's text holds no symbols for a parser to misread.
 
 ### 5.7 Security and privacy
 - **No inbound network surface.** All server-side authorization lives in Supabase row-level security, never in the client.

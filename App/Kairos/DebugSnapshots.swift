@@ -322,7 +322,7 @@
         /// Renders with the bundled typst, blocking: fine for a debug snapshot, never for the app.
         private static func renderNow(_ document: ResumeDocument, in folder: URL, name: String = "build") -> URL? {
             guard let typst = Bundle.main.url(forAuxiliaryExecutable: "typst"), let fonts = TypstRunner.bundledFonts,
-                let template = try? ResumeTemplate.classic.source(), let data = try? JSONEncoder().encode(document)
+                let template = try? ResumeTemplate.standard.source(), let data = try? JSONEncoder().encode(document)
             else { return nil }
             let work = folder.appending(path: "\(name)-render")
             try? FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)

@@ -645,6 +645,31 @@ Your decisions:
     - **Also:** builds log start, finish and failure with durations (Console, category `builds`). Render failures now read as sentences rather than enum names. A build started again after a quit replaces its earlier PDF record instead of adding a second.
     - **Checked on a copy of your database:** the 1Password build finishes in about 1 s and the Affirm stretch build in about 4 s once queued. Every render takes under 0.1 s.
     - **Found, not fixed:** in debug runs, each of the 4 Gemini keys takes 4–7 s to come out of the Keychain, about 20 s in all. The app reads keys once per launch, on the main thread, the first time it needs AI. If it's as slow there, the window freezes for that long once per launch.
+- [x] **P5 · A Harvard-style resume template with contact icons** (S), your request (2026-10-21): more Harvard-like, taking the fonts, spacing, icons, underlines and italics from your reference resume (`~/Downloads/Kairos-resumes/Affirm/Software_Engineer_I_Frontend_Upfunnel/Resume.pdf`) without copying its structure
+  - **Acceptance:** builds print with the new template; Classic stays available for later template choice; the PDF's text stays clean for applicant tracking systems; the cover letter matches.
+  - **Verify:** `core-test RenderTests`; your reference content rendered both ways; `--run-build`
+  - **Done 2026-10-21:**
+    - **What the reference is:** XeLaTeX ("Jake's Resume" layout) in Latin Modern Roman, at 0.5 in margins, body 10 pt, entry titles 11 pt, small-caps headings 12 pt and the name at 24.8 pt. Its icons are drawings, so they don't show up in its text. Its text does contain 6 ligature characters ("ﬁ" as one character), which a parser can misread.
+    - **What Harvard asks** (Mignone Center, Master's guide 2025): a common, easy-to-read font, no text boxes, colour or shading, 10–12 pt kept consistent, equal margins of at least ¾ in, one page for master's students. Its tech sample has a centred name, headings over a rule, organization and place on one line, and title and dates in italics on the next. Its contact line is plain text, with no icons.
+    - **Measured, on the reference's own content** (19 bullets; pages of content, where over 1 means fitting drops bullets):
+      - Classic: 1.22.
+      - Harvard in New Computer Modern, 10 pt: 1.18 at 0.5 in, 1.21 at 0.6 in, 1.29 at 0.75 in.
+      - The same at 10.5 pt and 0.5 in: 1.24.
+      - Source Serif 4, 10 pt, 0.5 in: 1.17. Libertinus, same: 1.16.
+      - The reference itself takes about 1.45.
+    - **Decisions:**
+      - **Font:** New Computer Modern, built into typst, so no new files. It's the reference's look, and its small caps are real. Source Serif 4 reads larger at the same size (x-height 0.475 em against 0.431) at the same density. It stays the alternative if Computer Modern reads too light.
+      - **Size:** one body size, 10 pt, as Harvard asks; only the name (22 pt) and headings (11.5 pt) differ.
+      - **Margins:** 0.6 in on every side. That's between the reference's 0.5 in and Harvard's ¾ in; ¾ in would cost about 3 lines on this content.
+      - **Layout:** two-line entries, with bold role and dates over italic organization and place. Projects read "Name | *stack*". Your section order is unchanged.
+      - **Links:** underlined (0.45 pt, skipping descenders), with an icon before each contact item. Italic links were rejected: italic numbers read badly in the phone number, and italics already mark organizations. Plain links were rejected because nothing then shows they can be clicked.
+      - **Contact rows:** the place gets its own line, because all five items don't fit on one at 10 pt. The phone number is now a `tel:` link.
+      - **Icons:** Bootstrap Icons 1.13.2 (MIT), not Font Awesome, whose icons are CC BY 4.0 and would need credit in the resume. They're inline vector drawings, marked as decoration, so neither a parser nor a screen reader meets them. Source and hashes are in `Templates/ICONS.md`.
+      - **Not taken:** bolding keywords inside bullets, as the reference does. Harvard doesn't, it would need the writers to mark words, and the reference's picks ("Monitoring", "Frontend") read as keyword stuffing.
+    - **Checks:** Typst's text has no ligature characters or icon symbols, and small caps keep the typed letters ("Experience", not "EXPERIENCE"). The tests prove an icon is drawn before each item, with Classic as a control that must stay under the same ink line.
+    - **On your 1Password build:** fitting dropped 2 bullets to fit one page, against 1 with Classic. Most of that is the place's own line.
+    - **Undrawn, decided here:** the cover letter takes the same header, at 11 pt with 1 in margins as before.
+    - **Visual differences from `Build.dc.html`:** its preview is Source Serif 4 with one-line entries and caps labels. The Harvard template replaces those, as you asked; Classic still matches it.
 
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 

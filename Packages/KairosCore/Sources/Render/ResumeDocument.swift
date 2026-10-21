@@ -19,13 +19,42 @@ public struct ResumeDocument: Codable, Sendable, Equatable {
     }
 
     public struct ContactItem: Codable, Sendable, Equatable {
+        /// What an item is, which picks its icon.
+        public enum Kind: String, Codable, Sendable {
+            case email, phone, website, location
+            case linkedIn = "linkedin"
+            case gitHub = "github"
+
+            /// From the link: mailto, tel, LinkedIn, GitHub, or any other site. An item without one is
+            /// a phone number when it's mostly digits (builds from before phone numbers were links),
+            /// otherwise the place.
+            public init(text: String, url: String?) {
+                guard let url = url?.lowercased() else {
+                    self = text.filter(\.isNumber).count >= 7 ? .phone : .location
+                    return
+                }
+                if url.hasPrefix("mailto:") {
+                    self = .email
+                } else if url.hasPrefix("tel:") {
+                    self = .phone
+                } else {
+                    let host = URL(string: url)?.host() ?? ""
+                    func on(_ domain: String) -> Bool { host == domain || host.hasSuffix("." + domain) }
+                    self = on("linkedin.com") ? .linkedIn : on("github.com") ? .gitHub : .website
+                }
+            }
+        }
+
         public var text: String
         /// Makes the item a link in the PDF.
         public var url: String?
+        public var kind: Kind
 
-        public init(text: String, url: String? = nil) {
+        /// `kind` is worked out from the text and link unless given.
+        public init(text: String, url: String? = nil, kind: Kind? = nil) {
             self.text = text
             self.url = url
+            self.kind = kind ?? Kind(text: text, url: url)
         }
     }
 
@@ -128,7 +157,21 @@ public struct RenderedPDF: Sendable, Equatable {
 
 /// The resume templates shipped in `Templates/`, vendored and never fetched (SPEC §5.6).
 public enum ResumeTemplate: String, Sendable, CaseIterable {
+    /// Source Serif 4, one-line entries (T32).
     case classic
+    /// Harvard's layout in New Computer Modern, with contact icons (polish P5).
+    case harvard
+
+    /// The template builds use.
+    public static let standard = ResumeTemplate.harvard
+
+    /// The size and margins the template is drawn for.
+    public var style: ResumeDocument.Style {
+        switch self {
+        case .classic: ResumeDocument.Style(fontSize: 10.5, margin: 0.6)
+        case .harvard: ResumeDocument.Style(fontSize: 10, margin: 0.6)
+        }
+    }
 
     public func source() throws(RenderError) -> String {
         try Self.source(named: rawValue)

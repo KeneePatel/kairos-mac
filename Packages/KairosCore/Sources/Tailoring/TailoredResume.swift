@@ -88,7 +88,9 @@ extension TailoredResume.Header {
         if validation.issue(for: .portfolio) != nil { header.portfolioURL = nil }
         var contact: [TailoredResume.ContactLine] = []
         if !header.email.isEmpty { contact.append(.init(text: header.email, url: "mailto:\(header.email)")) }
-        if !header.phone.isEmpty { contact.append(.init(text: Self.displayPhone(header.phone))) }
+        if !header.phone.isEmpty {
+            contact.append(.init(text: Self.displayPhone(header.phone), url: Self.telURL(header.phone)))
+        }
         for url in [header.linkedInURL, header.gitHubURL ?? "", header.portfolioURL ?? ""] where !url.isEmpty {
             contact.append(.init(text: Self.displayURL(url), url: url))
         }
@@ -104,6 +106,12 @@ extension TailoredResume.Header {
         guard e164.hasPrefix("+1"), digits.count == 11 else { return e164 }
         let number = Array(digits.dropFirst())
         return "(\(String(number[0..<3]))) \(String(number[3..<6]))-\(String(number[6..<10]))"
+    }
+
+    /// "+14165550123" → "tel:+14165550123", so the number can be tapped in the PDF; separators
+    /// are dropped.
+    static func telURL(_ phone: String) -> String {
+        "tel:" + (phone.hasPrefix("+") ? "+" : "") + phone.filter(\.isNumber)
     }
 
     /// "https://www.linkedin.com/in/jordan-rivera" → "linkedin.com/in/jordan-rivera".

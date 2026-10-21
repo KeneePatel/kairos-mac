@@ -1,8 +1,14 @@
 # Bundled fonts
 
-Resume PDFs are set in **Source Serif 4** (design/kairos/README.md, Type). Typst runs with
+The Classic template is set in **Source Serif 4** (design/kairos/README.md, Type). Typst runs with
 `--ignore-system-fonts`, so output is the same on every Mac, and these are the only text fonts it
 sees besides those built into typst.
+
+The Harvard template, which builds use, and the cover letter are set in **New Computer Modern**,
+one of the fonts built into the `typst` binary (0.15.1), so it adds no files here. Per typst-assets'
+NOTICE, its bold and italic are under the GUST Font License and its regular weight under GPL 3 with
+the Font Exception, which lets a document embed the font without the document falling under the
+GPL.
 
 | File | Weight | SHA-256 |
 |---|---|---|
