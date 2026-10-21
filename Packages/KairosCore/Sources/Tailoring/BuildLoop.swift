@@ -21,11 +21,14 @@ public struct BuildRequest: Sendable, Equatable {
     public var gapBulletsPerRole: Int
     /// Write a cover letter too (optional per build).
     public var coverLetter: Bool
+    /// Write a summary. Off for a template that doesn't print one (Harvard's), so no call is spent on
+    /// it and the score doesn't count words the PDF won't show.
+    public var summary: Bool
 
     public init(
         jobTitle: String, company: String, companyProducts: [String] = [], requirements: JobRequirements,
         locale: SpellingLocale, mode: BuildMode = .strict, pageBudget: Int = 1,
-        gapBulletsPerRole: Int = StretchSettings().limit, coverLetter: Bool = false
+        gapBulletsPerRole: Int = StretchSettings().limit, coverLetter: Bool = false, summary: Bool = true
     ) {
         self.jobTitle = jobTitle
         self.company = company
@@ -36,6 +39,7 @@ public struct BuildRequest: Sendable, Equatable {
         self.pageBudget = pageBudget
         self.gapBulletsPerRole = gapBulletsPerRole
         self.coverLetter = coverLetter
+        self.summary = summary
     }
 }
 
@@ -117,9 +121,9 @@ public struct BuildLoop: Sendable {
         progress(.writing)
         async let experienceBullets = section(WriteExperienceTask(), experienceInput, lite: request.mode == .lite)
         async let projectBullets = section(WriteProjectsTask(), projectsInput, lite: request.mode == .lite)
-        async let summaryText = summary(
-            WriteSummaryInput(
-                brief: brief, selection: selection, totalYears: master.header.totalYears, verifier: verifier))
+        let summaryInput = WriteSummaryInput(
+            brief: brief, selection: selection, totalYears: master.header.totalYears, verifier: verifier)
+        async let summaryText = request.summary ? summary(summaryInput) : nil
         async let skillGroups = skills(WriteSkillsInput(brief: brief, skills: selection.skills))
         let written = try await (
             experience: experienceBullets, projects: projectBullets, summary: summaryText, skills: skillGroups
@@ -128,7 +132,7 @@ public struct BuildLoop: Sendable {
         var fellBack: [MatchScore.Section] = []
         if written.experience.fellBack { fellBack.append(.experience) }
         if written.projects.fellBack { fellBack.append(.projects) }
-        if written.summary == nil { fellBack.append(.summary) }
+        if request.summary, written.summary == nil { fellBack.append(.summary) }
         if written.skills == nil { fellBack.append(.skills) }
 
         let ranks = Dictionary(

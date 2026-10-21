@@ -204,7 +204,9 @@
                     return
                 }
                 let renderer = ResumeRenderer(runner: TypstRunner(executable: typst))
-                let queue = BuildQueue(db: db, router: ai.router(), folder: copy.appending(path: "Builds")) {
+                let queue = BuildQueue(
+                    db: db, router: ai.router(), folder: copy.appending(path: "Builds"), template: .standard
+                ) {
                     printable in
                     let kind = if case .letter = printable { "letter" } else { "resume" }
                     let renderStarted = Date()

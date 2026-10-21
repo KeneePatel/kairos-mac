@@ -4,11 +4,20 @@ The Classic template is set in **Source Serif 4** (design/kairos/README.md, Type
 `--ignore-system-fonts`, so output is the same on every Mac, and these are the only text fonts it
 sees besides those built into typst.
 
-The Harvard template, which builds use, and the cover letter are set in **New Computer Modern**,
-one of the fonts built into the `typst` binary (0.15.1), so it adds no files here. Per typst-assets'
-NOTICE, its bold and italic are under the GUST Font License and its regular weight under GPL 3 with
-the Font Exception, which lets a document embed the font without the document falling under the
-GPL.
+The Harvard template, which builds use, and the cover letter are set in **Liberation Serif**,
+metric-compatible with Times New Roman, the font of Harvard's own resume sample. Times New Roman
+itself can't be bundled; Liberation Serif can.
+
+| File | Weight | SHA-256 |
+|---|---|---|
+| `LiberationSerif-Regular.ttf` | Regular | `058ea80864aef09a23f45cbec2bb5400bc3dfbdea01c3f10538a21fcb497fb74` |
+| `LiberationSerif-Bold.ttf` | Bold | `d754ba427cfe0bca54ae052384baa8f842da5bd6550ad4da024ac441e7a7d5ce` |
+| `LiberationSerif-Italic.ttf` | Italic | `0e3dea9f8d613e006ccfa62201f33e265d19167bd0907725c3e145368b04fc2e` |
+
+- **Source:** https://github.com/liberationfonts/liberation-fonts, release 2.1.5,
+  `liberation-fonts-ttf-2.1.5.tar.gz` (fetched 2026-10-21). Bold italic is left out; no template uses it.
+- **License:** SIL Open Font License 1.1, copied in `OFL-Liberation.txt` (Red Hat, with digitized
+  data from Google's Tinos).
 
 | File | Weight | SHA-256 |
 |---|---|---|

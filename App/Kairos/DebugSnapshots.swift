@@ -95,10 +95,12 @@
                     to: folder.appending(path: "search-settings-\(name).png"), appearance: appearance)
             }
             let build = sampleBuild(resume: resume.resume, job: today.selected)
-            let pdf = renderNow(ResumeDocument(build.content ?? TailoredResume(header: .init(name: ""))), in: folder)
+            let pdf = renderNow(
+                ResumeDocument(build.content ?? TailoredResume(header: .init(name: "")), for: .standard), in: folder)
             let stretched = sampleBuild(resume: resume.resume, job: today.selected, stretch: true)
             let stretchedPDF = renderNow(
-                ResumeDocument(stretched.content ?? TailoredResume(header: .init(name: ""))), in: folder,
+                ResumeDocument(stretched.content ?? TailoredResume(header: .init(name: "")), for: .standard),
+                in: folder,
                 name: "build-stretch")
             let stretchModel = AppModel(
                 preview: today.model.jobs, screenings: [:], sources: today.model.sources,

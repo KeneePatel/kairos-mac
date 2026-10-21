@@ -136,11 +136,14 @@ public struct ResumeDocument: Codable, Sendable, Equatable {
     public var header: Header
     public var sections: [Section]
     public var style: Style
+    /// The template it's laid out for, which prints it.
+    public var template: ResumeTemplate
 
-    public init(header: Header, sections: [Section], style: Style = Style()) {
+    public init(header: Header, sections: [Section], style: Style = Style(), template: ResumeTemplate = .classic) {
         self.header = header
         self.sections = sections
         self.style = style
+        self.template = template
     }
 }
 
@@ -156,22 +159,27 @@ public struct RenderedPDF: Sendable, Equatable {
 }
 
 /// The resume templates shipped in `Templates/`, vendored and never fetched (SPEC §5.6).
-public enum ResumeTemplate: String, Sendable, CaseIterable {
-    /// Source Serif 4, one-line entries (T32).
+public enum ResumeTemplate: String, Codable, Sendable, CaseIterable {
+    /// Source Serif 4, one-line entries, the Build mockup's order (T32).
     case classic
-    /// Harvard's layout in New Computer Modern, with contact icons (polish P5).
+    /// Harvard's own guides: Times-style type at one size, ¾ in margins, Education then Skills
+    /// first, no summary (polish P5b).
     case harvard
 
     /// The template builds use.
     public static let standard = ResumeTemplate.harvard
 
-    /// The size and margins the template is drawn for.
+    /// The size and margins the template is drawn for. Harvard: 10 to 12 pt kept consistent, and
+    /// equal margins of at least ¾ in; 11 pt is its own sample's size.
     public var style: ResumeDocument.Style {
         switch self {
         case .classic: ResumeDocument.Style(fontSize: 10.5, margin: 0.6)
-        case .harvard: ResumeDocument.Style(fontSize: 10, margin: 0.6)
+        case .harvard: ResumeDocument.Style(fontSize: 11, margin: 0.75)
         }
     }
+
+    /// Whether the template prints a summary. Harvard's don't, so a build for one doesn't write it.
+    public var hasSummary: Bool { self == .classic }
 
     public func source() throws(RenderError) -> String {
         try Self.source(named: rawValue)
@@ -195,9 +203,11 @@ public struct ResumeRenderer: Sendable {
     }
 
     /// `createdAt` fixes the PDF's creation date, so the same document gives the same bytes.
-    public func render(_ document: ResumeDocument, template: ResumeTemplate = .classic, createdAt: Date? = nil)
+    /// With the document's own template unless `template` says otherwise.
+    public func render(_ document: ResumeDocument, template: ResumeTemplate? = nil, createdAt: Date? = nil)
         async throws(RenderError) -> RenderedPDF
     {
+        let template = template ?? document.template
         let data: Data
         do {
             data = try JSONEncoder().encode(document)

@@ -454,7 +454,7 @@ final class AppModel {
         let folder =
             ((try? AccountStore.applicationSupport().databaseURL(for: .local))?.deletingLastPathComponent()
             ?? FileManager.default.temporaryDirectory).appending(path: "Builds")
-        let queue = BuildQueue(db: db, router: ai?.router(), folder: folder) { printable in
+        let queue = BuildQueue(db: db, router: ai?.router(), folder: folder, template: .standard) { printable in
             guard let renderer else { throw RenderError.launch("typst isn't in the app bundle") }
             return try await renderer.render(printable)
         }

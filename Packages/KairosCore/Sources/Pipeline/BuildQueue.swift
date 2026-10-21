@@ -58,15 +58,17 @@ public actor BuildQueue {
     private let workers: Int
     private let render: Render
     private let maxDuration: Duration
+    private let template: ResumeTemplate
     private let log = Logger(subsystem: "com.keneepatel.kairos", category: "builds")
     private var pending: [UUID] = []
     private var running: Set<UUID> = []
 
     /// `folder` is where PDFs go; `render` turns a document into a PDF (a `ResumeRenderer`). A build
-    /// normally takes a minute or two; `maxDuration` is the most one may take.
+    /// normally takes a minute or two; `maxDuration` is the most one may take. `template` lays the
+    /// resume out and decides whether a summary is written; the app passes `.standard`.
     public init(
         db: Database, router: LLMRouter?, folder: URL, workers: Int = 2, maxDuration: Duration = .seconds(15 * 60),
-        render: @escaping Render
+        template: ResumeTemplate = .classic, render: @escaping Render
     ) {
         (events, continuation) = AsyncStream.makeStream(of: Event.self)
         self.db = db
@@ -75,6 +77,7 @@ public actor BuildQueue {
         self.workers = max(1, workers)
         self.render = render
         self.maxDuration = maxDuration
+        self.template = template
     }
 
     /// The router later builds use, such as after you add an AI key.
@@ -184,19 +187,21 @@ public actor BuildQueue {
                 musts: analysis.requirements.filter { $0.kind == .must }.map(\.text),
                 nices: analysis.requirements.filter { $0.kind == .nice }.map(\.text), domains: analysis.domains),
             locale: SpellingLocale(country: job.country), mode: record.mode, gapBulletsPerRole: stretch.limit,
-            coverLetter: record.coverLetter != nil)
+            coverLetter: record.coverLetter != nil, summary: self.template.hasSummary)
         let loop = BuildLoop(
             router: router, master: master, context: CallContext(jobID: job.id.rawValue, buildID: id.lowercased))
         let render = self.render
         let continuation = self.continuation
+        let template = self.template
         let outcome = try await loop.run(
-            request, measure: { try await render(.resume(ResumeDocument($0))).pageCount },
+            request, measure: { try await render(.resume(ResumeDocument($0, for: template))).pageCount },
             progress: { step in
                 // A build stopped at its deadline reports nothing more.
                 if !Task.isCancelled { continuation.yield(.step(id, step)) }
             })
 
-        let url = try await save(.resume(ResumeDocument(outcome.resume)), kind: "resume", name: id.lowercased, for: id)
+        let url = try await save(
+            .resume(ResumeDocument(outcome.resume, for: template)), kind: "resume", name: id.lowercased, for: id)
         var letter: CoverLetterRecord?
         if request.coverLetter {
             letter = await coverLetter(outcome.coverLetter, for: id)

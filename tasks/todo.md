@@ -670,6 +670,28 @@ Your decisions:
     - **On your 1Password build:** fitting dropped 2 bullets to fit one page, against 1 with Classic. Most of that is the place's own line.
     - **Undrawn, decided here:** the cover letter takes the same header, at 11 pt with 1 in margins as before.
     - **Visual differences from `Build.dc.html`:** its preview is Source Serif 4 with one-line entries and caps labels. The Harvard template replaces those, as you asked; Classic still matches it.
+- [x] **P5b · The Harvard template, set to Harvard's own guides** (S), your decision (2026-10-21): "Harvard preferences would precede mine". Superseded P5's choices where Harvard's guides differ.
+  - **Sources:** the Mignone Center's Master's resume guide (2025), the College bullet template (2025 `.docx`), its resume sample and optional category examples (2026), and its quick tips. Conflicts were settled this way: written rules beat samples, and the master's guide beats the College one, since you hold a master's.
+  - **Harvard's rules applied:**
+    - **Font:** "a common, easy to read font". That's Liberation Serif, metric-compatible with the Times New Roman of Harvard's sample, at 11 pt. Times New Roman itself can't be bundled.
+    - **Size:** one size "kept consistent throughout", the name and headings included (as in the master's tech sample).
+    - **Margins:** "equal all the way around … at least three quarters of an inch". 0.75 in.
+    - **Colour:** none, and no boxes or shading.
+    - **Abbreviations:** "Don't abbreviate". Months are spelled out, and a range within one year names the year once ("May – August 2025").
+    - **Order:** "For tech (computer science) resumes, include Technical Skills after the Education section". So Education, Skills, Experience, Projects, Certifications, with spoken languages as Harvard's "Language" row under Skills.
+  - **Taken from Harvard's samples:**
+    - The name in bold capitals.
+    - One contact line: place, phone, email, links, with " | " between them.
+    - Headings in bold capitals over a rule.
+    - Organization (bold) and place, then title (italic) and dates.
+    - Education shows school and place, then the degree and its graduation date.
+  - **No summary:** no Harvard template, sample or optional category has one. A Harvard build doesn't write one, which saves an AI call, and the score doesn't count it.
+  - **Dropped from P5:** the icons, the underlines and the small caps. No Harvard sample has them.
+  - **Kept, where Harvard is silent:** the links show the address (`linkedin.com/in/…`), not just "LinkedIn", so they still work on paper and for parsers. The phone number stays a `tel:` link.
+  - **Cost:** your content needs 1.31 pages at 11 pt; Harvard's ¾ in margins are the main cost. It's 1.17 at 10.5 pt, which is still inside Harvard's 10–12 pt; that's a one-line change in `ResumeTemplate.harvard.style`.
+  - **Design:** `ResumeDocument(_:for:)` makes Harvard's choices in Swift (tested without typst), and documents carry their template. `BuildQueue(template:)` defaults to Classic, which its existing tests cover unchanged; the app passes `.standard`.
+  - **Tests:** one size throughout; margins equal and at least ¾ in; the Times-style font only; the reading order; the plain contact line keeping its links; Harvard's arrangement and dates; no summary call in a Harvard build.
+  - **Cover letter:** the same font and contact line. The name stays as typed, in bold, because Harvard's letter template sets no letterhead. Harvard's own letter template greets with a colon ("Dear …:"), but the greeting is unchanged, since your request was about the resume.
 
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 

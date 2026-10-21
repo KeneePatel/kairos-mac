@@ -106,11 +106,17 @@ private func outcome(of id: UUID, in queue: BuildQueue) async -> BuildQueue.Even
 private final class Printed: Sendable {
     private let kinds = Mutex<[String]>([])
 
+    private let layouts = Mutex<[ResumeTemplate]>([])
+
     func record(_ printable: Printable) {
         kinds.withLock {
             if case .letter = printable { $0.append("letter") } else { $0.append("resume") }
         }
+        if case .resume(let document) = printable { layouts.withLock { $0.append(document.template) } }
     }
+
+    /// The template of each resume printed.
+    var templates: [ResumeTemplate] { layouts.withLock { $0 } }
 
     var last: String? { kinds.withLock { $0.last } }
 }
@@ -175,6 +181,26 @@ struct BuildQueueTests {
         try await Task.sleep(for: .milliseconds(300))
         let record = try #require(try await BuildRepository(db).build(first))
         #expect(record.status == .failed && record.error == BuildError.tookTooLong(limit).message)
+    }
+
+    /// The app's queue prints with Harvard's template, which has no summary, so none is written.
+    @Test func aHarvardBuildPrintsHarvardsLayoutWithoutASummary() async throws {
+        let (db, job) = try await database()
+        try await analyse(job, in: db)
+        let fake = FakeProvider(replies)
+        let printed = Printed()
+        let queue = BuildQueue(db: db, router: router(db, fake), folder: folder(), template: .harvard) { printable in
+            printed.record(printable)
+            return try await render(printable)
+        }
+        let id = try await queue.enqueue(job: job.id)
+        guard case .finished? = await outcome(of: id, in: queue) else {
+            Issue.record("the build didn't finish")
+            return
+        }
+        #expect(Set(fake.requests.map(\.task)) == [.writeExperience, .writeSkills])
+        #expect(try await BuildRepository(db).build(id)?.content?.summary == nil)
+        #expect(printed.templates.allSatisfy { $0 == .harvard } && !printed.templates.isEmpty)
     }
 
     @Test func aBuildRunsAndLeavesAPDFAndItsRecord() async throws {

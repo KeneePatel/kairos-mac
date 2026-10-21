@@ -63,7 +63,7 @@ The app uses SF Pro (the system font). The scale lines up with the macOS text st
 | Caption (table header) | 11/14 | Semibold | `.subheadline` |
 | Score | 28/32 | Bold, tabular figures | custom |
 | Phone large title / body | 32/38 Bold · 15/20 | | web only |
-| Resume, Harvard (builds use it) and the cover letter | New Computer Modern: name 22 small caps, body 10 (letter 11), section labels 11.5 small caps over a 0.5 pt rule; contact links underlined after a Bootstrap icon | | PDF only |
+| Resume, Harvard (builds use it) and the cover letter | Liberation Serif (Times New Roman metrics), 11 pt throughout: name and section labels bold capitals, labels over a 0.5 pt rule; ¾ in margins; plain contact line | | PDF only |
 | Resume, Classic | Source Serif 4: name 22, body 10.5/14, section labels 9.5 caps | | PDF only |
 
 Use tabular figures for every number that lines up in a column: scores, counts and times.

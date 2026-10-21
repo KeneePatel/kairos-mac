@@ -10,7 +10,7 @@ public enum Printable: Sendable, Equatable {
 extension ResumeRenderer {
     public func render(_ printable: Printable, createdAt: Date? = nil) async throws(RenderError) -> RenderedPDF {
         switch printable {
-        case .resume(let document): try await render(document, template: .standard, createdAt: createdAt)
+        case .resume(let document): try await render(document, createdAt: createdAt)
         case .letter(let letter): try await render(letter: letter, createdAt: createdAt)
         }
     }
@@ -34,7 +34,8 @@ public struct LetterDocument: Codable, Sendable, Equatable {
     public init(_ letter: CoverLetter, style: ResumeDocument.Style = .init(fontSize: 11, margin: 1)) {
         header = ResumeDocument.Header(
             name: letter.header.name,
-            contact: letter.header.contact.map { ResumeDocument.ContactItem(text: $0.text, url: $0.url) })
+            contact: ResumeDocument.ContactItem.harvardOrder(
+                letter.header.contact.map { ResumeDocument.ContactItem(text: $0.text, url: $0.url) }))
         date = letter.date
         recipient = ["Hiring team", letter.company]
         subject = letter.jobTitle.isEmpty ? nil : "Re: \(letter.jobTitle)"

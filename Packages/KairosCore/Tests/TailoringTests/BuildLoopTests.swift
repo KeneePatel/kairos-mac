@@ -130,6 +130,21 @@ struct BuildLoopTests {
         #expect(outcome.resume.experience.flatMap(\.bullets).count == 7)
     }
 
+    /// A template without a summary (Harvard's): no call is spent on one, and the score doesn't
+    /// count words the PDF won't show.
+    @Test func aBuildWithoutASummaryWritesNone() async throws {
+        let (loop, fake) = try loop([
+            .writeExperience: [.reply(goodExperience)], .writeProjects: [.reply(projects)],
+            .writeSkills: [.reply(skills)],
+        ])
+        var noSummary = request
+        noSummary.summary = false
+        let outcome = try await loop.run(noSummary)
+        #expect(!fake.requests.map(\.task).contains(.writeSummary))
+        #expect(outcome.resume.summary == nil && outcome.fellBack.isEmpty)
+        #expect(outcome.score.score(.summary) == nil && outcome.score.score(.experience) != nil)
+    }
+
     @Test func liteModeWritesOnlyTheSummaryAndSkills() async throws {
         let (loop, fake) = try loop([.writeSummary: [.reply(summary)], .writeSkills: [.reply(skills)]])
         var lite = request

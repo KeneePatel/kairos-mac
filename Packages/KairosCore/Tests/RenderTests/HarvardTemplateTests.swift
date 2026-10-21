@@ -11,6 +11,52 @@ private func normalized(_ text: String) -> String {
     text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
 }
 
+private func bullet(_ text: String) -> TailoredBullet { TailoredBullet(text: text, sourceIDs: [UUID()]) }
+
+/// The design's sample persona as a build (fixtures only), with everything Harvard rearranges: a
+/// summary, abbreviated months, a degree's range of years and spoken languages.
+func jordanBuild() -> TailoredResume {
+    TailoredResume(
+        header: .init(
+            name: "Jordan Rivera",
+            contact: [
+                .init(text: "jordan.rivera@example.com", url: "mailto:jordan.rivera@example.com"),
+                .init(text: "(416) 555-0123", url: "tel:+14165550123"),
+                .init(text: "linkedin.com/in/jordan-rivera", url: "https://www.linkedin.com/in/jordan-rivera"),
+                .init(text: "Toronto, ON"),
+            ]),
+        summary: "Backend developer with 5 years building event-driven services for logistics and fintech.",
+        skills: [
+            SkillGroup(label: "Languages", skills: ["Go", "Java", "Python", "SQL"]),
+            SkillGroup(label: "Infrastructure", skills: ["Kubernetes", "Docker", "Terraform"]),
+        ],
+        experience: [
+            .init(
+                entryID: UUID(), title: "Software Developer, Backend", organization: "Harbourline Logistics",
+                location: "Toronto, ON", dates: "Mar 2022 – Present",
+                bullets: [
+                    bullet("Built an event pipeline in Go handling 4.2M events a day with p99 under 120 ms."),
+                    bullet("Onboarded 11 carriers in 4 days instead of 3 weeks with a gRPC integration kit."),
+                ]),
+            .init(
+                entryID: UUID(), title: "Junior Developer", organization: "Rivet Studio", location: "Toronto, ON",
+                dates: "Jun 2020 – Feb 2022",
+                bullets: [bullet("Shipped REST APIs in Django and PostgreSQL for 30+ client projects.")]),
+        ],
+        projects: [
+            .init(
+                entryID: UUID(), title: "Dockyard", organization: "Go", dates: "2023 – Present",
+                bullets: [bullet("Finds and removes dangling Docker images and volumes; 400+ stars.")])
+        ],
+        education: [
+            .init(
+                entryID: UUID(), title: "BMath, Computer Science", organization: "University of Waterloo",
+                location: "Waterloo, ON", dates: "2015 – 2019")
+        ],
+        certifications: [.init(entryID: UUID(), title: "AWS Solutions Architect – Associate", dates: "2024")],
+        languages: "English (native), French (conversational)")
+}
+
 /// The fonts a PDF's first page uses, by their PostScript names without the subset prefix.
 private func fonts(in data: Data) throws -> Set<String> {
     let provider = try #require(CGDataProvider(data: data as CFData))
@@ -40,34 +86,60 @@ private func fonts(in data: Data) throws -> Set<String> {
     return withExtendedLifetime(document) { names }
 }
 
-/// Dark pixels an icon leaves in the 11 pt before its item, at 2×. Calibrated on a real resume
-/// (2026-10-21): icons left 107 to 197; the same strip in the Classic template, which has no icons,
-/// left 45 to 60 from the end of the item before.
-private let iconInk = 85
-
-/// Dark pixels in `rect` (page points) when the page is drawn at 2×.
-private func ink(in rect: CGRect, on page: PDFPage) -> Int {
-    let box = page.bounds(for: .mediaBox)
-    let scale: CGFloat = 2
-    let width = Int(box.width * scale)
-    let height = Int(box.height * scale)
-    guard
-        let context = CGContext(
-            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
-            space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)
-    else { return 0 }
-    context.setFillColor(gray: 1, alpha: 1)
-    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-    context.scaleBy(x: scale, y: scale)
-    page.draw(with: .mediaBox, to: context)
-    guard let pixels = context.data?.assumingMemoryBound(to: UInt8.self) else { return 0 }
-    var dark = 0
-    for y in Int(rect.minY * scale)..<Int(rect.maxY * scale) {
-        for x in Int(rect.minX * scale)..<Int(rect.maxX * scale) where pixels[(height - 1 - y) * width + x] < 128 {
-            dark += 1
-        }
+/// Harvard's arrangement, decided in Swift before any template runs.
+@Suite("Harvard arrangement")
+struct HarvardArrangementTests {
+    /// Education, then Skills ("for tech resumes"), Experience, Projects, Certifications; no summary;
+    /// spoken languages as Harvard's "Language" row; the contact line in its samples' order.
+    @Test func aBuildIsArrangedTheWayHarvardLaysItOut() {
+        let document = ResumeDocument(jordanBuild(), for: .harvard)
+        #expect(document.template == .harvard && document.style == ResumeTemplate.harvard.style)
+        #expect(document.sections.map(\.kind) == [.education, .skills, .experience, .projects, .certifications])
+        #expect(document.sections.allSatisfy { $0.text == nil })  // no summary
+        #expect(document.sections[1].groups.map(\.label) == ["Languages", "Infrastructure", "Language"])
+        #expect(document.sections[1].groups.last?.items == ["English (native), French (conversational)"])
+        #expect(
+            document.header.contact.map(\.text) == [
+                "Toronto, ON", "(416) 555-0123", "jordan.rivera@example.com", "linkedin.com/in/jordan-rivera",
+            ])
+        #expect(document.sections[0].items[0].dates == "2019")
+        #expect(document.sections[2].items.map(\.dates) == ["March 2022 – Present", "June 2020 – February 2022"])
+        #expect(document.sections[2].items[0].subtitle == "Harbourline Logistics")
     }
-    return dark
+
+    /// Harvard: "Don't abbreviate". A range inside one year names the year once, and a degree is
+    /// shown by when it was finished.
+    @Test func datesAreWrittenTheWayHarvardWritesThem() {
+        let spelled = [
+            ("May 2025 – Aug 2025", "May – August 2025"), ("Sep 2024 – Feb 2025", "September 2024 – February 2025"),
+            ("Mar 2022 – Present", "March 2022 – Present"), ("Sept. 2024", "September 2024"),
+            ("2023 – Present", "2023 – Present"), ("2024", "2024"),
+        ]
+        for (dates, harvard) in spelled { #expect(HarvardDates.spelledOut(dates) == harvard, "\(dates)") }
+        let graduation = [
+            ("2015 – 2019", "2019"), ("Jan 2024 – Aug 2025", "August 2025"), ("2024 – Present", "2024 – Present"),
+            ("May 2025", "May 2025"),
+        ]
+        for (dates, harvard) in graduation { #expect(HarvardDates.graduation(dates) == harvard, "\(dates)") }
+    }
+
+    /// Classic keeps the Build mockup's arrangement, summary first.
+    @Test func classicKeepsItsOwnArrangement() {
+        let build = jordanBuild()
+        let document = ResumeDocument(build, for: .classic)
+        #expect(document == ResumeDocument(build, style: ResumeTemplate.classic.style))
+        #expect(document.template == .classic && document.sections.first?.kind == .summary)
+        #expect(ResumeTemplate.classic.hasSummary && !ResumeTemplate.harvard.hasSummary)
+    }
+
+    /// The letter's contact line follows the same order.
+    @Test func theLetterUsesHarvardsContactOrder() {
+        let letter = CoverLetter(
+            header: jordanBuild().header, date: "October 21, 2026", company: "Northline Freight",
+            jobTitle: "Backend Developer II", greeting: "Dear Northline Freight hiring team,",
+            paragraphs: ["One.", "Two.", "Three."], closing: "Sincerely,", signature: "Jordan Rivera")
+        #expect(LetterDocument(letter).header.contact.first?.text == "Toronto, ON")
+    }
 }
 
 @Suite("Harvard template", .enabled(if: TypstBinary.url != nil, "Run scripts/fetch-typst.sh first"))
@@ -76,8 +148,10 @@ struct HarvardTemplateTests {
         ResumeRenderer(runner: TypstRunner(executable: try #require(TypstBinary.url)))
     }
 
-    func render(_ document: ResumeDocument = jordan()) async throws -> (RenderedPDF, PDFDocument, PDFPage) {
-        let rendered = try await renderer().render(document, template: .harvard)
+    func render(_ document: ResumeDocument = ResumeDocument(jordanBuild(), for: .harvard)) async throws -> (
+        RenderedPDF, PDFDocument, PDFPage
+    ) {
+        let rendered = try await renderer().render(document)
         let pdf = try #require(PDFDocument(data: rendered.data))
         return (rendered, pdf, try #require(pdf.page(at: 0)))
     }
@@ -101,126 +175,119 @@ struct HarvardTemplateTests {
             #expect(text.contains(normalized(line)), "“\(line)” isn't in the PDF's text")
             if let found, !anywhere { cursor = found }
         }
+        #expect(!text.contains("Backend developer with 5 years"))  // the summary isn't printed
     }
 
-    /// Small caps change how the name and headings look, not their letters: a parser reads
-    /// "Experience", as typed.
-    @Test func smallCapsKeepTheTypedLetters() async throws {
-        let text = normalized(try #require(try await render().1.string))
-        #expect(text.hasPrefix("Jordan Rivera"))
-        for heading in ["Summary", "Experience", "Projects", "Education", "Skills", "Certifications", "Languages"] {
-            #expect(text.contains(heading), "\(heading) is missing")
+    /// Harvard: "font size should be between 10 and 12 point and kept consistent throughout the
+    /// document". Name, headings and body are all 11 pt.
+    @Test func oneSizeThroughout() async throws {
+        let page = try await render().2
+        let text = try #require(page.attributedString)
+        var sizes = Set<CGFloat>()
+        text.enumerateAttribute(.font, in: NSRange(location: 0, length: text.length)) { value, _, _ in
+            if let font = value as? NSFont { sizes.insert(font.pointSize.rounded()) }
         }
-        #expect(!text.contains("EXPERIENCE"))
+        #expect(sizes == [11])
     }
 
-    /// Each contact item has its icon drawn just before it. The icons are drawings, so the PDF's
-    /// text holds only the items, with no symbols from an icon font, and the only fonts are the
-    /// text's.
-    @Test func contactIconsAreDrawingsNotText() async throws {
-        let (rendered, document, page) = try await render()
-        let text = try #require(document.string)
-        let stray = text.unicodeScalars.filter {
-            (0xE000...0xF8FF).contains($0.value) || $0.value == 0xFFFD || $0.properties.generalCategory == .otherSymbol
+    /// Harvard: "Margins should be equal all the way around the page and should be at least three
+    /// quarters of an inch".
+    @Test func marginsAreEqualAndAtLeastThreeQuartersOfAnInch() async throws {
+        let page = try await render().2
+        let box = page.bounds(for: .mediaBox)
+        let ink = (0..<(page.string?.count ?? 0)).map { page.characterBounds(at: $0) }.filter {
+            $0.width > 0 && $0.height > 0
         }
-        #expect(stray.isEmpty, "stray symbols: \(stray.map { String(format: "U+%04X", $0.value) })")
+        let left = try #require(ink.map(\.minX).min())
+        let right = box.width - (try #require(ink.map(\.maxX).max()))
+        let top = box.height - (try #require(ink.map(\.maxY).max()))
+        #expect(left >= 53.5 && right >= 53.5 && top >= 53.5, "left \(left), right \(right), top \(top)")
+        #expect(abs(left - right) < 1.5)
+    }
+
+    /// "A common, easy to read font": Liberation Serif, metric-compatible with the Times New Roman of
+    /// Harvard's sample, and nothing else. The text is clean for parsers: no symbols, no ligatures.
+    @Test func itIsSetInATimesStyleFontAndNothingElse() async throws {
+        let (rendered, document, _) = try await render()
         let used = try fonts(in: rendered.data)
-        #expect(used == ["NewCM10-Regular", "NewCM10-Bold", "NewCM10-Italic"])
-        for item in ["jordan.rivera@example.com", "(416) 555-0123", "linkedin.com/in/jordan-rivera"] {
-            let bounds = try #require(document.findString(item, withOptions: []).first?.bounds(for: page), "\(item)")
-            let before = CGRect(x: bounds.minX - 13, y: bounds.minY, width: 11, height: bounds.height)
-            #expect(ink(in: before, on: page) > iconInk, "no icon before \(item)")
+        #expect(used == ["LiberationSerif", "LiberationSerif-Bold", "LiberationSerif-Italic"])
+        let text = try #require(document.string)
+        let odd = text.unicodeScalars.filter {
+            (0xE000...0xF8FF).contains($0.value) || (0xFB00...0xFB06).contains($0.value) || $0.value == 0xFFFD
         }
-        // The check can fail: Classic, which has no icons, stays under the line.
-        let classic = try #require(PDFDocument(data: try await renderer().render(jordan(), template: .classic).data))
-        let classicPage = try #require(classic.page(at: 0))
-        let linkedIn = try #require(
-            classic.findString("linkedin.com/in/jordan-rivera", withOptions: []).first?.bounds(for: classicPage))
-        let strip = CGRect(x: linkedIn.minX - 13, y: linkedIn.minY, width: 11, height: linkedIn.height)
-        #expect(ink(in: strip, on: classicPage) <= iconInk)
-        // The place in the header has its pin.
-        let places = document.findString("Toronto, ON", withOptions: []).map { $0.bounds(for: page) }
-        let header = try #require(places.max { $0.midY < $1.midY })
-        #expect(
-            ink(in: CGRect(x: header.minX - 13, y: header.minY, width: 11, height: header.height), on: page) > iconInk)
+        #expect(odd.isEmpty)
     }
 
-    /// Links stay links: email, LinkedIn and the phone number when it has one.
-    @Test func contactLinksAreClickable() async throws {
-        var document = jordan()
-        document.header.contact[1] = .init(text: "(416) 555-0123", url: "tel:+14165550123")
-        let (_, pdf, page) = try await render(document)
+    /// The contact line is plain text, as in Harvard's samples, and every link still works.
+    @Test func theContactLineIsPlainTextThatLinks() async throws {
+        let (_, document, page) = try await render()
+        let text = normalized(try #require(document.string))
+        #expect(
+            text.contains(
+                "JORDAN RIVERA Toronto, ON | (416) 555-0123 | jordan.rivera@example.com | linkedin.com/in/jordan-rivera"
+            ))
         let links = Set(page.annotations.compactMap(\.url?.absoluteString))
         #expect(
             links == [
                 "mailto:jordan.rivera@example.com", "tel:+14165550123", "https://www.linkedin.com/in/jordan-rivera",
             ])
-        #expect(pdf.pageCount == 1)
     }
 
     @Test func sectionOrderAndVisibilityAreInputs() async throws {
-        var document = jordan()
-        let education = try #require(document.sections.firstIndex { $0.kind == .education })
-        document.sections.insert(document.sections.remove(at: education), at: 0)
+        var document = ResumeDocument(jordanBuild(), for: .harvard)
+        document.sections.swapAt(0, 2)
         document.sections[document.sections.firstIndex { $0.kind == .skills }!].visible = false
         let text = normalized(try #require(try await render(document).1.string))
-        let educationAt = try #require(text.range(of: "Education")?.lowerBound)
-        let experienceAt = try #require(text.range(of: "Experience")?.lowerBound)
-        #expect(educationAt < experienceAt)
-        #expect(!text.contains("Skills") && !text.contains("Infrastructure"))
+        let educationAt = try #require(text.range(of: "EDUCATION")?.lowerBound)
+        let experienceAt = try #require(text.range(of: "EXPERIENCE")?.lowerBound)
+        #expect(experienceAt < educationAt)
+        #expect(!text.contains("SKILLS") && !text.contains("Infrastructure"))
     }
 
     /// Content is data the template reads, never Typst source, so markup characters print as typed,
-    /// in every place this template sets text differently: italic lines, the project stack, links.
+    /// in every place this template sets text: organization, title, place, project stack, bullets
+    /// and the contact line.
     @Test func typstMarkupInContentPrintsLiterally() async throws {
         let markup = #"#panic("no") *bold* _it_ $x$ [b] <l> @r \e"#
-        var document = jordan()
-        document.header.contact[0] = .init(text: markup, url: "mailto:jordan.rivera@example.com")
-        document.sections[1].items[0].subtitle = markup
-        document.sections[1].items[0].location = markup
-        document.sections[2].items[0].subtitle = markup
-        document.sections[1].items[0].bullets = [markup]
+        var document = ResumeDocument(jordanBuild(), for: .harvard)
+        document.header.contact[0] = .init(text: markup, url: "https://example.com")
+        let experience = try #require(document.sections.firstIndex { $0.kind == .experience })
+        let projects = try #require(document.sections.firstIndex { $0.kind == .projects })
+        document.sections[experience].items[0].subtitle = markup
+        document.sections[experience].items[0].title = markup
+        document.sections[experience].items[0].location = markup
+        document.sections[experience].items[0].bullets = [markup]
+        document.sections[projects].items[0].subtitle = markup
         let text = try #require(try await render(document).1.string)
-        #expect(text.components(separatedBy: markup).count - 1 == 5)
+        #expect(text.components(separatedBy: markup).count - 1 == 6)
     }
 
-    @Test func itIsSetInNewComputerModernAndReproducible() async throws {
+    @Test func itIsReproducible() async throws {
         let renderer = try renderer()
         let at = Date(timeIntervalSince1970: 1_790_000_000)
-        let first = try await renderer.render(jordan(), template: .harvard, createdAt: at)
-        let second = try await renderer.render(jordan(), template: .harvard, createdAt: at)
+        let document = ResumeDocument(jordanBuild(), for: .harvard)
+        let first = try await renderer.render(document, createdAt: at)
+        let second = try await renderer.render(document, createdAt: at)
         #expect(first.data == second.data)
-        #expect(first.data.range(of: Data("NewCM10-Regular".utf8)) != nil)
     }
 
-    /// Builds print with the standard template at its size, and the letter shares its header.
+    /// Builds print with the standard template, and the letter shares its type and header.
     @Test func buildsAndLettersPrintInTheHarvardStyle() async throws {
         #expect(ResumeTemplate.standard == .harvard)
-        #expect(ResumeTemplate.harvard.style == ResumeDocument.Style(fontSize: 10, margin: 0.6))
-        let resume = TailoredResume(header: .init(name: "Jordan Rivera"), summary: "Backend developer.")
-        #expect(ResumeDocument(resume).style == ResumeTemplate.harvard.style)
-        let printed = try await renderer().render(.resume(ResumeDocument(resume)))
+        #expect(ResumeTemplate.harvard.style == ResumeDocument.Style(fontSize: 11, margin: 0.75))
+        let printed = try await renderer().render(.resume(ResumeDocument(jordanBuild(), for: .standard)))
         let resumeFonts = try fonts(in: printed.data)
-        #expect(resumeFonts.contains("NewCM10-Regular"))
+        #expect(resumeFonts.contains("LiberationSerif"))
 
         let letter = CoverLetter(
-            header: .init(
-                name: "Jordan Rivera",
-                contact: [
-                    .init(text: "jordan.rivera@example.com", url: "mailto:jordan.rivera@example.com"),
-                    .init(text: "Toronto, ON"),
-                ]),
-            date: "October 20, 2026", company: "Northline Freight", jobTitle: "Backend Developer II",
-            greeting: "Dear Northline Freight hiring team,", paragraphs: ["One.", "Two.", "Three."],
-            closing: "Sincerely,", signature: "Jordan Rivera")
+            header: jordanBuild().header, date: "October 21, 2026", company: "Northline Freight",
+            jobTitle: "Backend Developer II", greeting: "Dear Northline Freight hiring team,",
+            paragraphs: ["One.", "Two.", "Three."], closing: "Sincerely,", signature: "Jordan Rivera")
         let letterPDF = try await renderer().render(.letter(LetterDocument(letter)))
         let letterFonts = try fonts(in: letterPDF.data)
-        #expect(letterFonts.contains("NewCM10-Regular"))
-        let letterDocument = try #require(PDFDocument(data: letterPDF.data))
-        let page = try #require(letterDocument.page(at: 0))
-        let email = try #require(
-            letterDocument.findString("jordan.rivera@example.com", withOptions: []).first?.bounds(for: page))
-        #expect(ink(in: CGRect(x: email.minX - 13, y: email.minY, width: 11, height: email.height), on: page) > iconInk)
+        #expect(letterFonts.contains("LiberationSerif"))
+        let letterText = normalized(try #require(PDFDocument(data: letterPDF.data)?.string))
+        #expect(letterText.hasPrefix("Jordan Rivera Toronto, ON | (416) 555-0123 | jordan.rivera@example.com"))
     }
 }
 
@@ -237,7 +304,7 @@ struct ContactKindTests {
         ("Toronto, ON", nil, .location),
     ]
 
-    /// The icon comes from the link, so a stored build's contact line gets its icons too.
+    /// The kind comes from the link, so a stored build's contact line sorts the same way.
     @Test func eachItemsKindComesFromItsLink() {
         for item in Self.cases {
             #expect(ResumeDocument.ContactItem(text: item.text, url: item.url).kind == item.kind, "\(item.text)")
