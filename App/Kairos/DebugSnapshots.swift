@@ -76,6 +76,9 @@
                     ReviewView().environment(today.model).frame(width: 1_440, height: 560),
                     to: folder.appending(path: "review-\(name).png"), appearance: appearance)
                 render(
+                    ReviewView(filter: .prefiltered).environment(today.model).frame(width: 1_440, height: 360),
+                    to: folder.appending(path: "review-prefiltered-\(name).png"), appearance: appearance)
+                render(
                     NavigationStack { FetchView() }.environment(today.model).frame(width: 1_440, height: 640),
                     to: folder.appending(path: "fetch-\(name).png"), appearance: appearance)
                 render(
@@ -175,7 +178,7 @@
                     descriptionMarkdown: "Build the services that track two million shipments a day.", verdict: verdict,
                     verdictSource: .analysis, rank: rank, firstSeenAt: Date())
             }
-            let jobs = [
+            var jobs = [
                 job("Backend Developer II", "Northline Freight", "Toronto", "ON", .canada, .hybrid, .yes, rank: 220.92),
                 job(
                     "Software Developer, Platform", "Cobalt Ledger", "Waterloo", "ON", .canada, .hybrid, .maybe,
@@ -190,6 +193,7 @@
                     "Senior Backend Engineer", "Kestrel Analytics", "New York", "NY", .unitedStates, .onsite, .no,
                     rank: 10.35),
             ]
+            jobs[2].verdictSource = .prefilter  // the French posting never reached the AI
             func record(_ verdict: Verdict, _ stage: VerdictSource, _ reasons: [String], _ coverage: Coverage?)
                 -> ScreeningRecord
             {

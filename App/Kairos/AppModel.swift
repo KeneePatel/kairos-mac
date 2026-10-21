@@ -265,34 +265,52 @@ final class AppModel {
 
     // MARK: - Review
 
-    /// Review's three views (polish P3): the Yes and Maybe jobs you haven't acted on, every No with
-    /// its reason, and everything fetched.
+    /// Review's views (polish P3, split by stage at your request): the jobs that reached the AI by
+    /// verdict, then everything the prefilter dropped, then all of it. A verdict you set counts as
+    /// the AI's stage, whichever stage set it before.
     enum ReviewFilter: String, CaseIterable, Identifiable {
-        case toReview, rejected, all
+        case yes, maybe, no, prefiltered, all
         var id: Self { self }
 
         var title: String {
             switch self {
-            case .toReview: "To review"
-            case .rejected: "Rejected"
+            case .yes: "Yes"
+            case .maybe: "Maybe"
+            case .no: "No"
+            case .prefiltered: "Prefiltered"
             case .all: "All"
             }
         }
     }
 
+    /// Yes and Maybe leave out what you've marked "Not for me" or applied to; No, Prefiltered and
+    /// All keep everything.
     func reviewJobs(_ filter: ReviewFilter) -> [Job] {
+        let byRank: (Job, Job) -> Bool = { ($0.rank ?? -1, $1.title) > ($1.rank ?? -1, $0.title) }
+        let judged = jobs.filter { $0.verdictSource != nil && $0.verdictSource != .prefilter }
         switch filter {
-        case .toReview: todayJobs.filter { $0.verdict == .yes || $0.verdict == .maybe }
-        case .rejected: jobs.filter { $0.verdict == .no }.sorted { ($0.rank ?? 0, $1.title) > ($1.rank ?? 0, $0.title) }
-        case .all: jobs.sorted { ($0.rank ?? -1, $1.title) > ($1.rank ?? -1, $0.title) }
+        case .yes: return todayJobs.filter { $0.verdict == .yes && $0.verdictSource != .prefilter }
+        case .maybe: return todayJobs.filter { $0.verdict == .maybe && $0.verdictSource != .prefilter }
+        case .no: return judged.filter { $0.verdict == .no }.sorted(by: byRank)
+        case .prefiltered: return jobs.filter { $0.verdictSource == .prefilter }.sorted(by: byRank)
+        case .all: return jobs.sorted(by: byRank)
         }
     }
 
     func reviewCount(_ filter: ReviewFilter) -> Int { reviewJobs(filter).count }
 
-    /// `filter`'s jobs grouped by country in your order.
+    /// `filter`'s jobs grouped by country in your order; prefiltered jobs by the rule that dropped
+    /// them instead, most first.
     func reviewSections(_ filter: ReviewFilter) -> [JobSection] {
         let shown = reviewJobs(filter)
+        if filter == .prefiltered {
+            let byRule = Dictionary(grouping: shown) { job in
+                screening(for: job)?.ruleID.flatMap(PrefilterRule.init(rawValue:))?.reason ?? "Other reasons"
+            }
+            return byRule.sorted { ($0.value.count, $1.key) > ($1.value.count, $0.key) }.map {
+                JobSection(id: $0.key, title: $0.key, jobs: $0.value)
+            }
+        }
         let countries: [Country?] =
             searchPreferences.countries + Country.allCases.filter { !searchPreferences.countries.contains($0) } + [nil]
         return countries.compactMap { country in

@@ -89,7 +89,7 @@ struct RootView: View {
 extension RootView {
     /// Review counts the jobs worth a look.
     func badge(_ section: AppSection) -> Int {
-        section == .review ? model.reviewCount(.toReview) : 0
+        section == .review ? model.reviewCount(.yes) + model.reviewCount(.maybe) : 0
     }
 }
 

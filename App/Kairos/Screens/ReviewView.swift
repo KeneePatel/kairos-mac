@@ -2,14 +2,19 @@ import Screening
 import Store
 import SwiftUI
 
-/// Review (polish P3, replacing Today and Jobs): the screened jobs, best first, grouped by country
-/// in your order. To review shows the Yes and Maybe jobs you haven't acted on, Rejected every No
-/// with its reason, All everything fetched. Choosing a job opens it full width.
+/// Review (polish P3, replacing Today and Jobs): the screened jobs, best first. Yes, Maybe and No
+/// are the jobs that reached the AI, grouped by country in your order; Prefiltered is what the
+/// prefilter dropped, grouped by the rule; All is everything fetched. Choosing a job opens it full
+/// width.
 struct ReviewView: View {
     @Environment(AppModel.self) private var model
-    @State private var filter = AppModel.ReviewFilter.toReview
+    @State private var filter: AppModel.ReviewFilter
     @State private var path: [JobID] = []
     @State private var selection: JobID?
+
+    init(filter: AppModel.ReviewFilter = .yes) {
+        _filter = State(initialValue: filter)
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -54,8 +59,10 @@ struct ReviewView: View {
 
     private var emptyTitle: String {
         switch filter {
-        case .toReview: "Nothing to review"
-        case .rejected: "Nothing rejected"
+        case .yes: "No Yes jobs"
+        case .maybe: "No Maybe jobs"
+        case .no: "No rejections from the AI"
+        case .prefiltered: "Nothing prefiltered"
         case .all: "No jobs yet"
         }
     }
@@ -66,9 +73,14 @@ struct ReviewView: View {
             return
                 "\(model.waitingForAI) jobs passed the prefilter and wait for the AI. Add a key in Settings, then fetch again."
         }
-        return filter == .toReview
-            ? "No Yes or Maybe jobs right now. Rejected shows why the rest didn't make it."
-            : "Choose Fetch now in Fetch to check your companies' boards."
+        switch filter {
+        case .yes, .maybe:
+            return "None right now. No and Prefiltered show why the rest didn't make it."
+        case .no, .prefiltered:
+            return "Every job got past this stage."
+        case .all:
+            return "Choose Fetch now in Fetch to check your companies' boards."
+        }
     }
 
     private var filterPicker: some View {
