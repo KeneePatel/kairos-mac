@@ -635,6 +635,16 @@ Your decisions:
     - **Undrawn, decided here:**
       - Partial is a half-filled circle in the Maybe amber; a requirement that doesn't count is a minus circle in secondary ink, with the words "Taken as met" or "Not judged: a personal quality". Colour never stands alone.
       - The Fetch panels reuse the grouped-surface card; the Job page is capped at 880 pt wide and centred.
+- [x] **P4 · Builds never get stuck** (S), from your report of two builds frozen near the end (2026-10-20)
+  - **Acceptance:** a typst run always ends, at worst at its timeout, and nothing is left running. A build that runs past its deadline fails with a clear message and frees its worker. Your two frozen builds finish.
+  - **Verify:** `core-test RenderTests`, `core-test PipelineTests`; `--run-build` on a copy of your database
+  - **Done 2026-10-20:**
+    - **Root cause:** `TypstRunner` waited for typst with `waitUntilExit()`, which runs a run loop on a shared thread. Sometimes it missed an exit that had already happened, and waited forever. A sample of the frozen build showed that thread in `waitUntilExit` with no typst running. The 30-second timeout couldn't help: the task group it raced in waits for every child, including the stuck one. The two builds froze while rendering, the step after the cover letter for one and a fitting render for the other. Then they sat "running" for hours. Restarting the 1Password build froze it again at the same point.
+    - **Runner:** the exit comes from Process's termination handler, which is set before launch. typst's messages go to a file, never a pipe that could fill, and stdin is closed. On timeout the runner stops waiting, asks typst to stop, and kills it 2 s later if it's still running. The new lifecycle tests use a fake typst that ignores the stop signal, 40 quick runs at once, and 4,000 lines of messages; against the old runner they hung.
+    - **Build deadline:** a build that runs more than 15 minutes is failed ("This build ran for more than 15 minutes and was stopped. Build again to retry."). It's cancelled, and its worker takes the next build. The deadline doesn't wait on stuck work, and a step that ends late can't turn the build back to done or report more steps.
+    - **Also:** builds log start, finish and failure with durations (Console, category `builds`). Render failures now read as sentences rather than enum names. A build started again after a quit replaces its earlier PDF record instead of adding a second.
+    - **Checked on a copy of your database:** the 1Password build finishes in about 1 s and the Affirm stretch build in about 4 s once queued. Every render takes under 0.1 s.
+    - **Found, not fixed:** in debug runs, each of the 4 Gemini keys takes 4–7 s to come out of the Keychain, about 20 s in all. The app reads keys once per launch, on the main thread, the first time it needs AI. If it's as slow there, the window freezes for that long once per launch.
 
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 

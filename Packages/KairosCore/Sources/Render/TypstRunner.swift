@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 /// Runs the bundled `typst` binary to turn a template plus JSON content into a PDF.
 ///
@@ -65,6 +66,11 @@ public struct TypstRunner: Sendable {
         return text.isEmpty ? "typst failed without saying why" : String(text.prefix(2_000))
     }
 
+    /// Runs typst and waits for it without blocking a thread. The exit comes from Process's
+    /// termination handler, never `waitUntilExit()`, which spins a run loop and can miss an exit
+    /// that already happened: a build froze for hours that way (2026-10-20), waiting on a typst that
+    /// had exited. The timeout always wins: it stops waiting, asks typst to stop, and kills it if
+    /// it doesn't. typst's messages go to a file, so no pipe can fill up and stall it.
     private func run(_ arguments: [String], home: URL) async throws(RenderError) -> Result {
         let process = Process()
         process.executableURL = executable
@@ -72,9 +78,16 @@ public struct TypstRunner: Sendable {
         // A sealed environment: no TYPST_FONT_PATHS or similar from the user's shell changes the
         // output, and any cache typst wants goes in the throwaway folder.
         process.environment = ["HOME": home.path, "TMPDIR": home.path]
-        let errors = Pipe()
-        process.standardError = errors
+        let log = home.appendingPathComponent("typst-messages.txt")
+        guard FileManager.default.createFile(atPath: log.path, contents: nil),
+            let messages = FileHandle(forWritingAtPath: log.path)
+        else { throw .workspace("can't create typst's message log") }
+        defer { try? messages.close() }
+        process.standardError = messages
         process.standardOutput = FileHandle.nullDevice
+        process.standardInput = FileHandle.nullDevice
+        let exit = ExitSignal()
+        process.terminationHandler = { exit.finish($0.terminationStatus) }
 
         do {
             try process.run()
@@ -82,43 +95,78 @@ public struct TypstRunner: Sendable {
             throw .launch(error.localizedDescription)
         }
 
-        let box = ProcessBox(process)
-        let stderr = errors.fileHandleForReading
-        let outcome = await withTaskGroup(of: Outcome.self) { group in
-            group.addTask {
-                // Drain stderr before waiting, so typst never stalls on a full pipe.
-                let data = stderr.readDataToEndOfFile()
-                box.process.waitUntilExit()
-                return .finished(data)
-            }
+        let status: Int32? = await withTaskGroup(of: Int32?.self) { group in
+            group.addTask { await exit.wait() }
             group.addTask { [timeout] in
                 try? await Task.sleep(for: timeout)
-                return .timedOut
+                return nil
             }
-            let first = await group.next() ?? .timedOut
-            if case .timedOut = first { box.process.terminate() }
-            group.cancelAll()
+            let first = await group.next() ?? nil
+            group.cancelAll()  // the other child returns at once: neither ever blocks
             return first
         }
-        switch outcome {
-        case .timedOut:
+        guard let status else {
+            await Self.stop(process, exit: exit)
             throw .timedOut
-        case .finished(let data):
-            return Result(status: process.terminationStatus, stderr: String(decoding: data, as: UTF8.self))
         }
+        let text = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
+        return Result(status: status, stderr: text)
     }
 
-    private enum Outcome: Sendable {
-        case finished(Data)
-        case timedOut
+    /// Asks typst to stop and gives it two seconds, then kills it. Returns once it's been told to
+    /// go for good, so a timeout never leaves typst running.
+    private static func stop(_ process: Process, exit: ExitSignal) async {
+        let pid = process.processIdentifier
+        process.terminate()
+        for _ in 0..<20 where !exit.hasFinished {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        if !exit.hasFinished { kill(pid, SIGKILL) }
     }
 }
 
-/// `Process` isn't marked `Sendable`, but `waitUntilExit()` and `terminate()` are safe to call from
-/// another thread. This box lets the reader and the timeout reach the one running process.
-private final class ProcessBox: @unchecked Sendable {
-    let process: Process
-    init(_ process: Process) { self.process = process }
+/// typst's exit, from the termination handler, for one waiter. Cancelling the wait ends it at once
+/// with nil, so a timeout never waits on a process.
+private final class ExitSignal: Sendable {
+    private struct State {
+        var status: Int32?
+        var waiter: CheckedContinuation<Int32?, Never>?
+        var cancelled = false
+    }
+
+    private let state = Mutex(State())
+
+    var hasFinished: Bool { state.withLock { $0.status != nil } }
+
+    func finish(_ status: Int32) {
+        let waiter = state.withLock { state -> CheckedContinuation<Int32?, Never>? in
+            state.status = status
+            defer { state.waiter = nil }
+            return state.waiter
+        }
+        waiter?.resume(returning: status)
+    }
+
+    func wait() async -> Int32? {
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Int32?, Never>) in
+                let ready = state.withLock { state -> Int32?? in
+                    if let status = state.status { return .some(status) }
+                    if state.cancelled { return .some(nil) }
+                    state.waiter = continuation
+                    return .none
+                }
+                if case .some(let value) = ready { continuation.resume(returning: value) }
+            }
+        } onCancel: {
+            let waiter = state.withLock { state -> CheckedContinuation<Int32?, Never>? in
+                state.cancelled = true
+                defer { state.waiter = nil }
+                return state.waiter
+            }
+            waiter?.resume(returning: nil)
+        }
+    }
 }
 
 public enum RenderError: Error, Equatable, Sendable {

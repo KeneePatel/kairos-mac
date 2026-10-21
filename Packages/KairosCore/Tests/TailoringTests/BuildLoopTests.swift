@@ -266,4 +266,18 @@ struct BuildRepositoryTests {
             job: JobID(canonicalURL: "https://jobs.example.com/maplepay"), mode: .strict, masterVersion: 8)
         #expect(try await repo.recent(limit: 2).map(\.id) == [other, second])  // every job, newest first
     }
+
+    /// A build started again after a quit saves its PDF again: the new record replaces the old.
+    @Test func aBuildKeepsOneFileOfEachKind() async throws {
+        let db = try await migrated()
+        let repo = BuildRepository(db)
+        let id = try await repo.create(
+            job: JobID(canonicalURL: "https://jobs.example.com/northline"), mode: .strict, masterVersion: 1)
+        _ = try await repo.addArtifact(build: id, kind: "resume", sha256: "first", localPath: "/tmp/r.pdf")
+        _ = try await repo.addArtifact(build: id, kind: "cover_letter", sha256: "letter", localPath: "/tmp/c.pdf")
+        let again = try await repo.addArtifact(build: id, kind: "resume", sha256: "second", localPath: "/tmp/r.pdf")
+        let files = try await repo.artifacts(for: id)
+        #expect(files.map(\.kind) == ["cover_letter", "resume"])
+        #expect(files.last?.id == again && files.last?.sha256 == "second")
+    }
 }

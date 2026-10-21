@@ -148,9 +148,14 @@ public struct BuildRepository: Sendable {
         ).map(record)
     }
 
+    /// Records a build's file. One file of each kind per build: a build started again after a quit
+    /// replaces the file it saved the first time.
     public func addArtifact(build: UUID, kind: String, sha256: String, localPath: String) async throws -> UUID {
         let id = UUID.v7()
         try await db.write { connection, stamp in
+            try connection.execute(
+                "UPDATE artifact SET deleted = 1, updated_hlc = ? WHERE build_id = ? AND kind = ? AND deleted = 0",
+                [.text(stamp.hlc.description), .text(build.lowercased), .text(kind)])
             try connection.execute(
                 "INSERT INTO artifact (id, build_id, kind, sha256, local_path, updated_hlc) VALUES (?, ?, ?, ?, ?, ?)",
                 [

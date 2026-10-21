@@ -115,8 +115,68 @@ private final class Printed: Sendable {
     var last: String? { kinds.withLock { $0.last } }
 }
 
+/// Holds the first print until opened and ignores cancellation, like the typst wait that froze a
+/// build for hours (2026-10-20). Later prints pass straight through.
+private final class StuckFirstPrint: Sendable {
+    private struct State {
+        var prints = 0
+        var opened = false
+        var waiting: [CheckedContinuation<Void, Never>] = []
+    }
+
+    private let state = Mutex(State())
+
+    func pass() async {
+        await withCheckedContinuation { continuation in
+            let hold = state.withLock { state in
+                state.prints += 1
+                guard state.prints == 1, !state.opened else { return false }
+                state.waiting.append(continuation)
+                return true
+            }
+            if !hold { continuation.resume() }
+        }
+    }
+
+    func open() {
+        let waiting = state.withLock { state in
+            state.opened = true
+            defer { state.waiting = [] }
+            return state.waiting
+        }
+        for continuation in waiting { continuation.resume() }
+    }
+}
+
 @Suite("Build queue")
 struct BuildQueueTests {
+    /// A build stuck in a step that never returns fails at its deadline, frees its worker for the
+    /// next build, and stays failed when the step ends later.
+    @Test func aStuckBuildFailsAtItsDeadlineAndFreesItsWorker() async throws {
+        let (db, job) = try await database()
+        try await analyse(job, in: db)
+        let stuck = StuckFirstPrint()
+        let limit = Duration.milliseconds(500)
+        let queue = BuildQueue(
+            db: db, router: router(db, FakeProvider(replies)), folder: folder(), workers: 1, maxDuration: limit
+        ) { printable in
+            await stuck.pass()
+            return try await render(printable)
+        }
+        let first = try await queue.enqueue(job: job.id)
+        let second = try await queue.enqueue(job: job.id)
+        #expect(await outcome(of: first, in: queue) == .failed(first, BuildError.tookTooLong(limit).message))
+        guard case .finished? = await outcome(of: second, in: queue) else {
+            Issue.record("the build after the stuck one didn't run")
+            return
+        }
+
+        stuck.open()
+        try await Task.sleep(for: .milliseconds(300))
+        let record = try #require(try await BuildRepository(db).build(first))
+        #expect(record.status == .failed && record.error == BuildError.tookTooLong(limit).message)
+    }
+
     @Test func aBuildRunsAndLeavesAPDFAndItsRecord() async throws {
         let (db, job) = try await database()
         try await analyse(job, in: db)

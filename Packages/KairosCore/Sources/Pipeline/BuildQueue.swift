@@ -5,7 +5,9 @@ import MasterResume
 import Render
 import Screening
 import Store
+import Synchronization
 import Tailoring
+import os
 
 /// Why a build couldn't run, in words for the Build screen.
 public enum BuildError: Error, Equatable, Sendable {
@@ -15,6 +17,7 @@ public enum BuildError: Error, Equatable, Sendable {
     case notAnalysed
     case resumeNotReady([String])
     case stretchOff
+    case tookTooLong(Duration)
 
     public var message: String {
         switch self {
@@ -24,6 +27,9 @@ public enum BuildError: Error, Equatable, Sendable {
         case .notAnalysed: "This job hasn't been analysed yet. Run screening first."
         case .resumeNotReady(let missing): "Your master resume isn't ready: \(missing.joined(separator: " "))"
         case .stretchOff: "Stretch mode is off. Turn it on in Settings, General, or build in Full mode."
+        case .tookTooLong(let limit):
+            "This build ran for more than \(limit.formatted(.units(allowed: [.minutes, .seconds], width: .wide))) "
+                + "and was stopped. Build again to retry."
         }
     }
 }
@@ -31,7 +37,8 @@ public enum BuildError: Error, Equatable, Sendable {
 /// Builds resumes in the background, two at a time (SPEC §5.3). Each build runs the build loop,
 /// renders the PDF with page fitting, saves it, and records the result. A build a crash or quit
 /// left unfinished starts again with `resumeInterrupted()`; the writers' replies come back from the
-/// AI result cache, so steps already done cost no calls.
+/// AI result cache, so steps already done cost no calls. A build that runs past `maxDuration` is
+/// stopped and failed, so none sits "running" forever and holds a worker.
 public actor BuildQueue {
     public enum Event: Sendable, Equatable {
         case queued(UUID)
@@ -50,17 +57,24 @@ public actor BuildQueue {
     private let folder: URL
     private let workers: Int
     private let render: Render
+    private let maxDuration: Duration
+    private let log = Logger(subsystem: "com.keneepatel.kairos", category: "builds")
     private var pending: [UUID] = []
     private var running: Set<UUID> = []
 
-    /// `folder` is where PDFs go; `render` turns a document into a PDF (a `ResumeRenderer`).
-    public init(db: Database, router: LLMRouter?, folder: URL, workers: Int = 2, render: @escaping Render) {
+    /// `folder` is where PDFs go; `render` turns a document into a PDF (a `ResumeRenderer`). A build
+    /// normally takes a minute or two; `maxDuration` is the most one may take.
+    public init(
+        db: Database, router: LLMRouter?, folder: URL, workers: Int = 2, maxDuration: Duration = .seconds(15 * 60),
+        render: @escaping Render
+    ) {
         (events, continuation) = AsyncStream.makeStream(of: Event.self)
         self.db = db
         self.router = router
         self.folder = folder
         self.workers = max(1, workers)
         self.render = render
+        self.maxDuration = maxDuration
     }
 
     /// The router later builds use, such as after you add an AI key.
@@ -101,17 +115,47 @@ public actor BuildQueue {
 
     private func process(_ id: UUID) async {
         let builds = BuildRepository(db)
+        let started = ContinuousClock.now
+        log.info("build \(id.lowercased, privacy: .public) started")
         do {
             try await builds.start(id)
-            let (outcome, pdf) = try await build(id)
+            let (outcome, pdf) = try await Self.within(maxDuration) { try await self.build(id) }
+            log.info(
+                "build \(id.lowercased, privacy: .public) finished in \(ContinuousClock.now - started, privacy: .public)"
+            )
             continuation.yield(.finished(id, score: outcome.score.total, pdf: pdf))
         } catch {
             let message = Self.message(for: error)
+            log.error(
+                "build \(id.lowercased, privacy: .public) failed after \(ContinuousClock.now - started, privacy: .public): \(message, privacy: .public)"
+            )
             try? await builds.fail(id, error: message)
             continuation.yield(.failed(id, message))
         }
         running.remove(id)
         startWorkers()
+    }
+
+    /// Runs `work`, or gives up after `limit` and cancels it. Unlike a task group, it never waits
+    /// for work that ignores cancellation: a stuck step can't keep its build running.
+    static func within<T: Sendable>(_ limit: Duration, _ work: @escaping @Sendable () async throws -> T) async throws
+        -> T
+    {
+        try await withCheckedThrowingContinuation { continuation in
+            let race = Race(continuation)
+            race.hold(
+                Task {
+                    do {
+                        race.end(.success(try await work()))
+                    } catch {
+                        race.end(.failure(error))
+                    }
+                },
+                Task {
+                    guard (try? await Task.sleep(for: limit)) != nil else { return }
+                    race.end(.failure(BuildError.tookTooLong(limit)))
+                })
+        }
     }
 
     private func build(_ id: UUID) async throws -> (BuildOutcome, URL) {
@@ -147,13 +191,17 @@ public actor BuildQueue {
         let continuation = self.continuation
         let outcome = try await loop.run(
             request, measure: { try await render(.resume(ResumeDocument($0))).pageCount },
-            progress: { continuation.yield(.step(id, $0)) })
+            progress: { step in
+                // A build stopped at its deadline reports nothing more.
+                if !Task.isCancelled { continuation.yield(.step(id, step)) }
+            })
 
         let url = try await save(.resume(ResumeDocument(outcome.resume)), kind: "resume", name: id.lowercased, for: id)
         var letter: CoverLetterRecord?
         if request.coverLetter {
             letter = await coverLetter(outcome.coverLetter, for: id)
         }
+        try Task.checkCancellation()  // stopped at its deadline: it stays failed
         try await builds.finish(
             id, content: outcome.resume, score: outcome.score, iterations: outcome.rewrites, coverLetter: letter)
         return (outcome, url)
@@ -196,8 +244,48 @@ public actor BuildQueue {
         case LLMError.noProvider, LLMError.noKey: return BuildError.noAI.message
         case LLMError.cancelled: return "Stopped."
         case let error as LLMError: return "The AI provider couldn't finish this build (\(error.code)). Try again."
-        case let error as RenderError: return "The PDF couldn't be made: \(error)"
+        case RenderError.timedOut: return "Making the PDF took too long, so it was stopped. Build again to retry."
+        case RenderError.compile(let reason): return "The PDF couldn't be made: \(reason)"
+        case RenderError.launch(let reason), RenderError.workspace(let reason):
+            return "The PDF maker couldn't run (\(reason)). Build again to retry."
         default: return "This build failed: \(error.localizedDescription)"
         }
+    }
+}
+
+/// A build and its deadline: the first to end resumes the waiting worker, once, and the other is
+/// cancelled.
+private final class Race<T: Sendable>: Sendable {
+    private struct State {
+        var continuation: CheckedContinuation<T, any Error>?
+        var tasks: [Task<Void, Never>] = []
+    }
+
+    private let state: Mutex<State>
+
+    init(_ continuation: CheckedContinuation<T, any Error>) {
+        state = Mutex(State(continuation: continuation))
+    }
+
+    func hold(_ tasks: Task<Void, Never>...) {
+        let ended = state.withLock { state in
+            guard state.continuation != nil else { return true }
+            state.tasks += tasks
+            return false
+        }
+        if ended { for task in tasks { task.cancel() } }
+    }
+
+    func end(_ result: Result<T, any Error>) {
+        let (continuation, tasks) = state.withLock { state in
+            defer {
+                state.continuation = nil
+                state.tasks = []
+            }
+            return (state.continuation, state.tasks)
+        }
+        guard let continuation else { return }
+        for task in tasks { task.cancel() }
+        continuation.resume(with: result)
     }
 }
