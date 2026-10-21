@@ -5,7 +5,7 @@ import Observation
 import Secrets
 import Store
 
-/// The AI providers screen's state: the saved "llm" setting, the keys (in the Keychain, shown
+/// The AI providers screen's state: the saved "llm" setting, the keys (in the key store, shown
 /// masked), each provider's models, and today's usage.
 @MainActor
 @Observable
@@ -25,12 +25,12 @@ final class AISettingsModel {
     private(set) var settings = LLMSettings.defaults()
     private(set) var models: [String: Models] = [:]
     private(set) var usage: [String: Usage] = [:]
-    /// Keychain account → masked key, for display only. From the hint saved beside the key, so
+    /// Key name → masked key, for display only. From the hint saved beside the key, so
     /// showing it never unlocks the key; a key saved before hints shows its mask once something
     /// reads it (opening AI providers lists models, which does).
     private(set) var masked: [String: String] = [:]
     @ObservationIgnored private var revealed: [String: String] = [:]
-    /// Keychain account → what the last "Test" found.
+    /// Key name → what the last "Test" found.
     private(set) var keyChecks: [String: KeyCheck] = [:]
     private(set) var error: String?
 
@@ -110,7 +110,7 @@ final class AISettingsModel {
         do {
             try secrets.write(trimmed, for: SecretKey(name), hint: LLMSettings.masked(trimmed))
         } catch {
-            self.error = "Couldn't save the key to your Keychain."
+            self.error = "Couldn't save the key on this Mac."
             return
         }
         settings.providers[index].keyNames.append(name)
@@ -125,7 +125,7 @@ final class AISettingsModel {
             try secrets.write(trimmed, for: SecretKey(name), hint: LLMSettings.masked(trimmed))
             revealed[name] = nil
         } catch {
-            self.error = "Couldn't save the key to your Keychain."
+            self.error = "Couldn't save the key on this Mac."
             return
         }
         refreshMasks()
@@ -142,7 +142,7 @@ final class AISettingsModel {
 
     // MARK: - GitHub token
 
-    /// Optional; lifts GitHub's 60-requests-an-hour limit for project import. Kept in the Keychain
+    /// Optional; lifts GitHub's 60-requests-an-hour limit for project import. Kept in the key store
     /// next to the AI keys, since this model already owns that store.
     static let gitHubTokenName = SecretKey("github.token")
 
@@ -209,7 +209,7 @@ final class AISettingsModel {
                 ((try? secrets.read(SecretKey(name))) ?? nil).map { (name, $0) }
             } : [(nil, nil)]
         // The keys were read anyway: a key saved before hints shows its mask from now on.
-        for case (let name?, let key?) in keys where masked[name] == "Saved in your Keychain" {
+        for case (let name?, let key?) in keys where masked[name] == Self.savedWithoutHint {
             revealed[name] = LLMSettings.masked(key)
             masked[name] = revealed[name]
         }
@@ -296,12 +296,15 @@ final class AISettingsModel {
         refreshMasks()
     }
 
-    /// Hints only: nothing here reads a key, so opening Kairos never asks for your password.
+    /// Shown for a key saved before hints existed, until a test reveals its mask.
+    static let savedWithoutHint = "Saved on this Mac"
+
+    /// Hints only: nothing here reads a key.
     private func refreshMasks() {
         var result: [String: String] = [:]
         for name in settings.providers.flatMap(\.keyNames) {
             guard let summary = (try? secrets.summary(SecretKey(name))) ?? nil else { continue }
-            result[name] = summary.hint ?? revealed[name] ?? "Saved in your Keychain"
+            result[name] = summary.hint ?? revealed[name] ?? Self.savedWithoutHint
         }
         masked = result
     }

@@ -181,10 +181,10 @@
                     return
                 }
                 say("job: \(job.title) · \(job.company)")
-                let secrets = CachingSecretStore(KeychainStore(service: "com.keneepatel.kairos"))
+                let secrets = AppSecrets.store()
                 let ai = AISettingsModel(db: db, secrets: secrets)
                 await ai.load()
-                // How long each key takes to come out of the Keychain, and whether it does. Never the key.
+                // How long each key takes to come out of storage, and whether it does. Never the key.
                 for provider in ai.settings.providers {
                     for name in provider.keyNames {
                         let asked = Date()

@@ -50,7 +50,8 @@ final class AppModel {
     private(set) var isFetching = false
     /// The master resume editor's state; there once the database is open.
     private(set) var resume: ResumeModel?
-    /// AI providers, keys (in the Keychain) and routing; there once the database is open.
+    /// AI providers, keys (in Kairos's private key file until release) and routing; there once the
+    /// database is open.
     private(set) var ai: AISettingsModel?
 
     init() {}
@@ -96,9 +97,7 @@ final class AppModel {
             let resume = ResumeModel(db: db)
             await resume.load()
             self.resume = resume
-            // Each key is read from the Keychain at most once a session, however many runs use it.
-            let ai = AISettingsModel(
-                db: db, secrets: CachingSecretStore(KeychainStore(service: "com.keneepatel.kairos")))
+            let ai = AISettingsModel(db: db, secrets: AppSecrets.store())
             await ai.load()
             self.ai = ai
             await reload()

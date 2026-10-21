@@ -13,6 +13,8 @@ public struct SecretKey: Hashable, Sendable, CustomStringConvertible {
 public enum SecretsError: Error, Equatable, Sendable {
     case keychain(OSStatus)
     case notUTF8
+    /// The key file couldn't be read or written (`FileSecretStore`).
+    case file(String)
 }
 
 public protocol SecretStore: Sendable {

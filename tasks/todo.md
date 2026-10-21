@@ -711,6 +711,16 @@ Your decisions:
     - The project chosen for that build reads "October 2026 – Present". Projects imported from GitHub take the repository's creation date, so a project you pushed this month looks brand new.
     - One certification reads "October 2026". It may be real, or the editor's default, since picking a month with no year fills in this year.
     - Both are in Master resume, under each entry's dates.
+- [x] **P6 · Keys in a private file until release** (S), your decision (2026-10-21): "remove the keychain for now … until the final release and at that time you can ask me to put it again"
+  - **Why:** the login keychain kept asking for your password on reads, despite the stable signing certificate added at the start of polish (7e574bd). Each debug build run I made read your 4 Gemini keys, and each read took 4–7 s, about the time it takes to type a password. So those runs likely prompted you.
+  - **Done:**
+    - `FileSecretStore` keeps keys in `api-keys.json`, in Kairos's sandbox folder next to the database folders.
+    - The file is readable only by your account (0600), even after a rewrite. It's left out of Time Machine backups, never synced and never in SQLite. A damaged file is an error rather than an empty store, so a save can't wipe it.
+    - The app and the debug runs read keys only from there (`AppSecrets.store()`) and never touch the Keychain.
+    - The Keychain store and its signing spike stay in the code for release.
+  - **Your step:** paste your keys again in Settings, AI providers. Each saved key name with nothing behind it shows "Not on this Mac" and an Add button. Your old Keychain items are left as they were; you can delete them in Keychain Access, or keep them until release.
+  - **Checked:** a debug build run read all 4 keys from the file in 0.0 s and queued in 0.3 s, against about 20 s before, with no Keychain access.
+  - **Release:** recorded on T57: ask you before moving keys back, and find the cause of the prompts first. SPEC §5.7 and §12 note the exception.
 
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 
@@ -798,6 +808,7 @@ Your decisions:
 
 - [ ] **T57 · Release workflow and update check** (M) · your step: add the signing certificate as an encrypted repo secret
   - **Acceptance:** `release.yml` on a `v*` tag builds, signs, makes the DMG and publishes a GitHub Release. The app checks the GitHub Releases API for updates. The install guide covers "Open Anyway", with screenshots.
+  - **Before this ships, ask Kenee:** move API keys back into the Keychain (P6, your decision on 2026-10-21). First find out why the login keychain kept prompting despite the stable signing certificate, so the move doesn't bring the prompts back. Then switch `AppSecrets.store()` back to `KeychainStore`, move the keys out of `api-keys.json` and delete that file.
   - **Verify:** tag a pre-release; install it on a second Mac
 
 - [ ] **T58 · PWA shell, sign-in and data pull** (M) · deps: R3

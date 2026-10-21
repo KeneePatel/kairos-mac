@@ -459,6 +459,7 @@ New accounts start with the Gemini preset. Writing tasks use its newest Flash mo
 - **No inbound network surface.** All server-side authorization lives in Supabase row-level security, never in the client.
 - **Keys:** the app and the PWA ship only the Supabase **publishable** key (`sb_publishable_…`, safe in client code). The secret key never leaves the Supabase dashboard and is never in the repo. The legacy anon and service_role keys are not used; Supabase deprecates them by the end of 2026.
 - **Keychain** holds LLM keys and the session (access and refresh tokens) as login-keychain items, which never sync through iCloud Keychain. The data protection keychain needs a paid-program team ID, so access is tied to the app's signature instead; spike T07 showed one stable self-signed certificate keeps that access across updates without prompts (`docs/spikes/keychain-signing.md`). Never in SQLite, Supabase, `UserDefaults` or logs.
+  - **Development exception (Kenee, 2026-10-21), until release:** the login keychain kept asking for the account password on every read, so LLM keys and the GitHub token live in `api-keys.json` in the app's sandbox folder instead. The file is readable only by its user (0600), left out of Time Machine backups, never synced and never in SQLite (`FileSecretStore`). Before release they move back to the Keychain, after asking Kenee (tasks/todo.md, T57).
 - **Data classification:**
 
   | Class | Fields | Handling |
@@ -873,7 +874,7 @@ Conventions:
 - Build every tailored resume and cover letter only from the user's master resume.
 - Let the verifier enforce the hard limits in every mode, and flag every stretch bullet.
 - Treat job descriptions and model output as untrusted data.
-- Keep secrets and sessions in the Keychain only.
+- Keep secrets and sessions in the Keychain only. Until release, API keys use the private key file of §5.7's development exception, which Kenee approved.
 
 **Ask first**
 - Adding any Swift package, bundled binary, npm package or new network host.

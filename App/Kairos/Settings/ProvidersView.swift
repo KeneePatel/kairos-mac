@@ -13,7 +13,7 @@ struct ProvidersView: View {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
                         .font(TypeStyle.callout).foregroundStyle(Color(.error))
                 }
-                FormSection(title: "Providers", caption: "Your own keys, kept in this Mac's Keychain.") {
+                FormSection(title: "Providers", caption: "Your own keys, kept on this Mac only.") {
                     Menu {
                         ForEach(model.addablePresets) { preset in
                             Button(preset.name) { Task { await model.add(preset) } }
@@ -102,7 +102,7 @@ private struct ProviderCard: View {
         .confirmationDialog("Remove \(preset.name)?", isPresented: $confirmingRemoval) {
             Button("Remove", role: .destructive) { Task { await model.remove(provider.id) } }
         } message: {
-            Text("Its keys are deleted from your Keychain, and tasks that used it fall back to their other models.")
+            Text("Its keys are deleted from this Mac, and tasks that used it fall back to their other models.")
         }
         .task { if model.models[provider.id] == nil { await model.refreshModels(for: provider.id) } }
     }
@@ -161,8 +161,11 @@ private struct ProviderCard: View {
                             check(name)
                             Text(model.masked[name] ?? "Not on this Mac").font(.system(.callout, design: .monospaced))
                                 .foregroundStyle(Color(.ink2))
-                            Button(index == 0 ? "Replace" : "Remove") {
-                                if index == 0 {
+                            // A key named in your settings but not saved here (such as one from the
+                            // Keychain, before keys moved to a file) can be pasted again in place.
+                            let missing = model.masked[name] == nil
+                            Button(missing ? "Add" : index == 0 ? "Replace" : "Remove") {
+                                if missing || index == 0 {
                                     keySheet = .replace(name)
                                 } else {
                                     Task { await model.removeKey(name, from: provider.id) }
@@ -231,7 +234,7 @@ private struct ProviderCard: View {
     }
 }
 
-/// Paste a key: it goes straight to the Keychain and is only ever shown masked afterwards.
+/// Paste a key: it's saved on this Mac only and is only ever shown masked afterwards.
 private struct KeySheet: View {
     enum Mode: Identifiable, Hashable {
         case add
@@ -251,7 +254,7 @@ private struct KeySheet: View {
     private var title: String {
         switch mode {
         case .add: isBackup ? "Add a backup key for \(provider.preset.name)" : "Add a key for \(provider.preset.name)"
-        case .replace: "Replace the primary key"
+        case .replace(let name): model.masked[name] == nil ? "Paste this key again" : "Replace the primary key"
         }
     }
 
@@ -259,8 +262,10 @@ private struct KeySheet: View {
         VStack(alignment: .leading, spacing: Spacing.space5) {
             VStack(alignment: .leading, spacing: Spacing.space1) {
                 Text(title).font(TypeStyle.title3).foregroundStyle(Color(.ink))
-                Text("It's saved in your Keychain on this Mac. Kairos shows only its first and last characters.")
-                    .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                Text(
+                    "It's saved on this Mac only, in a file only you can read. Kairos shows only its first and last characters."
+                )
+                .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
             }
             if isBackup {
                 Label {
