@@ -119,6 +119,8 @@ public struct VerdictEngine: Sendable {
     public let preferences: SearchPreferences
     public let profile: WorkProfile
     public let speaksFrench: Bool
+    /// Your master resume's languages: a requirement naming one counts as shown.
+    public let languages: [EntryFields.Language]
     /// From your master resume; nil skips the years-above-yours check.
     public let totalYears: Double?
 
@@ -127,6 +129,7 @@ public struct VerdictEngine: Sendable {
     ) {
         self.preferences = preferences
         self.profile = profile
+        self.languages = languages
         self.totalYears = totalYears
         speaksFrench = Prefilter.speaksFrench(languages)
     }
@@ -134,6 +137,7 @@ public struct VerdictEngine: Sendable {
     /// `snippetOnly`: the description is a search's snippet, not the whole posting (Adzuna). What
     /// it shows can still rule a job out, but it can't make it a Yes.
     public func decide(_ analysis: JobAnalysis, for job: Job, snippetOnly: Bool = false) -> VerdictDecision {
+        let analysis = analysis.recognizingLanguages(languages)
         let coverage = Coverage(analysis)
         let flags = analysis.flags
         var notes = [coverage.summary]

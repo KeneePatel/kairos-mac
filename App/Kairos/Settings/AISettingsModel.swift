@@ -67,6 +67,8 @@ final class AISettingsModel {
     func load() async {
         settings =
             (try? await SettingsRepository(db).value(LLMSettings.storageKey, as: LLMSettings.self)) ?? .defaults()
+        // A task added since you saved these (suggestions, 2026-10-22) follows your route for its kind.
+        settings.addMissingRoutes()
         refreshMasks()
         await refreshUsage()
     }

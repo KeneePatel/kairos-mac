@@ -140,7 +140,7 @@ Module ids are stable and will not be renamed.
 | `backend` | The Supabase project as code: SQL migrations, row-level security policies, `sync_push`, account deletion, invite hook, storage policies, auth settings checklist | — (deployed separately) |
 | `account` | Sign-up, sign-in (password, Google, GitHub), email confirmation, password reset, session refresh, sign-out, invites, export, account deletion | `secrets`, `backend` (contract) |
 | `sync` | Outbox, push through `sync_push`, pull over REST, PDF upload and download, command queue | `store`, `account` |
-| `app-mac` | SwiftUI screens (since 2026-10-22 the workflow reads Find jobs · Review · Filtered out · Resumes · Applications: Review holds only jobs that passed your filters, as Yes, Maybe, No and All, and Filtered out holds the rest by reason, each one can be brought back; a job opens full width with its requirements and evidence, and there's no side inspector; once a job has a build, its Resume button opens that job's resume page, with the resume, cover letter and only its own build history; Review's Build resumes queues one for every Yes or every Maybe job without one, after showing the AI calls it costs), menu bar, WebKit hosts, master-resume editor, account screens, notifications | `pipeline`, `sync`, `account`, `master-resume` |
+| `app-mac` | SwiftUI screens (since 2026-10-22 the workflow reads Find jobs · Review · Improve · Filtered out · Resumes · Applications: Review holds only jobs that passed your filters, as Yes, Maybe, No and All, and Filtered out holds the rest by reason, each one can be brought back; a job opens full width with its requirements and evidence, and there's no side inspector; once a job has a build, its Resume button opens that job's resume page, with the resume, cover letter and only its own build history; Review's Build resumes queues one for every Yes or every Maybe job without one, after showing the AI calls it costs; Improve is a read-only report of what keeps Review's No and Maybe jobs from a Yes: fixes ranked by the verdicts they could move, worked out by code from the stored analyses, with search fixes (Adzuna snippets, titles your list leaves out) and reasons no resume changes apart, and an optional `suggestEvidence` call per fix), menu bar, WebKit hosts, master-resume editor, account screens, notifications | `pipeline`, `sync`, `account`, `master-resume` |
 | `cli` | Headless `kairos` commands (API sources only) | `pipeline`, `sync`, `account` |
 | `web-companion` | PWA: sign-in, today's list, job detail, verdict override, queue builds, open PDFs, application tracking | `backend` (contract) |
 
@@ -239,6 +239,7 @@ flowchart LR
    - Coverage counts only skill, experience, education and language requirements: a yes is worth 1, a partial ½.
    - Soft skills are never judged, and location, authorization and availability requirements are taken as met. The prefilter and the authorization flags still apply your settings.
    - A job can be re-evaluated on its own, with a fresh analysis (P2).
+   - A language requirement naming a language you list (above basic) counts as shown, whatever the model said, unless it also asks for French or to be bilingual and you don't speak French (2026-10-22: "English" had made a No). It applies when the verdict is decided, so Re-check filters corrects stored jobs without AI calls.
 7. **Rank:** verdict first, then country priority (CA before US), then match. Review's list (Today's until 2026-10-20) and notifications follow this order.
 8. **Notify:** one notification with the counts of new `yes` and `maybe` jobs.
 
@@ -372,6 +373,7 @@ let result = try await llm.run(AnalyzeJobTask(), input: job)
 | `rewriteSection` | Per weak section, ≤ 3 passes | Current section + the score's findings | Bullets with `source_ids` | Flash | 3k / 1.5k | 0.4 |
 | `gapBullets` | Stretch mode only | Uncovered requirements + role context + Can-discuss skills | Gap bullets, flagged | Flash | 3k / 800 | 0.5 |
 | `coverLetter` | Per build, optional | Requirements + selected entries + company and title | Paragraphs | Flash | 4k / 1k | 0.6 |
+| `suggestEvidence` | On request, in Improve ("Ask the AI") | One fix's asks in the postings' words + your master resume as numbered evidence (as `analyzeJob` sends it) | Up to 3 questions, each citing your roles, projects or bullets, with what a bullet could show if the answer is yes; or how to show it with something new. Never resume lines | Flash-Lite (settings saved before it follow `analyzeJob`'s route) | 4k / 800 | 0.3 |
 
 "Flash" and "Flash-Lite" mean the newest model of that class the provider lists. Settings shows the exact ids fetched from the provider's `GET /models`, and the user can pin any of them per task. Lite models get the high-volume extraction work because free tiers give them higher limits.
 

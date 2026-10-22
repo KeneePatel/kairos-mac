@@ -138,6 +138,33 @@ public struct JobAnalysis: Codable, Sendable, Equatable {
 
     /// Must-haves your master resume shows.
     public var coveredMusts: Int { requirements.filter { $0.kind == .must && $0.effectiveMatch == .yes }.count }
+
+    /// The analysis with each language requirement you meet counted as shown, citing your language
+    /// ("l2", as the screening profile numbers them). The model sometimes marks one missing that
+    /// your master resume lists ("English", 2026-10-22). Basic level doesn't count, and neither does
+    /// a requirement that also asks for French or to be bilingual when you don't speak French: the
+    /// model and the French flag judge those.
+    public func recognizingLanguages(_ languages: [EntryFields.Language]) -> JobAnalysis {
+        let spoken = languages.enumerated().filter { $0.element.proficiency != .basic }.map { index, language in
+            (id: "l\(index + 1)", name: TextScan.fold(language.language).trimmingCharacters(in: .whitespaces))
+        }
+        .filter { !$0.name.isEmpty }
+        guard !spoken.isEmpty else { return self }
+        let french = Prefilter.speaksFrench(languages)
+        var recognised = self
+        recognised.requirements = requirements.map { requirement in
+            let text = TextScan.fold(requirement.text)
+            guard requirement.category == .language, requirement.effectiveMatch != .yes,
+                french || !TextScan.containsAny(text, ["french", "francais", "bilingual"]),
+                let language = spoken.first(where: { TextScan.containsPhrase(text, $0.name) })
+            else { return requirement }
+            var shown = requirement
+            shown.match = .yes
+            shown.evidence = [language.id]
+            return shown
+        }
+        return recognised
+    }
 }
 
 /// `analyzeJob` (SPEC §5.5 catalog): once per job that passes the prefilter.

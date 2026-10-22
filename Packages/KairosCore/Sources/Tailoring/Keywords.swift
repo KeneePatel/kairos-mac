@@ -72,6 +72,11 @@ enum Keywords {
         return terms
     }
 
+    /// The broader terms a text names ("cloud", "message queues"), and the technologies each stands for.
+    static func concepts(in text: String) -> [(concept: String, members: [String])] {
+        vocabulary.concepts.filter { contains($0.key, in: text) }.sorted { $0.key < $1.key }.map { ($0.key, $0.value) }
+    }
+
     /// Content words, singular, for matching what technologies don't cover ("on-call", "services").
     static func keywords(in text: String) -> Set<String> {
         let words = text.lowercased().split { !$0.isLetter && !$0.isNumber && $0 != "-" }.map(String.init)
@@ -109,4 +114,25 @@ enum Keywords {
         "about", "across", "other", "within", "excellent", "good", "great", "proven", "solid", "hands-on",
         "built", "build", "building",
     ]
+}
+
+/// The technologies and broader terms a text names, by the vocabulary builds use (`Synonyms.json`),
+/// for code outside tailoring: Improve groups job requirements with it, so "K8s" and "Kubernetes"
+/// count as one ask.
+public enum TechVocabulary {
+    /// A technology as a text names it: its canonical name (lowercase) and the words as written.
+    public struct Named: Sendable, Equatable {
+        public let canonical: String
+        public let written: String
+    }
+
+    /// In the order first named.
+    public static func technologies(in text: String) -> [Named] {
+        Keywords.mentions(in: text).map { Named(canonical: $0.canonical, written: $0.written) }
+    }
+
+    /// Broader terms ("cloud", "ci/cd") and the canonical technologies each stands for.
+    public static func concepts(in text: String) -> [(concept: String, members: [String])] {
+        Keywords.concepts(in: text)
+    }
 }

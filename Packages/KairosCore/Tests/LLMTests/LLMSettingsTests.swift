@@ -30,6 +30,24 @@ struct LLMSettingsTests {
         _ = settings.router(db: db, secrets: secrets)
     }
 
+    /// Settings saved before a task existed have no route for it, so it would fail with no
+    /// provider. It borrows your route for a task of the same kind, or else the default.
+    @Test func aTaskAddedLaterBorrowsYourRouteForItsKind() {
+        var settings = LLMSettings.defaults()
+        let local = ModelRef(provider: "ollama-local", model: "qwen3.5:4B")
+        settings.routes["analyzeJob"] = [local]
+        settings.routes["suggestEvidence"] = nil
+        settings.routes["coverLetter"] = nil
+        settings.addMissingRoutes()
+        #expect(settings.routes["suggestEvidence"] == [local])  // Flash-Lite's kind, as analyzeJob
+        #expect(settings.routes["coverLetter"] == settings.routes["writeExperience"])
+        #expect(settings.routes["triage"] == nil)
+        // A route you emptied stays empty.
+        settings.routes["select"] = []
+        settings.addMissingRoutes()
+        #expect(settings.routes["select"] == [])
+    }
+
     @Test func keepingEverythingLocalRoutesEveryTaskToOllama() {
         var settings = LLMSettings.defaults()
         settings.routeEverything(to: ModelRef(provider: "ollama-local", model: "qwen3.5:4B"))

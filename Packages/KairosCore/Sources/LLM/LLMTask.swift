@@ -26,11 +26,12 @@ public struct TaskID: RawRepresentable, Hashable, Sendable, CustomStringConverti
     public static let rewriteSection = TaskID("rewriteSection")
     public static let gapBullets = TaskID("gapBullets")
     public static let coverLetter = TaskID("coverLetter")
+    public static let suggestEvidence = TaskID("suggestEvidence")
 
     /// Every task in the spec's catalog, in its order.
     public static let catalog: [TaskID] = [
         .importResume, .importGitHubRepo, .triage, .analyzeJob, .select, .writeSummary, .writeSkills,
-        .writeExperience, .writeProjects, .rewriteSection, .gapBullets, .coverLetter,
+        .writeExperience, .writeProjects, .rewriteSection, .gapBullets, .coverLetter, .suggestEvidence,
     ]
 }
 

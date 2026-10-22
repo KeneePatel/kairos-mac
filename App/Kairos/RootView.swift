@@ -1,21 +1,23 @@
 import SwiftUI
 
 /// The app's sections in sidebar order (polish P3; reworked 2026-10-22): the workflow, from finding
-/// jobs to reviewing the ones that passed your filters (with the filtered-out ones apart), resumes
-/// and applications, then your profile. Names say what a job seeker recognizes.
+/// jobs to reviewing the ones that passed your filters, what would widen your reach (Improve), the
+/// filtered-out ones apart, resumes and applications, then your profile. Names say what a job
+/// seeker recognizes.
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case fetch, review, filtered, builds, applications
+    case fetch, review, improve, filtered, builds, applications
     case masterResume, settings, activity
 
     var id: Self { self }
 
-    static let workflow: [AppSection] = [.fetch, .review, .filtered, .builds, .applications]
+    static let workflow: [AppSection] = [.fetch, .review, .improve, .filtered, .builds, .applications]
     static let profile: [AppSection] = [.masterResume, .settings, .activity]
 
     var title: String {
         switch self {
         case .fetch: "Find jobs"
         case .review: "Review"
+        case .improve: "Improve"
         case .filtered: "Filtered out"
         case .builds: "Resumes"
         case .applications: "Applications"
@@ -29,6 +31,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .fetch: "arrow.down.circle"
         case .review: "checklist"
+        case .improve: "chart.line.uptrend.xyaxis"
         case .filtered: "line.3.horizontal.decrease.circle"
         case .builds: "doc.text"
         case .applications: "paperplane"
@@ -72,6 +75,8 @@ struct RootView: View {
                 FetchView()
             case (.ready, .review):
                 ReviewView()
+            case (.ready, .improve):
+                ImproveView()
             case (.ready, .filtered):
                 FilteredOutView()
             case (.ready, .builds):

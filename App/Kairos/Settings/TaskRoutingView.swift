@@ -17,6 +17,7 @@ extension TaskID {
         case .rewriteSection: "Rewrite weak sections"
         case .gapBullets: "Stretch mode bullets"
         case .coverLetter: "Write cover letters"
+        case .suggestEvidence: "Suggest how to show a skill"
         default: rawValue
         }
     }

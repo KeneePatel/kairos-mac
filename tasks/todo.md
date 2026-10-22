@@ -802,6 +802,45 @@ Your decisions:
   - **Checked:** with `Kairos --layout-probe --screens`, a new probe mode that snapshots screens with their toolbars in titled windows, on your data: Review with the menu and column, a job with a resume showing Resume, that job's resume page with History, and a job without one showing Build resume. The confirmation dialog only appears on a click, so it wasn't snapshotted.
   - **Visual differences:** none of these are drawn in `Build.dc.html` or the Review mockup. The Resume column reuses the verdict column's pattern of an icon and a word, with `error` for a failed build. Resume is the page's one prominent button, taking Build resume's place.
 
+- [x] **P11 · Improve: what keeps jobs from a Yes, and what could change it** (L), your request (2026-10-22): "a method to improve the broadness and horizon of the Master Resume … another sidebar dedicated to top reason on whats making the screener say no … and some directives on what could make it better"
+  - **Design and research:** [Resume Reach](https://claude.ai/artifact/JfdxmuGi3dftzZGdzoT6KE) covers your data on 22 October, the screen, the catalogue of fixes, the research behind them and how it's worked out.
+  - **What your data showed:**
+    - Of 53 analysed jobs, 28 were Maybe only because they're Adzuna snippets. 5 were No for a level you've turned off, and 12 were decided by skill match.
+    - Experience lines outnumbered single skills among what was unmet.
+    - One No was a screener slip: "Missing English".
+  - **Your decisions:**
+    - Called Improve, after Review.
+    - Covers No and Maybe jobs, with both resume fixes and search fixes.
+    - A read-only report with no Re-check: it changes nothing, and each job opens its own page.
+    - AI suggestions now.
+  - **Done:**
+    - **Improve (sidebar, after Review):** fixes on the left and the chosen one on the right.
+      - **On your resume:** ranked by the verdicts they could move ("up to 2 → Yes"), then by how many jobs ask.
+        - A fix groups what postings ask for: a technology ("K8s" and "Kubernetes" are one), a broader term (Observability, Cloud), a kind of work (distributed systems, production and scale, testing, security, system design, APIs, front end, data, mobile), or years.
+        - Each says where your master resume stands: a Proven skill, Can discuss, named in a role or project but not in Skills, or nowhere.
+        - Each says what to do, with the research behind it and a link.
+      - **"Up to":** Kairos runs the same verdict code on the stored analyses with that fix's asks counted as shown, so it's an upper bound and costs no AI call.
+      - **Years:** your dated roles' months (each month once) against Total years. An ask counts as met only if your roles cover it.
+      - **In your search:** the Adzuna snippets, your years limit, and titles your list leaves out. A title qualifies when it has every word of one of your titles, just not together, and would pass all your filters with its own title added. Your data has 4 for "Software Development Engineer".
+      - **No resume changes these:** a level you've turned off, sponsorship, clearance, French, student-only.
+      - **One-offs:** asks only one posting makes, for something nowhere on your resume, kept out of the ranking.
+    - **Ask the AI ("How could I show this?"):** `suggestEvidence` (prompt v1, Flash-Lite).
+      - It points at up to 3 of your roles, projects or bullets that might show a fix. Each comes as a question for you, with what a bullet could show if the answer is yes. It never writes a line.
+      - Code checks every id it cites is on your resume and that each question is a question. It sends what `analyzeJob` sends: no contact details, authorization or where you live. The prompt privacy test covers it.
+      - Settings saved before the task existed give it `analyzeJob`'s route, so it goes where you already send your profile.
+    - **The English fix:** a language requirement naming a language you list counts as shown, applied when the verdict is decided and on the job page. Re-check filters corrects the stored Blueforce job without AI calls.
+  - **Tests:**
+    - 7 for the report: ranking, where you stand, one-offs, years with dated roles, search and held reasons apart, a years-only Maybe, broader terms' names.
+    - 2 for languages and 3 for the task, plus routes filled for new tasks, the public vocabulary and the bulk analysis read.
+  - **Checked:**
+    - `--layout-probe --screens` on your data: Improve with its ranking (Security and identity, Years, Front end and web, then skills you list but don't show in bullets) and the end of the list.
+    - Improve needs a window of at least 666 × 104.
+    - "Ask the AI" isn't checked live: it would spend a call on your key. Its first press is the live check.
+  - **Visual differences from the proposal's mockup:**
+    - No sidebar count on Improve, to avoid a nagging number.
+    - No Re-check or Not now buttons and no Set Total years, by your choice of a read-only report.
+    - The list uses the system sidebar list, as Filtered out does, rather than drawn rows.
+
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 
 Refined with you on 2026-10-21:

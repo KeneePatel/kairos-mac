@@ -74,6 +74,29 @@ public struct LLMSettings: Codable, Sendable, Equatable {
             routes: routes, budget: Budget())
     }
 
+    /// Routes for tasks added since these settings were saved, which would otherwise fail with no
+    /// provider. Each follows your own pick: the route of the task that sends the same data
+    /// (`routeSources`), else of the first task of the same kind (Flash or Flash-Lite), else the
+    /// default. A route you emptied stays empty.
+    public mutating func addMissingRoutes() {
+        let defaults = Self.defaults().routes
+        for task in TaskID.catalog where routes[task.rawValue] == nil {
+            guard let modelClass = TaskDefaults.catalog[task]?.modelClass else { continue }
+            let saved = routes
+            let routed: (TaskID) -> Bool = { other in other != task && !(saved[other.rawValue] ?? []).isEmpty }
+            let sibling =
+                Self.routeSources[task].flatMap { routed($0) ? $0 : nil }
+                ?? TaskID.catalog.first { routed($0) && TaskDefaults.catalog[$0]?.modelClass == modelClass }
+            if let route = sibling.flatMap({ routes[$0.rawValue] }) ?? defaults[task.rawValue] {
+                routes[task.rawValue] = route
+            }
+        }
+    }
+
+    /// A later task and the one that sends the same data: suggestions send your screening profile,
+    /// as reading postings does, so they go wherever you send that.
+    static let routeSources: [TaskID: TaskID] = [.suggestEvidence: .analyzeJob]
+
     public func provider(_ id: String) -> Provider? {
         providers.first { $0.id == id }
     }

@@ -53,11 +53,11 @@
         }
 
         /// `--screens`: screens offscreen snapshots can't show whole, each in a titled window with its
-        /// toolbar: Review, a job with a resume and that job's resume page, a job without one.
+        /// toolbar: Review, Improve, a job with a resume and that job's resume page, a job without one.
         @MainActor private static func screens(_ model: AppModel) async {
             let built = model.reviewJobs(.all).first { model.latestBuild(for: $0)?.status == .done }
             let unbuilt = model.reviewJobs(.yes).first { model.latestBuild(for: $0) == nil }
-            var shown: [(String, AnyView)] = [("review", AnyView(ReviewView()))]
+            var shown: [(String, AnyView)] = [("review", AnyView(ReviewView())), ("improve", AnyView(ImproveView()))]
             if let built {
                 shown.append(("job-built", AnyView(NavigationStack { JobScreen(id: built.id) })))
                 shown.append(("job-resume", AnyView(NavigationStack { BuildsView(job: built.id) })))
@@ -78,8 +78,24 @@
                 try? await Task.sleep(for: .seconds(1.5))
                 print("PROBE screen \(name) \(window.frame.size)")
                 snapshot(window, name: "screen-\(name)")
+                // A long list's end too: its last sections.
+                if name == "improve",
+                    let list = scrollViews(in: window.contentView).first(where: { $0.frame.minX < 10 }),
+                    let document = list.documentView
+                {
+                    list.contentView.scroll(
+                        to: NSPoint(x: 0, y: max(0, document.frame.height - list.contentView.bounds.height)))
+                    list.reflectScrolledClipView(list.contentView)
+                    try? await Task.sleep(for: .seconds(1))
+                    snapshot(window, name: "screen-\(name)-end")
+                }
                 window.orderOut(nil)
             }
+        }
+
+        @MainActor private static func scrollViews(in view: NSView?) -> [NSScrollView] {
+            guard let view else { return [] }
+            return (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap { scrollViews(in: $0) }
         }
 
         /// The window as drawn, title bar and toolbar included.

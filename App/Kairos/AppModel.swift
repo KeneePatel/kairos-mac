@@ -1,6 +1,7 @@
 import Foundation
 import JobSources
 import LLM
+import MasterResume
 import OSLog
 import Observation
 import Pipeline
@@ -469,8 +470,19 @@ final class AppModel {
 
     /// The analysis behind a job's verdict, whichever prompt made it.
     func storedAnalysis(for job: Job) async -> StoredAnalysis? {
-        guard let db else { return nil }
-        return try? await AnalysisRepository(db).latest(for: job.id)
+        guard let db, let stored = try? await AnalysisRepository(db).latest(for: job.id) else { return nil }
+        // As the verdict reads it: a language you list counts as shown.
+        return StoredAnalysis(
+            analysis: stored.analysis.recognizingLanguages(languages), model: stored.model,
+            promptVersion: stored.promptVersion, analyzedAt: stored.analyzedAt)
+    }
+
+    /// Your master resume's languages.
+    private var languages: [EntryFields.Language] {
+        resume?.resume.entries(.language).compactMap { entry in
+            guard case .language(let language) = entry.fields else { return nil }
+            return language
+        } ?? []
     }
 
     /// Screens one job again from scratch (P2). Nil when it worked; otherwise why not, in words.
@@ -720,6 +732,53 @@ final class AppModel {
             await reload()
         case .queued:
             await reload()
+        }
+    }
+
+    // MARK: - Improve
+
+    /// Improve's report (P11): Review's No and Maybe jobs against your master resume, and the
+    /// titles your list dropped. Nil until the database and your resume are open.
+    func improveReport() async -> ImproveReport? {
+        guard let db, let resume else { return nil }
+        let analyses =
+            (try? await AnalysisRepository(db).analyses(promptVersion: AnalyzeJobTask.promptVersion)) ?? [:]
+        return ImproveReport(
+            jobs: reviewJobs(.no) + reviewJobs(.maybe), screenings: screenings, analyses: analyses,
+            filteredByTitle: jobs.filter { filterRule(of: $0) == .titleInclude && $0.state != .archived },
+            resume: resume.resume, preferences: searchPreferences, profile: workProfile)
+    }
+
+    /// "How could I show this?": the AI points at your roles, projects and bullets that might show
+    /// a fix, each as a question. One call, or none when the same question was asked before.
+    func suggestions(for fix: ImproveReport.Fix) async -> Result<SuggestEvidenceTask.Output, SuggestionProblem> {
+        guard let resume, let router = ai?.router() else { return .failure(.text(BuildError.noAI.message)) }
+        let input = SuggestEvidenceTask.Input(
+            fix: fix.title, asks: fix.asks.map(\.text), profile: ScreeningProfile(resume.resume))
+        do {
+            let result = try await router.run(SuggestEvidenceTask(), input: input)
+            await ai?.refreshUsage()
+            return .success(result.output)
+        } catch {
+            log.error("Suggestions failed: \(error.code, privacy: .public)")
+            return .failure(.text(Self.words(for: error)))
+        }
+    }
+
+    struct SuggestionProblem: Error, Equatable {
+        let message: String
+        static func text(_ message: String) -> SuggestionProblem { SuggestionProblem(message: message) }
+    }
+
+    /// An AI failure in words, with what to do.
+    private static func words(for error: LLMError) -> String {
+        switch error {
+        case .noProvider, .noKey: BuildError.noAI.message
+        case .keyRejected: "Your key was rejected. Check it in Settings, AI providers."
+        case .budgetReached: "\(Budget.reachedMessage). It resets at midnight."
+        case .rateLimited, .modelNotOnPlan: "The AI is busy or out of quota for now. Try again later."
+        case .invalidJSON, .invalidOutput: "The AI's answer didn't hold up to Kairos's checks. Try again."
+        default: "The AI couldn't answer just now. Try again in a moment."
         }
     }
 

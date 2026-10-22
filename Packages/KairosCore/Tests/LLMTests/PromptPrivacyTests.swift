@@ -133,6 +133,12 @@ struct PromptPrivacyTests {
             profile: Avery.profile, skills: Avery.resume.skills,
             languages: [.init(language: "English", proficiency: .native)], totalYears: 6, resume: Avery.resume)
         prompts[.analyzeJob] = [AnalyzeJobTask().messages(for: context.analysisInput(for: Avery.job), budget: budget)]
+        prompts[.suggestEvidence] = [
+            SuggestEvidenceTask().messages(
+                for: .init(
+                    fix: "Data pipelines", asks: Avery.requirements.musts,
+                    profile: ScreeningProfile(Avery.resume)), budget: budget)
+        ]
 
         // A Stretch build with a letter, every reply unusable, so each writer also falls back and
         // the rewrite pass runs: every build task sends at least once.

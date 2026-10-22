@@ -40,6 +40,18 @@ public struct AnalysisRepository: Sendable {
         return Set(rows.compactMap { $0.string("job_id").map(JobID.init(rawValue:)) })
     }
 
+    /// Every analysis `promptVersion` made, by job: what Improve reads.
+    public func analyses(promptVersion: Int) async throws -> [JobID: JobAnalysis] {
+        let rows = try await db.query(
+            "SELECT * FROM job_analysis WHERE prompt_version = ? AND deleted = 0", [SQLValue(promptVersion)])
+        var analyses: [JobID: JobAnalysis] = [:]
+        for row in rows {
+            guard let id = row.string("job_id") else { continue }
+            analyses[JobID(rawValue: id)] = try stored(row).analysis
+        }
+        return analyses
+    }
+
     /// The job's analysis whichever prompt made it: the one behind its verdict, for the Job page.
     public func latest(for job: JobID) async throws -> StoredAnalysis? {
         try await db.query("SELECT * FROM job_analysis WHERE job_id = ? AND deleted = 0", [.text(job.rawValue)])

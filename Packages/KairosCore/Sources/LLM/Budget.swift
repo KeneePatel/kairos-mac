@@ -55,6 +55,8 @@ public struct TaskDefaults: Sendable, Equatable {
             budget: TokenBudget(input: 3_000, output: 800), temperature: 0.5, modelClass: .flash, timeoutSeconds: 120),
         .coverLetter: TaskDefaults(
             budget: TokenBudget(input: 4_000, output: 1_000), temperature: 0.6, modelClass: .flash, timeoutSeconds: 120),
+        .suggestEvidence: TaskDefaults(
+            budget: TokenBudget(input: 4_000, output: 800), temperature: 0.3, modelClass: .flashLite),
     ]
 
     private static let writer = TaskDefaults(

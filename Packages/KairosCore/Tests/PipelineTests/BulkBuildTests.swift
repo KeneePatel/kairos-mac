@@ -61,6 +61,8 @@ private let analysis = JobAnalysis(
         try await analyses.save(analysis, for: job("stale"), model: "flash-lite", promptVersion: 1)
 
         #expect(try await analyses.analysedJobs(promptVersion: 2) == [job("current")])
+        let current = try await analyses.analyses(promptVersion: 2)
+        #expect(Array(current.keys) == [job("current")] && current[job("current")] == analysis)
     }
 
     @Test func aBulkBuildSkipsJobsWithAResumeOrNoAnalysis() {
