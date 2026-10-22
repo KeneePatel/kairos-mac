@@ -2,13 +2,14 @@ import Screening
 import Store
 import SwiftUI
 
-/// Fetch (polish P3): the first step of the workflow. Fetch now checks every board and screens
-/// what's new; under it, the last run, what the prefilter dropped before any AI call and why, and
-/// the companies you watch.
+/// Find jobs (polish P3; renamed 2026-10-22): the first step of the workflow. Find new jobs checks
+/// every board and screens what's new; under it, the last run, what your filters dropped and why
+/// (all of it in Filtered out), and the companies you watch.
 struct FetchView: View {
     @Environment(AppModel.self) private var model
     @State private var addingCompany = false
     @State private var addingAdzuna = false
+    @State private var clearing: JobRepository.Clearing?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,7 +20,7 @@ struct FetchView: View {
             Divider()
             SourcesTable()
         }
-        .navigationTitle("Fetch")
+        .navigationTitle("Find jobs")
         .navigationSubtitle(subtitle)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -31,10 +32,33 @@ struct FetchView: View {
                 }
             }
             ToolbarItem(placement: .primaryAction) { PostedWithinMenu() }
-            RunControls(model: model, title: "Fetch now")
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button("Delete all jobs…", role: .destructive) {
+                        Task { clearing = await model.clearingPreview() }
+                    }
+                    .disabled(model.isFetching || model.jobs.isEmpty)
+                } label: {
+                    Label("More", systemImage: "ellipsis.circle")
+                }
+                .help("More actions")
+            }
+            RunControls(model: model, title: "Find new jobs")
         }
         .sheet(isPresented: $addingCompany) { AddCompanySheet() }
         .sheet(isPresented: $addingAdzuna) { AdzunaSheet() }
+        .confirmationDialog(
+            "Delete all jobs?",
+            isPresented: Binding(get: { clearing != nil }, set: { if !$0 { clearing = nil } }),
+            titleVisibility: .visible, presenting: clearing
+        ) { plan in
+            Button("Delete \(plan.deleted) job\(plan.deleted == 1 ? "" : "s")", role: .destructive) {
+                Task { await model.deleteAllJobs() }
+            }
+            .disabled(plan.deleted == 0)
+        } message: { plan in
+            Text(Self.clearingMessage(plan))
+        }
     }
 
     private var subtitle: String {
@@ -44,7 +68,7 @@ struct FetchView: View {
         return "\(watched) · checked \(checked.formatted(date: .omitted, time: .shortened))"
     }
 
-    /// Three panels side by side: the last run, what the prefilter dropped, and what waits for AI.
+    /// Three panels side by side: the last run, what your filters dropped, and what waits for AI.
     private var summary: some View {
         HStack(alignment: .top, spacing: Spacing.space4) {
             panel("Last run", symbol: "clock") {
@@ -55,7 +79,7 @@ struct FetchView: View {
                         .buttonStyle(.link)
                 }
             }
-            panel("Dropped before the AI", symbol: "line.3.horizontal.decrease.circle") {
+            panel("Filtered out", symbol: "line.3.horizontal.decrease.circle") {
                 if model.droppedByRule.isEmpty {
                     Text("Nothing yet.").font(TypeStyle.body).foregroundStyle(Color(.inkSecondary))
                 } else {
@@ -67,22 +91,35 @@ struct FetchView: View {
                                 .foregroundStyle(Color(.inkSecondary))
                         }
                     }
-                    Text("Your settings decide these: Settings, Search.")
-                        .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                    Button("See them in Filtered out") { model.section = .filtered }
+                        .buttonStyle(.link)
                 }
             }
             panel("Waiting for the AI", symbol: "hourglass") {
-                Text(model.waitingForAI == 0 ? "Nothing waiting." : "\(model.waitingForAI) jobs passed the prefilter")
+                Text(model.waitingForAI == 0 ? "Nothing waiting." : "\(model.waitingForAI) jobs passed your filters")
                     .font(TypeStyle.body).foregroundStyle(Color(.ink))
                 Text(
                     model.waitingForAI == 0
-                        ? "Every job that passed the prefilter has a verdict."
+                        ? "Every job that passed your filters has a verdict."
                         : "They're analysed on the next run once an AI key is set."
                 )
                 .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
                 .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// "Deletes 1,612 jobs, with their verdicts and analyses. The 3 you saved, … stay."
+    static func clearingMessage(_ plan: JobRepository.Clearing) -> String {
+        var kept: [String] = []
+        if plan.saved > 0 { kept.append("\(plan.saved) you saved") }
+        if plan.built > 0 { kept.append("\(plan.built) you built a resume for") }
+        if plan.applied > 0 { kept.append("\(plan.applied) you applied to") }
+        let stay =
+            kept.isEmpty
+            ? "" : " The " + ListFormatter.localizedString(byJoining: kept) + " stay."
+        return
+            "Deletes \(plan.deleted) job\(plan.deleted == 1 ? "" : "s"), with their verdicts and analyses.\(stay) Jobs still posted come back on your next Find new jobs, screened afresh."
     }
 
     private func panel(_ title: String, symbol: String, @ViewBuilder content: () -> some View) -> some View {

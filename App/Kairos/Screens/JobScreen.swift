@@ -257,7 +257,7 @@ struct JobScreen: View {
 
     private func decidedBy(_ record: ScreeningRecord?) -> String {
         switch record?.stage {
-        case .prefilter?: "Decided by the prefilter, before any AI call."
+        case .prefilter?: "Decided by your filters, before any AI call. Bring it back from Filtered out."
         case .analysis?: "Decided by code, from the AI's reading of the posting against your master resume."
         case .user?: "You decided."
         case nil: "Not screened yet."

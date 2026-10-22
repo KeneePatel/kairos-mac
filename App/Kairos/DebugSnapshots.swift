@@ -82,8 +82,8 @@
                     ReviewView().environment(today.model).frame(width: 1_440, height: 560),
                     to: folder.appending(path: "review-\(name).png"), appearance: appearance)
                 render(
-                    ReviewView(filter: .prefiltered).environment(today.model).frame(width: 1_440, height: 360),
-                    to: folder.appending(path: "review-prefiltered-\(name).png"), appearance: appearance)
+                    FilteredOutView().environment(today.model).frame(width: 1_440, height: 420),
+                    to: folder.appending(path: "filtered-out-\(name).png"), appearance: appearance)
                 render(
                     NavigationStack { FetchView() }.environment(today.model).frame(width: 1_440, height: 640),
                     to: folder.appending(path: "fetch-\(name).png"), appearance: appearance)

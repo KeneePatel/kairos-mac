@@ -228,6 +228,58 @@ struct ScreeningRunTests {
         #expect(verdicts == ["Backend Developer: -", "Sales Engineer: no"])  // it waits for the next run
     }
 
+    /// "Re-check filters" (2026-10-22) runs without the AI: a job with a stored analysis still gets
+    /// its verdict from it, for free; only jobs never analysed wait.
+    @Test func withoutAIAStoredAnalysisStillDecides() async throws {
+        let db = try await database()
+        let analysed = job("Backend Developer", "Toronto, ON", region: "ON")
+        let fresh = job("Platform Engineer", "Vancouver, BC", region: "BC")
+        try await JobRepository(db).upsert([analysed, fresh])
+        let analyst = FakeAnalyst(["Backend Developer": strong])  // the other fails, unanalysed
+        _ = await screen(db, router: router(db, analyst))
+        try await JobRepository(db).clearScreening()
+
+        let last = try #require(await screen(db, router: nil).last)
+        #expect(last.analyzed == 1 && last.yes == 1 && last.waiting == 1)
+        #expect(last.stopped?.contains("AI isn't set up") == true)
+        #expect(try await JobRepository(db).job(analysed.id)?.verdict == .yes)
+        #expect(try await JobRepository(db).job(fresh.id)?.verdict == nil)
+    }
+
+    /// "Bring back" (2026-10-22): a job the filters dropped goes to the AI, and stays out of the
+    /// filters' reach on every later re-screen.
+    @Test func aBroughtBackJobSkipsTheFiltersForGood() async throws {
+        let db = try await database()
+        let sales = job("Sales Engineer", "Toronto, ON", region: "ON")  // your titles exclude "sales"
+        try await JobRepository(db).upsert(sales)
+        let analyst = FakeAnalyst(["Sales Engineer": strong])
+        _ = await screen(db, router: router(db, analyst))
+        #expect(try await JobRepository(db).job(sales.id)?.verdictSource == .prefilter)
+
+        let outcome = await ScreeningRun(db: db, router: router(db, analyst)).bringBack(sales.id)
+        #expect(outcome == .verdict(.yes) && analyst.calls == 1)
+        #expect(try await JobRepository(db).job(sales.id)?.verdictSource == .analysis)
+
+        try await JobRepository(db).clearScreening()
+        let last = try #require(await screen(db, router: router(db, analyst)).last)
+        #expect(last.prefiltered == 0 && analyst.calls == 1)  // the stored analysis decides again
+        #expect(try await JobRepository(db).job(sales.id)?.verdict == .yes)
+    }
+
+    /// Without the AI, a brought-back job waits for it rather than going back to the filters.
+    @Test func aBroughtBackJobWaitsWithoutAI() async throws {
+        let db = try await database()
+        let sales = job("Sales Engineer", "Toronto, ON", region: "ON")
+        try await JobRepository(db).upsert(sales)
+        _ = await screen(db, router: nil)
+        let outcome = await ScreeningRun(db: db, router: nil).bringBack(sales.id)
+        #expect(outcome == .stopped("AI isn't set up yet. Add a key in Settings, AI providers."))
+        let waiting = try #require(try await JobRepository(db).job(sales.id))
+        #expect(waiting.verdict == nil && waiting.verdictSource == nil)
+        let context = try await ScreeningContext.load(from: db)
+        #expect(context.broughtBack == [sales.id])
+    }
+
     /// SPEC §5.5, Budget: when it's reached, analysis pauses and the rest of the pipeline continues.
     @Test func theBudgetPausesAnalysisAndTheRestWait() async throws {
         let db = try await database()

@@ -28,6 +28,8 @@ final class AppModel {
     private(set) var phase: Phase = .opening
     /// The sidebar's selection; a build switches it to Builds.
     var section: AppSection = .review
+    /// The Settings tab to show, so another screen can open the right one ("Change titles").
+    var settingsTab: SettingsView.Tab = .ai
     private(set) var sources: [Source] = []
     /// Jobs you applied to (T45), the most recently moved first.
     private(set) var applications: [Application] = []
@@ -323,7 +325,7 @@ final class AppModel {
     /// verdict, then everything the prefilter dropped, then all of it. A verdict you set counts as
     /// the AI's stage, whichever stage set it before.
     enum ReviewFilter: String, CaseIterable, Identifiable {
-        case yes, maybe, no, prefiltered, all
+        case yes, maybe, no, all
         var id: Self { self }
 
         var title: String {
@@ -331,40 +333,34 @@ final class AppModel {
             case .yes: "Yes"
             case .maybe: "Maybe"
             case .no: "No"
-            case .prefiltered: "Prefiltered"
             case .all: "All"
             }
         }
     }
 
-    /// Yes and Maybe leave out what you've marked "Not for me" or applied to; No, Prefiltered and
-    /// All keep everything.
+    /// Review holds the jobs that passed your filters (2026-10-22). Yes, Maybe and No are a to-do
+    /// list: they leave out jobs you've applied to or marked "Not for me". All adds those (shown
+    /// dimmed) and jobs waiting for the AI. Jobs retention has archived leave Review.
     func reviewJobs(_ filter: ReviewFilter) -> [Job] {
         let byRank: (Job, Job) -> Bool = { ($0.rank ?? -1, $1.title) > ($1.rank ?? -1, $0.title) }
-        let judged = jobs.filter { $0.verdictSource != nil && $0.verdictSource != .prefilter }
+        let passed = jobs.filter { $0.verdictSource != .prefilter && $0.state != .archived }
+        let open = passed.filter { $0.state == .new || $0.state == .shortlisted }
         switch filter {
-        case .yes: return todayJobs.filter { $0.verdict == .yes && $0.verdictSource != .prefilter }
-        case .maybe: return todayJobs.filter { $0.verdict == .maybe && $0.verdictSource != .prefilter }
-        case .no: return judged.filter { $0.verdict == .no }.sorted(by: byRank)
-        case .prefiltered: return jobs.filter { $0.verdictSource == .prefilter }.sorted(by: byRank)
-        case .all: return jobs.sorted(by: byRank)
+        case .yes: return open.filter { $0.verdict == .yes }.sorted(by: byRank)
+        case .maybe: return open.filter { $0.verdict == .maybe }.sorted(by: byRank)
+        case .no: return open.filter { $0.verdict == .no }.sorted(by: byRank)
+        case .all: return passed.sorted(by: byRank)
         }
     }
 
     func reviewCount(_ filter: ReviewFilter) -> Int { reviewJobs(filter).count }
 
-    /// `filter`'s jobs grouped by country in your order; prefiltered jobs by the rule that dropped
-    /// them instead, most first.
+    /// Whether you've acted on `job` (applied, or "Not for me"): All shows it dimmed.
+    func isActedOn(_ job: Job) -> Bool { job.state == .applied || job.state == .skipped }
+
+    /// `filter`'s jobs grouped by country in your order.
     func reviewSections(_ filter: ReviewFilter) -> [JobSection] {
         let shown = reviewJobs(filter)
-        if filter == .prefiltered {
-            let byRule = Dictionary(grouping: shown) { job in
-                screening(for: job)?.ruleID.flatMap(PrefilterRule.init(rawValue:))?.reason ?? "Other reasons"
-            }
-            return byRule.sorted { ($0.value.count, $1.key) > ($1.value.count, $0.key) }.map {
-                JobSection(id: $0.key, title: $0.key, jobs: $0.value)
-            }
-        }
         let countries: [Country?] =
             searchPreferences.countries + Country.allCases.filter { !searchPreferences.countries.contains($0) } + [nil]
         return countries.compactMap { country in
@@ -373,6 +369,91 @@ final class AppModel {
             return JobSection(
                 id: country?.rawValue ?? "none", title: country?.displayName ?? "Location not stated", jobs: matching)
         }
+    }
+
+    // MARK: - Filtered out
+
+    /// The filter rule that dropped `job`, when it's one of the filters' jobs.
+    func filterRule(of job: Job) -> PrefilterRule? {
+        guard job.verdictSource == .prefilter else { return nil }
+        return screening(for: job)?.ruleID.flatMap(PrefilterRule.init(rawValue:))
+    }
+
+    /// Filtered out (2026-10-22): the jobs your filters dropped before any AI call, all of them
+    /// (`rule` nil) or one rule's, newest first.
+    func filteredJobs(_ rule: PrefilterRule?) -> [Job] {
+        jobs.filter { $0.verdictSource == .prefilter && (rule == nil || filterRule(of: $0) == rule) }
+            .sorted { ($0.firstSeenAt, $1.title) > ($1.firstSeenAt, $0.title) }
+    }
+
+    var filteredCount: Int { jobs.count { $0.verdictSource == .prefilter } }
+
+    /// Each rule with how many jobs it dropped, most first.
+    var filteredReasons: [(rule: PrefilterRule, count: Int)] {
+        let rules = jobs.compactMap(filterRule(of:))
+        return Dictionary(grouping: rules) { $0 }.map { ($0.key, $0.value.count) }
+            .sorted { ($0.1, $1.0.rawValue) > ($1.1, $0.0.rawValue) }
+    }
+
+    /// Brings a filtered job back: the filters never drop it again, and it's judged like any other
+    /// (its stored analysis, or the AI's). Returns why it couldn't be judged yet, or nil.
+    func bringBack(_ job: Job) async -> String? {
+        guard let db else { return "The database isn't open." }
+        let outcome = await ScreeningRun(db: db, router: ai?.router()).bringBack(job.id)
+        await reload()
+        switch outcome {
+        case .verdict: return nil
+        case .failed: return "It's back in Review. The AI couldn't analyse it just now; Re-screen all tries again."
+        case .stopped(let reason): return "It's back in Review, waiting: \(reason)"
+        }
+    }
+
+    /// "Re-check filters": your current filters on every job, with no AI calls. A job whose stored
+    /// analysis still applies keeps its verdict; one newly let through waits for the AI.
+    func recheckFilters() {
+        guard let db, !isFetching else { return }
+        isFetching = true
+        screening = nil
+        let run = ScreeningRun(db: db, router: nil)
+        fetchTask = Task { [weak self] in
+            _ = try? await JobRepository(db).clearScreening()
+            for await update in run.start() {
+                self?.screening = update
+                if update.done % 25 == 0 { await self?.reload() }
+            }
+            self?.isFetching = false
+            await self?.reload()
+        }
+    }
+
+    /// Jobs that would need the AI on a Re-screen all: those in Review with no analysis from the
+    /// current prompt. Each is one call.
+    func analysesNeeded() async -> Int {
+        guard let db else { return 0 }
+        let rows = try? await db.query(
+            """
+            SELECT COUNT(*) AS n FROM job j WHERE j.deleted = 0 AND j.state IN ('new', 'shortlisted')
+              AND (j.verdict_source IS NULL OR j.verdict_source = 'analysis')
+              AND NOT EXISTS (SELECT 1 FROM job_analysis a WHERE a.job_id = j.id AND a.deleted = 0
+                AND a.prompt_version = ?)
+            """, [.integer(Int64(AnalyzeJobTask.promptVersion))])
+        return rows?.first?.int("n") ?? 0
+    }
+
+    // MARK: - Delete all jobs
+
+    /// What "Delete all jobs" would delete and keep, for its confirmation.
+    func clearingPreview() async -> JobRepository.Clearing? {
+        guard let db else { return nil }
+        return try? await JobRepository(db).clearingPreview()
+    }
+
+    /// Deletes every job you haven't saved, built for or applied to; the next fetch brings back the
+    /// ones still posted (your decision, 2026-10-22).
+    func deleteAllJobs() async {
+        guard let db, !isFetching else { return }
+        _ = try? await JobRepository(db).clearAll()
+        await reload()
     }
 
     /// How many jobs each prefilter rule dropped, most first: what Fetch shows under the run.

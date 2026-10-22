@@ -16,6 +16,11 @@ public struct ScreeningContext: Sendable {
     public var evidence: ScreeningProfile
     /// Sources whose descriptions are snippets (Adzuna): their jobs can't be a Yes.
     public var snippetSources: Set<UUID> = []
+    /// Jobs you brought back from Filtered out: the filters never drop them again.
+    public var broughtBack: Set<JobID> = []
+
+    /// Where `broughtBack` is kept (a synced setting: job ids only).
+    public static let broughtBackKey = "screening.broughtBack"
 
     /// `resume` gives `analyzeJob` your whole master resume to match against; without it, only
     /// your skill names and languages.
@@ -52,6 +57,9 @@ public struct ScreeningContext: Sendable {
             totalYears: resume.header.totalYears,
             applied: applied.map { AppliedJob(company: $0.company, title: $0.title) }, resume: resume)
         context.snippetSources = Set(try await SourceRepository(db).sources().filter { $0.kind == .adzuna }.map(\.id))
+        context.broughtBack = Set(
+            (try await SettingsRepository(db).value(Self.broughtBackKey, as: [String].self) ?? []).map(
+                JobID.init(rawValue:)))
         return context
     }
 

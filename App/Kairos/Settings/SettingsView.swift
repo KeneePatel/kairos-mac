@@ -13,11 +13,14 @@ struct SettingsView: View {
     }
 
     @Environment(AISettingsModel.self) private var model
-    @State private var tab = Tab.ai
+    @Environment(AppModel.self) private var app
+
+    /// Kept on the app model, so Filtered out can open Search directly.
+    private var tab: Binding<Tab> { Binding(get: { app.settingsTab }, set: { app.settingsTab = $0 }) }
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Section", selection: $tab) {
+            Picker("Section", selection: tab) {
                 ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
@@ -25,7 +28,7 @@ struct SettingsView: View {
             .frame(maxWidth: 460)
             .padding(.vertical, Spacing.space3)
             Divider()
-            switch tab {
+            switch tab.wrappedValue {
             case .ai:
                 ProvidersView()
             case .search:
@@ -39,7 +42,7 @@ struct SettingsView: View {
                 }
             case .schedule, .account:
                 ContentUnavailableView(
-                    tab.rawValue, systemImage: "gearshape",
+                    tab.wrappedValue.rawValue, systemImage: "gearshape",
                     description: Text("This part of Settings isn't built yet.").foregroundStyle(Color(.inkSecondary)))
             }
         }

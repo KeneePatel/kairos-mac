@@ -140,7 +140,7 @@ Module ids are stable and will not be renamed.
 | `backend` | The Supabase project as code: SQL migrations, row-level security policies, `sync_push`, account deletion, invite hook, storage policies, auth settings checklist | — (deployed separately) |
 | `account` | Sign-up, sign-in (password, Google, GitHub), email confirmation, password reset, session refresh, sign-out, invites, export, account deletion | `secrets`, `backend` (contract) |
 | `sync` | Outbox, push through `sync_push`, pull over REST, PDF upload and download, command queue | `store`, `account` |
-| `app-mac` | SwiftUI screens (since 2026-10-20 the workflow reads Fetch · Review · Builds · Applications, a job opens full width with its requirements and evidence, and there's no side inspector), menu bar, WebKit hosts, master-resume editor, account screens, notifications | `pipeline`, `sync`, `account`, `master-resume` |
+| `app-mac` | SwiftUI screens (since 2026-10-22 the workflow reads Find jobs · Review · Filtered out · Resumes · Applications: Review holds only jobs that passed your filters, as Yes, Maybe, No and All, and Filtered out holds the rest by reason, each one can be brought back; a job opens full width with its requirements and evidence, and there's no side inspector), menu bar, WebKit hosts, master-resume editor, account screens, notifications | `pipeline`, `sync`, `account`, `master-resume` |
 | `cli` | Headless `kairos` commands (API sources only) | `pipeline`, `sync`, `account` |
 | `web-companion` | PWA: sign-in, today's list, job detail, verdict override, queue builds, open PDFs, application tracking | `backend` (contract) |
 
@@ -562,7 +562,7 @@ One per user. It's the complete record of everything they've done, longer than a
 | `skill` | yes | Skills to draw from | name, category, level (proven, can_discuss), sort |
 | `source` | yes | Configured sources | kind, config JSON, enabled, last_run_at, health, empty_runs (runs in a row with no results) |
 | `search` | yes | Saved searches | terms JSON, location, countries JSON (ordered), remote, max_age_hours |
-| `job` | yes* | Postings | source_id, url, canonical_url, dedup_key, company, title, location, city, country, region, remote_scope, currency, posted_at, salary JSON, description, state, verdict, verdict_source, rank, first_seen_at |
+| `job` | yes* | Postings | source_id, url, canonical_url, dedup_key, company, title, location, city, country, region, remote_scope, currency, posted_at, salary JSON, description, state, verdict, verdict_source, rank, first_seen_at, cleared ("Delete all jobs": a tombstone the next fetch may bring back) |
 | `job_analysis` | yes | Requirements | job_id, requirements JSON, flags JSON (sponsorship, clearance, language, remote scope), domains JSON, model, prompt_version |
 | `screening` | yes | Verdict trail | job_id, stage, verdict, rule_id, coverage JSON, reasons |
 | `build` | yes | One tailoring run | job_id, mode (strict, stretch, lite), master_version, status, template_id, content JSON (bullets carry `source_ids` and `verified`), match_score, breakdown JSON, iterations, cover_letter JSON, error, timestamps |

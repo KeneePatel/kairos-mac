@@ -730,6 +730,50 @@ Your decisions:
     - **The prefilter rule stays** for jobs stored before the limit or before this change, when they're screened again.
   - **Tests:** a fetch with a 7-day limit stores postings 3 and 7 days old and one undated, skips one 10 days old, and records it. The other fetch tests are unchanged.
 
+- [x] **P8 · The jobs flow, rethought for any job seeker** (M), your request (2026-10-22)
+  - **Your outline:**
+    - Company boards, then Adzuna.
+    - A "Delete all jobs" feature.
+    - Recent jobs only: done as P7.
+    - A sidebar item for prefiltered jobs, by reason with All.
+    - Review holding only the rest, as Yes, Maybe, No and All, with Re-screen all.
+  - **Research and proposal:** [Kairos Jobs Flow](https://claude.ai/artifact/QmmhHEko15JGmWnRY9cJHS) covers job-seeker data, similar tools and six user types, checks your flow against the code, and has mockups and alternatives.
+  - **Your decisions:**
+    - Tech and nearby roles first.
+    - After Delete all jobs, still-posted jobs come back on the next fetch.
+    - Jobs you've acted on are dimmed in All only.
+    - Jobs older than the Posted window stay in Review until retention archives them.
+  - **Done:**
+    - **Sidebar:** Find jobs, Review, Filtered out, Resumes, Applications; then Master resume, Settings, Activity. Find jobs and Resumes are the plain names for Fetch and Builds. Review's count is Yes plus Maybe; Filtered out shows its total.
+    - **Review:**
+      - Only jobs that passed your filters. Yes, Maybe and No leave out jobs you've applied to or marked "Not for me". All adds those, dimmed and labelled, plus jobs waiting for the AI.
+      - A banner says how many jobs wait for the AI, and how to fix it.
+      - Re-screen all first says how many AI calls it needs (jobs without an analysis from the current prompt) and asks before spending them.
+    - **Filtered out:**
+      - Reasons with their counts down the left, under All. The chosen reason's setting shows in words, with "Change in Settings", which opens Search.
+      - Each job has "Bring back": Kairos remembers it in a synced setting of job ids, and the filters never drop it again. It's judged by its stored analysis or the AI, or waits for the AI.
+      - "Re-check filters" applies your filters to every job without AI calls. A job with a stored analysis gets its verdict from it, and one newly let through waits.
+    - **Delete all jobs:** in Find jobs' More menu.
+      - It says how many it deletes, and that the jobs you saved, built a resume for or applied to stay.
+      - Deleted jobs become cleared tombstones (`009_cleared_jobs.sql`), with their analyses and screening trail. A cleared job isn't known, so the next fetch brings back what's still posted, screened afresh.
+      - Retention's tombstones aren't cleared, so old postings still never return.
+    - **Screening without the AI:** a stored analysis now decides even with no AI set up. Before, a run without a key left every job waiting.
+    - **Wording:** "prefilter" is gone from the screens in favour of "your filters" and "Filtered out".
+  - **Tests:**
+    - 3 for Delete all jobs: what's kept, a cleared job coming back as new, retention's tombstones staying known.
+    - 3 for screening: a stored analysis deciding without the AI, Bring back surviving a re-screen, Bring back waiting without the AI.
+    - Snapshots of Review, Filtered out and Find jobs, light and dark.
+  - **Visual differences from the mockups in the proposal:**
+    - The sidebar counts use macOS's own sidebar badges, so Review's count isn't a filled accent capsule.
+    - Bring back is a plain button in a table column.
+    - Delete all jobs uses the system confirmation dialog, without the radio choice: you chose one behaviour.
+  - **Undrawn, decided here:** the reasons list is a sidebar-style list beside the table. The rule bar reuses the grouped surface. The waiting banner uses `maybe-bg` with an hourglass icon and words.
+  - **Proposed next, from the research:**
+    - A company finder by name, so nobody has to hunt for career-page links.
+    - A guided first run.
+    - Filters shown above the Review list.
+    - Revisiting a daily check with a notification (T44): applications in a posting's first 96 hours get up to 8 times the interviews.
+
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 
 Refined with you on 2026-10-21:

@@ -80,7 +80,8 @@ public struct JobRepository: Sendable {
             let batch = ids[start..<min(start + 500, ids.count)]
             let marks = Array(repeating: "?", count: batch.count).joined(separator: ", ")
             let rows = try await db.query(
-                "SELECT id FROM job WHERE id IN (\(marks))", batch.map { .text($0.rawValue) })
+                // A job you cleared isn't known: finding it again brings it back.
+                "SELECT id FROM job WHERE id IN (\(marks)) AND cleared = 0", batch.map { .text($0.rawValue) })
             known.formUnion(rows.compactMap { $0.string("id") }.map(JobID.init(rawValue:)))
         }
         return known
@@ -101,6 +102,67 @@ public struct JobRepository: Sendable {
             }
         }
         return entries
+    }
+
+    /// What "Delete all jobs" would delete, and what it keeps: jobs you saved, built a resume for or
+    /// applied to.
+    public struct Clearing: Sendable, Equatable {
+        public var deleted = 0
+        public var saved = 0
+        public var built = 0
+        public var applied = 0
+
+        public init(deleted: Int = 0, saved: Int = 0, built: Int = 0, applied: Int = 0) {
+            self.deleted = deleted
+            self.saved = saved
+            self.built = built
+            self.applied = applied
+        }
+    }
+
+    /// Jobs you've engaged with, which "Delete all jobs" keeps.
+    private static let engaged = """
+        (state IN ('shortlisted', 'applied')
+            OR id IN (SELECT job_id FROM build WHERE deleted = 0)
+            OR id IN (SELECT job_id FROM application WHERE deleted = 0))
+        """
+
+    /// What `clearAll()` would do now, for its confirmation.
+    public func clearingPreview() async throws -> Clearing {
+        let rows = try await db.query(
+            """
+            SELECT
+              (SELECT COUNT(*) FROM job WHERE deleted = 0 AND NOT \(Self.engaged)) AS deleted,
+              (SELECT COUNT(*) FROM job WHERE deleted = 0 AND state = 'shortlisted') AS saved,
+              (SELECT COUNT(*) FROM job WHERE deleted = 0 AND state != 'applied'
+                  AND id IN (SELECT job_id FROM build WHERE deleted = 0)) AS built,
+              (SELECT COUNT(*) FROM job WHERE deleted = 0 AND (state = 'applied'
+                  OR id IN (SELECT job_id FROM application WHERE deleted = 0))) AS applied
+            """)
+        let row = rows.first
+        return Clearing(
+            deleted: row?.int("deleted") ?? 0, saved: row?.int("saved") ?? 0, built: row?.int("built") ?? 0,
+            applied: row?.int("applied") ?? 0)
+    }
+
+    /// "Delete all jobs": every job you haven't saved, built for or applied to becomes a cleared
+    /// tombstone, with its analysis and screening trail. Cleared jobs aren't known, so the next
+    /// fetch brings back the ones still posted, screened afresh. Returns how many were deleted.
+    @discardableResult
+    public func clearAll() async throws -> Int {
+        try await db.write { connection, stamp in
+            let hlc = SQLValue.text(stamp.hlc.description)
+            let going = "SELECT id FROM job WHERE deleted = 0 AND NOT \(Self.engaged)"
+            for table in ["job_analysis", "screening"] {
+                try connection.execute(
+                    "UPDATE \(table) SET deleted = 1, updated_hlc = ? WHERE deleted = 0 AND job_id IN (\(going))", [hlc]
+                )
+            }
+            try connection.execute(
+                "UPDATE job SET deleted = 1, cleared = 1, description = NULL, updated_hlc = ? WHERE id IN (\(going))",
+                [hlc])
+            return connection.changes
+        }
     }
 
     /// Marks the job deleted. The row stays as a tombstone, without its description, which a
@@ -168,6 +230,20 @@ public struct JobRepository: Sendable {
         }
     }
 
+    /// Clears the prefilter's verdict on one job (for "Bring back"), so it can be judged again.
+    /// Returns whether it changed: a verdict from anything but the prefilter stays.
+    @discardableResult
+    public func clearPrefilterVerdict(for id: JobID) async throws -> Bool {
+        try await db.write { connection, stamp in
+            try connection.execute(
+                """
+                UPDATE job SET verdict = NULL, verdict_source = NULL, rank = NULL, updated_hlc = ?
+                WHERE id = ? AND deleted = 0 AND verdict_source = 'prefilter'
+                """, [.text(stamp.hlc.description), .text(id.rawValue)])
+            return connection.changes > 0
+        }
+    }
+
     // MARK: - Row mapping
 
     private static let columns = [
@@ -181,7 +257,7 @@ public struct JobRepository: Sendable {
         return """
             INSERT INTO job (\(columns.joined(separator: ", ")), deleted)
             VALUES (\(Array(repeating: "?", count: columns.count).joined(separator: ", ")), 0)
-            ON CONFLICT (id) DO UPDATE SET \(updates.joined(separator: ", ")), deleted = 0
+            ON CONFLICT (id) DO UPDATE SET \(updates.joined(separator: ", ")), deleted = 0, cleared = 0
             """
     }()
 

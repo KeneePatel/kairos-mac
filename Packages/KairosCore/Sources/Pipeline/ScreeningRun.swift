@@ -84,6 +84,8 @@ public struct ScreeningRun: Sendable {
         case failed
         /// Every later analysis would fail the same way, so analysis stops.
         case stop(String)
+        /// No stored analysis and no AI to make one: this job waits; the others go on.
+        case waiting
     }
 
     private func perform(_ continuation: AsyncStream<Progress>.Continuation) async {
@@ -101,7 +103,8 @@ public struct ScreeningRun: Sendable {
         let prefilter = context.prefilter(now: now())
         var survivors: [Job] = []
         for job in jobs where !Task.isCancelled {
-            guard let rejection = prefilter.rejection(for: job) else {
+            // A job you brought back from Filtered out skips the filters for good.
+            guard !context.broughtBack.contains(job.id), let rejection = prefilter.rejection(for: job) else {
                 survivors.append(job)
                 continue
             }
@@ -114,11 +117,10 @@ public struct ScreeningRun: Sendable {
             continuation.yield(progress)
         }
 
-        // 2. Analysis and verdict for the rest, a few at a time.
-        if let router {
-            await analyze(survivors, with: router, context: context, progress: &progress, continuation)
-        } else if !survivors.isEmpty {
-            progress.waiting = survivors.count
+        // 2. Analysis and verdict for the rest, a few at a time. A stored analysis decides even
+        // without the AI ("Re-check filters"); a job without one waits for it.
+        await analyze(survivors, with: router, context: context, progress: &progress, continuation)
+        if router == nil, progress.waiting > 0 {
             progress.stopped = "AI isn't set up yet, so jobs that passed the prefilter wait for analysis."
         }
 
@@ -151,22 +153,43 @@ public struct ScreeningRun: Sendable {
     public func reevaluate(_ id: JobID) async -> Reevaluation {
         let context = (try? await ScreeningContext.load(from: db)) ?? ScreeningContext()
         guard let job = try? await JobRepository(db).job(id) else { return .failed }
-        if let rejection = context.prefilter(now: now()).rejection(for: job) {
+        if !context.broughtBack.contains(job.id), let rejection = context.prefilter(now: now()).rejection(for: job) {
             try? await ScreeningRepository(db).record(rejection, for: job.id)
             _ = try? await JobRepository(db).setVerdict(
                 .no, source: .prefilter, rank: context.rank(.no, for: job, match: 0), for: job.id)
             return .verdict(.no)
         }
         guard let router else { return .stopped("AI isn't set up yet. Add a key in Settings, AI providers.") }
-        switch await screen(job, with: router, context: context, engine: context.verdictEngine(), fresh: true) {
-        case .verdict(let verdict): return .verdict(verdict)
-        case .failed: return .failed
-        case .stop(let reason): return .stopped(reason.replacing(Self.waitNote, with: "."))
+        return Self.reevaluation(
+            await screen(job, with: router, context: context, engine: context.verdictEngine(), fresh: true))
+    }
+
+    /// "Bring back" from Filtered out: the job leaves the filters' reach for good and is judged
+    /// like any job that passed them (its stored analysis, or the AI's), or waits for the AI.
+    public func bringBack(_ id: JobID) async -> Reevaluation {
+        let settings = SettingsRepository(db)
+        var kept = (try? await settings.value(ScreeningContext.broughtBackKey, as: [String].self)) ?? []
+        if !kept.contains(id.rawValue) {
+            kept.append(id.rawValue)
+            try? await settings.save(kept, for: ScreeningContext.broughtBackKey)
+        }
+        _ = try? await JobRepository(db).clearPrefilterVerdict(for: id)
+        let context = (try? await ScreeningContext.load(from: db)) ?? ScreeningContext()
+        guard let job = try? await JobRepository(db).job(id) else { return .failed }
+        return Self.reevaluation(await screen(job, with: router, context: context, engine: context.verdictEngine()))
+    }
+
+    private static func reevaluation(_ outcome: Outcome) -> Reevaluation {
+        switch outcome {
+        case .verdict(let verdict): .verdict(verdict)
+        case .failed: .failed
+        case .stop(let reason): .stopped(reason.replacing(Self.waitNote, with: "."))
+        case .waiting: .stopped("AI isn't set up yet. Add a key in Settings, AI providers.")
         }
     }
 
     private func analyze(
-        _ jobs: [Job], with router: LLMRouter, context: ScreeningContext, progress: inout Progress,
+        _ jobs: [Job], with router: LLMRouter?, context: ScreeningContext, progress: inout Progress,
         _ continuation: AsyncStream<Progress>.Continuation
     ) async {
         let engine = context.verdictEngine()
@@ -194,6 +217,8 @@ public struct ScreeningRun: Sendable {
                 case .stop(let reason):
                     progress.stopped = progress.stopped ?? reason
                     progress.waiting += 1
+                case .waiting:
+                    progress.waiting += 1
                 }
                 continuation.yield(progress)
                 startNext()
@@ -203,14 +228,16 @@ public struct ScreeningRun: Sendable {
     }
 
     /// One job: its analysis (stored or new; always new when `fresh`), then its verdict and rank.
+    /// Without a router only a stored analysis can decide; otherwise the job waits.
     private func screen(
-        _ job: Job, with router: LLMRouter, context: ScreeningContext, engine: VerdictEngine, fresh: Bool = false
+        _ job: Job, with router: LLMRouter?, context: ScreeningContext, engine: VerdictEngine, fresh: Bool = false
     ) async -> Outcome {
         let analyses = AnalysisRepository(db)
         let analysis: JobAnalysis
         if !fresh, let stored = try? await analyses.analysis(for: job.id, promptVersion: AnalyzeJobTask.promptVersion) {
             analysis = stored.analysis
         } else {
+            guard let router else { return .waiting }
             let input = context.analysisInput(for: job)
             do {
                 let result = try await router.run(

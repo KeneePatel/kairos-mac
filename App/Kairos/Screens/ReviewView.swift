@@ -2,15 +2,17 @@ import Screening
 import Store
 import SwiftUI
 
-/// Review (polish P3, replacing Today and Jobs): the screened jobs, best first. Yes, Maybe and No
-/// are the jobs that reached the AI, grouped by country in your order; Prefiltered is what the
-/// prefilter dropped, grouped by the rule; All is everything fetched. Choosing a job opens it full
-/// width.
+/// Review (polish P3; reworked 2026-10-22): the jobs that passed your filters, best first, grouped
+/// by country in your order. Yes, Maybe and No are what's left to decide; All adds the jobs you've
+/// applied to or marked "Not for me" (dimmed) and those waiting for the AI. What your filters
+/// dropped is in Filtered out. Choosing a job opens it full width.
 struct ReviewView: View {
     @Environment(AppModel.self) private var model
     @State private var filter: AppModel.ReviewFilter
     @State private var path: [JobID] = []
     @State private var selection: JobID?
+    @State private var confirmingRescreen = false
+    @State private var callsNeeded = 0
 
     init(filter: AppModel.ReviewFilter = .yes) {
         _filter = State(initialValue: filter)
@@ -25,18 +27,32 @@ struct ReviewView: View {
                     ToolbarItem(placement: .principal) { filterPicker }
                     ToolbarItem(placement: .primaryAction) {
                         Button {
-                            model.screenAgain()
+                            Task {
+                                callsNeeded = await model.analysesNeeded()
+                                if callsNeeded == 0 { model.screenAgain() } else { confirmingRescreen = true }
+                            }
                         } label: {
                             Label("Re-screen all", systemImage: "arrow.triangle.2.circlepath")
                                 .labelStyle(.titleAndIcon)
                         }
                         .disabled(model.isFetching || model.jobs.isEmpty)
                         .help(
-                            "Applies your current settings to every job again. Jobs analysed with the current prompt keep their analysis; the rest are analysed."
+                            "Applies your current settings to every job again. Jobs analysed with the current prompt keep their analysis; the rest are sent to the AI."
                         )
                     }
                 }
                 .navigationDestination(for: JobID.self) { JobScreen(id: $0) }
+        }
+        .confirmationDialog(
+            "Re-screen all jobs?", isPresented: $confirmingRescreen, titleVisibility: .visible
+        ) {
+            Button("Re-screen, using about \(callsNeeded) AI call\(callsNeeded == 1 ? "" : "s")") {
+                model.screenAgain()
+            }
+        } message: {
+            Text(
+                "\(callsNeeded) job\(callsNeeded == 1 ? " hasn't" : "s haven't") been analysed with the current prompt, so each costs one AI call from your daily budget. The rest reuse their analysis for free."
+            )
         }
         .onChange(of: selection) { _, id in
             guard let id else { return }
@@ -46,6 +62,22 @@ struct ReviewView: View {
     }
 
     @ViewBuilder private var content: some View {
+        VStack(spacing: 0) {
+            if model.waitingForAI > 0 {
+                Label(
+                    "\(model.waitingForAI) job\(model.waitingForAI == 1 ? " is" : "s are") waiting for the AI. Add a key in Settings, AI providers, then choose Re-screen all.",
+                    systemImage: "hourglass"
+                )
+                .font(TypeStyle.callout).foregroundStyle(Color(.ink))
+                .padding(.horizontal, Spacing.space4).padding(.vertical, Spacing.space2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.maybeBg))
+            }
+            list
+        }
+    }
+
+    @ViewBuilder private var list: some View {
         if model.reviewJobs(filter).isEmpty {
             ContentUnavailableView {
                 Label(emptyTitle, systemImage: "checklist")
@@ -62,24 +94,23 @@ struct ReviewView: View {
         case .yes: "No Yes jobs"
         case .maybe: "No Maybe jobs"
         case .no: "No rejections from the AI"
-        case .prefiltered: "Nothing prefiltered"
         case .all: "No jobs yet"
         }
     }
 
     private var emptyMessage: String {
-        if model.sources.isEmpty { return "Add a company in Fetch, then choose Fetch now." }
+        if model.sources.isEmpty { return "Add a company in Find jobs, then choose Find new jobs." }
         if model.waitingForAI > 0 {
             return
-                "\(model.waitingForAI) jobs passed the prefilter and wait for the AI. Add a key in Settings, then fetch again."
+                "\(model.waitingForAI) jobs passed your filters and wait for the AI. Add a key in Settings, then choose Re-screen all."
         }
         switch filter {
         case .yes, .maybe:
-            return "None right now. No and Prefiltered show why the rest didn't make it."
-        case .no, .prefiltered:
-            return "Every job got past this stage."
+            return "None right now. No shows what the AI ruled out, and Filtered out what your filters dropped."
+        case .no:
+            return "The AI hasn't ruled anything out."
         case .all:
-            return "Choose Fetch now in Fetch to check your companies' boards."
+            return "Choose Find new jobs in Find jobs to check your companies' boards."
         }
     }
 
@@ -131,13 +162,16 @@ struct ReviewView: View {
         }
     }
 
-    /// The company, then for a maybe or a no the reason that decided it.
+    /// The company, then what you did with it, or for a maybe or a no the reason that decided it.
     private func roleLine(_ job: Job) -> String {
+        if job.state == .applied { return "\(job.company) · Applied" }
+        if job.state == .skipped { return "\(job.company) · Not for me" }
         guard job.verdict != .yes, let reason = model.screening(for: job)?.reasons.first else { return job.company }
         return "\(job.company) · \(reason)"
     }
 
-    /// "No" rows are dimmed with ink-dimmed, not opacity (design rule 1).
-    private func primary(_ job: Job) -> Color { job.verdict == .no ? Color(.inkDimmed) : Color(.ink) }
-    private func secondary(_ job: Job) -> Color { job.verdict == .no ? Color(.inkDimmed) : Color(.inkSecondary) }
+    /// "No" rows and jobs you've acted on are dimmed with ink-dimmed, not opacity (design rule 1).
+    private func dimmed(_ job: Job) -> Bool { job.verdict == .no || model.isActedOn(job) }
+    private func primary(_ job: Job) -> Color { dimmed(job) ? Color(.inkDimmed) : Color(.ink) }
+    private func secondary(_ job: Job) -> Color { dimmed(job) ? Color(.inkDimmed) : Color(.inkSecondary) }
 }

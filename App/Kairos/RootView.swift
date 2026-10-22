@@ -1,21 +1,23 @@
 import SwiftUI
 
-/// The app's sections in sidebar order (polish P3): the workflow, fetch to review to build, then
-/// your profile.
+/// The app's sections in sidebar order (polish P3; reworked 2026-10-22): the workflow, from finding
+/// jobs to reviewing the ones that passed your filters (with the filtered-out ones apart), resumes
+/// and applications, then your profile. Names say what a job seeker recognizes.
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case fetch, review, builds, applications
+    case fetch, review, filtered, builds, applications
     case masterResume, settings, activity
 
     var id: Self { self }
 
-    static let workflow: [AppSection] = [.fetch, .review, .builds, .applications]
+    static let workflow: [AppSection] = [.fetch, .review, .filtered, .builds, .applications]
     static let profile: [AppSection] = [.masterResume, .settings, .activity]
 
     var title: String {
         switch self {
-        case .fetch: "Fetch"
+        case .fetch: "Find jobs"
         case .review: "Review"
-        case .builds: "Builds"
+        case .filtered: "Filtered out"
+        case .builds: "Resumes"
         case .applications: "Applications"
         case .masterResume: "Master resume"
         case .settings: "Settings"
@@ -27,6 +29,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .fetch: "arrow.down.circle"
         case .review: "checklist"
+        case .filtered: "line.3.horizontal.decrease.circle"
         case .builds: "doc.text"
         case .applications: "paperplane"
         case .masterResume: "person.text.rectangle"
@@ -69,6 +72,8 @@ struct RootView: View {
                 FetchView()
             case (.ready, .review):
                 ReviewView()
+            case (.ready, .filtered):
+                FilteredOutView()
             case (.ready, .builds):
                 BuildsView()
             case (.ready, .applications):
@@ -89,9 +94,13 @@ struct RootView: View {
 }
 
 extension RootView {
-    /// Review counts the jobs worth a look.
+    /// Review counts the jobs worth a look; Filtered out, the jobs your filters dropped.
     func badge(_ section: AppSection) -> Int {
-        section == .review ? model.reviewCount(.yes) + model.reviewCount(.maybe) : 0
+        switch section {
+        case .review: model.reviewCount(.yes) + model.reviewCount(.maybe)
+        case .filtered: model.filteredCount
+        default: 0
+        }
     }
 }
 
