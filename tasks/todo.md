@@ -727,7 +727,11 @@ Your decisions:
 Refined with you on 2026-10-21:
 - **Order:** T40 Adzuna, T45 application tracking, T41–T43 page runners, T46 retention, then T44.
 - **T44 (scheduler, menu bar, login item, notifications):** last, and possibly dropped. You don't want it now; it's up for debate.
-- **T41–T43 (page runners):** kept, opt-in, as SPEC says. Off by default, with a warning before turning one on, and logins in a visible window.
+- **T41–T43 (page runners):** first kept, opt-in. **Dropped on 2026-10-22, your decision**, after a check:
+  - Indeed Canada sits behind Cloudflare's bot check. A background WebKit view stayed on "Just a moment…" for 30 s, and a plain request got HTTP 403.
+  - Kairos won't work around a bot check.
+  - Indeed, LinkedIn and Job Bank all forbid automated access in their terms. Job Bank's, for one, bars "any script, robot, spider, Web crawler, screen scraper…".
+  - Company boards and Adzuna stay the sources.
 
 - [x] **T40 · Adzuna source, Canada first** (S) · deps: R1
   - **Acceptance:** queries `ca` before `us`; the key is in the Keychain (in the private key file until release, P6); stays under the documented limits.
@@ -755,15 +759,15 @@ Refined with you on 2026-10-21:
     - **Your step:** get a free app ID and key at developer.adzuna.com, then Fetch, Add, Adzuna search…. Your job titles must be in Settings, Search.
     - **Not done:** a board copy of a job first stored from Adzuna in an earlier run doesn't replace it yet. Within one run the board's copy wins.
 
-- [ ] **T41 · WebKit page runner and Indeed Canada** (M) · deps: R1
+- [-] **T41 · WebKit page runner and Indeed Canada** (M) · deps: R1 · **dropped 2026-10-22** (see above)
   - **Acceptance:** offscreen `WKWebView`, a data store per source, a JavaScript extractor contract, timeouts and health tracking. The Indeed Canada extractor passes on saved HTML fixtures.
   - **Verify:** `core-test JobSourcesTests`; manual run
 
-- [ ] **T42 · LinkedIn, Job Bank and Indeed US extractors** (M) · deps: T41
+- [-] **T42 · LinkedIn, Job Bank and Indeed US extractors** (M) · deps: T41 · **dropped 2026-10-22**
   - **Acceptance:** one fixture test each; a board goes "degraded" after 3 empty runs.
   - **Verify:** `core-test JobSourcesTests`
 
-- [ ] **T43 · Opt-in and login sheets for page-runner boards** (S) · deps: T41
+- [-] **T43 · Opt-in and login sheets for page-runner boards** (S) · deps: T41 · **dropped 2026-10-22**
   - **Acceptance:** the warning appears before opting in; login happens in a visible WebKit sheet; cookies persist per board. Styled after the opt-in section of `Sources.dc.html`.
   - **Verify:** `app-build`; manual
 
