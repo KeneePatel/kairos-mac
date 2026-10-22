@@ -77,10 +77,14 @@ jobs:
       - name: Floor guard
         run: swift scripts/floor-guard.swift --base "${{ steps.base.outputs.ref }}"
 
+      # The checks below run even when an earlier step failed (the floor guard flags a new exception
+      # for sign-off by design), so a red run still reports every check. The job stays red.
       - name: Dependencies
+        if: ${{ !cancelled() }}
         run: scripts/check-deps.sh
 
       - name: Commits
+        if: ${{ !cancelled() }}
         run: |
           if [ "$EVENT" = "pull_request" ] && [ "$HEAD_REPO" != "$THIS_REPO" ]; then
             scripts/check-commits.sh "${{ steps.base.outputs.ref }}..HEAD" --allow-other-authors
@@ -89,6 +93,7 @@ jobs:
           fi
 
       - name: Secrets
+        if: ${{ !cancelled() }}
         run: |
           brew install gitleaks
           gitleaks detect --redact --no-banner
