@@ -26,6 +26,15 @@
                 }
                 exit(0)
             }
+            if CommandLine.arguments.contains("--doctor") {
+                let done = DispatchSemaphore(value: 0)
+                Task.detached {
+                    await doctor()
+                    done.signal()
+                }
+                done.wait()
+                exit(0)
+            }
             if CommandLine.arguments.contains("--render-letters") {
                 let done = DispatchSemaphore(value: 0)
                 Task.detached {
@@ -251,6 +260,22 @@
 
         /// `--render-letters`: every cached cover letter, rendered the way the build queue renders
         /// it (bundled typst, the real renderer), with how long each took. For a stuck build.
+        /// `--doctor`: the integrity report on this Mac's database (T46), until `kairos doctor` (R3).
+        /// Counts only.
+        private static func doctor() async {
+            do {
+                let url = try AccountStore.applicationSupport().databaseURL(for: .local)
+                let report = try await Doctor(try Database(path: url.path)).run()
+                print(
+                    "doctor: database \(ByteCountFormatter.string(fromByteCount: report.databaseBytes, countStyle: .file))"
+                )
+                if report.isClean { print("doctor: no problems found") }
+                for finding in report.findings { print("doctor: \(finding.problem): \(finding.count)") }
+            } catch {
+                print("doctor: couldn't run (\(error))")
+            }
+        }
+
         private static func renderLetters() async {
             do {
                 let db = try Database(path: try AccountStore.applicationSupport().databaseURL(for: .local).path)

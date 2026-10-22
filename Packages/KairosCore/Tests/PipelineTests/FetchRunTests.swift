@@ -133,6 +133,28 @@ struct FetchRunTests {
         #expect(last.sourcesTotal == 0 && last.phase == .finished)
     }
 
+    /// T46: a fetch ends by retiring old jobs you never engaged with, and records how many.
+    @Test func aFetchEndsByRetiringOldJobs() async throws {
+        let db = try await database()
+        let source = try await SourceRepository(db).add(kind: .lever)
+        func job(_ name: String, seenDaysAgo days: Double) -> Job {
+            Job(
+                canonicalURL: "https://jobs.example/\(name)", sourceID: source.id, url: "https://jobs.example/\(name)",
+                dedupKey: "acme robotics|\(name)|toronto", company: "Acme Robotics", title: name,
+                firstSeenAt: seenAt.addingTimeInterval(-days * 86_400))
+        }
+        try await JobRepository(db).upsert([job("old", seenDaysAgo: 130), job("stale", seenDaysAgo: 70)])
+        let last = try #require(
+            await collect(fetchRun(db, [source.id: FakeSource(id: source.id) { [] }])).last)
+        #expect(last.retired == Retention.Outcome(archived: 1, removed: 1))
+        let stats = try #require(
+            try await RunRepository(db).runs(kind: "fetch", limit: 1).first.flatMap { FetchRun.Stats.decode($0.stats) })
+        #expect(stats.archived == 1 && stats.removed == 1)
+        #expect(
+            FetchRun.Stats.decode(#"{"sources":1,"failed":0,"found":0,"outside":0,"duplicates":0,"added":0}"#)?.archived
+                == nil)
+    }
+
     /// A search source (Adzuna) runs after every company board, so when both list a job the board's
     /// full posting is the one kept, however fast the search answers.
     @Test func searchSourcesRunAfterTheBoards() async throws {

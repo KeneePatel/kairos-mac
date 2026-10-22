@@ -660,6 +660,9 @@ final class AppModel {
             "\(stats.added) new",
         ]
         if stats.failed > 0 { parts.append("\(stats.failed) board\(stats.failed == 1 ? "" : "s") failed") }
+        // Retention (T46): old jobs you never engaged with leave after a fetch.
+        let retired = (stats.archived ?? 0) + (stats.removed ?? 0)
+        if retired > 0 { parts.append("\(retired) old job\(retired == 1 ? "" : "s") tidied away") }
         if run.error == "cancelled" { parts.append("stopped") }
         if let screen = lastScreening, screen.startedAt >= run.startedAt,
             let screened = ScreeningRun.Stats.decode(screen.stats)

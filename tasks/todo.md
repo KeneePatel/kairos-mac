@@ -795,9 +795,18 @@ Refined with you on 2026-10-21:
       - No avatar, sidebar counts or sync time; those wait for accounts.
     - **Undrawn, decided here:** the status card reuses the grouped surface with a Move to menu. Timeline lines take each status's symbol. The follow-up row is a text field, a date and time, and Set reminder or Change and Clear.
 
-- [ ] **T46 · Retention and `kairos doctor`** (S) · deps: T45
+- [x] **T46 · Retention and `kairos doctor`** (S) · deps: T45
   - **Acceptance:** archive after 60 days and tombstone after 120 for jobs never shortlisted; integrity checks report orphans.
   - **Verify:** `core-test StoreTests`
+  - **Done 2026-10-22:**
+    - **`Retention`:** a job you never saved, applied to or built a resume for (new, skipped or archived) is archived 60 days after Kairos first saw it. At 120 it's tombstoned, with its analysis and screening trail.
+      - Tombstones stay known, so a posting still up isn't added back as new or analysed again.
+      - It runs at the end of every fetch. The run records what it archived and removed (nil when nothing, so older run records read as before), and Fetch's summary says "N old jobs tidied away".
+      - Archived jobs stay out of Review's Yes and Maybe; the other filters still list them.
+    - **`Doctor`:** reports rows pointing at something gone (analyses, screening records, builds, applications and their timelines, build files, resume bullets) and build files missing from disk, plus the database's size. It changes nothing, and checks only the tables a database has, so an older database works.
+    - **The `kairos` command line:** comes with R3, and `kairos doctor` will print this report. Until then, `Kairos --doctor` (debug builds) does.
+    - **Your database (2026-10-22):** 24.2 MB, no problems found.
+    - **Tests:** retention by age, state, build and application, with its trail removed and the job still known; doctor on a clean, damaged and older database; the fetch ends by retiring.
 
 ### Checkpoint F: R2 exit
 - [ ] A week of daily use; stories 3 and 6 pass; Phase 3 refined

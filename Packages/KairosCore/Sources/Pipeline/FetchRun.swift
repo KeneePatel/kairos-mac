@@ -4,7 +4,8 @@ import Store
 
 /// One "Fetch now": every enabled source is fetched (a few at a time), each posting normalized,
 /// postings outside Canada and the US and duplicates dropped, and the rest stored (SPEC §5.2, steps
-/// 1–3). Progress arrives as an `AsyncStream`; stopping the stream cancels the run.
+/// 1–3). Then old jobs you never engaged with leave (`Retention`, T46). Progress arrives as an
+/// `AsyncStream`; stopping the stream cancels the run.
 public struct FetchRun: Sendable {
     public struct Progress: Sendable, Equatable {
         public enum Phase: Sendable, Equatable { case running, finished, cancelled }
@@ -19,6 +20,8 @@ public struct FetchRun: Sendable {
         public var duplicates = 0
         public var added = 0
         public var failures: [Failure] = []
+        /// Old jobs archived (60 days) and removed (120 days) at the end of the run.
+        public var retired = Retention.Outcome()
 
         public init() {}
     }
@@ -36,6 +39,9 @@ public struct FetchRun: Sendable {
         public let outside: Int
         public let duplicates: Int
         public let added: Int
+        /// Old jobs the run archived and removed; nil when none, as in runs from before retention.
+        public var archived: Int?
+        public var removed: Int?
 
         public static func decode(_ json: String) -> Stats? {
             try? JSONDecoder().decode(Stats.self, from: Data(json.utf8))
@@ -97,11 +103,16 @@ public struct FetchRun: Sendable {
             }
         }
 
+        if !Task.isCancelled, let retired = try? await Retention(db).apply(now: now()) {
+            progress.retired = retired
+        }
         progress.phase = Task.isCancelled ? .cancelled : .finished
         if let runID {
             let stats = Stats(
                 sources: progress.sourcesTotal, failed: progress.failures.count, found: progress.found,
-                outside: progress.outside, duplicates: progress.duplicates, added: progress.added)
+                outside: progress.outside, duplicates: progress.duplicates, added: progress.added,
+                archived: progress.retired.archived > 0 ? progress.retired.archived : nil,
+                removed: progress.retired.removed > 0 ? progress.retired.removed : nil)
             let json = (try? JSONEncoder().encode(stats)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
             try? await runs.finish(runID, stats: json, error: progress.phase == .cancelled ? "cancelled" : nil)
         }
