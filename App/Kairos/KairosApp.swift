@@ -18,6 +18,9 @@ struct KairosApp: App {
             RootView()
                 .environment(model)
                 .task { await model.open() }
+                #if DEBUG
+                    .task { await DebugLayoutProbe.runIfRequested(model) }
+                #endif
                 .onOpenURL { url in
                     // kairos:// routes (auth callbacks later, SPEC §5.8) arrive here. Log only the route:
                     // query strings can carry one-time auth codes.

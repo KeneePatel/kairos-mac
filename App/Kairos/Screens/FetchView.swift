@@ -13,10 +13,15 @@ struct FetchView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // The panels get their full height first and the table takes what's left. The priority does
+            // this, not fixedSize on the text: the window's minimum height is measured at the narrowest
+            // width, where fixed text wraps a word a line and asked for 1,185 points, taller than a
+            // laptop screen, so opening Find jobs pushed the window off it.
             summary
                 .padding(Spacing.space5)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.surface))
+                .layoutPriority(1)
             Divider()
             SourcesTable()
         }
@@ -73,7 +78,6 @@ struct FetchView: View {
         HStack(alignment: .top, spacing: Spacing.space4) {
             panel("Last run", symbol: "clock") {
                 Text(model.runSummary).font(TypeStyle.body).foregroundStyle(Color(.ink))
-                    .fixedSize(horizontal: false, vertical: true)
                 if model.lastScreening != nil {
                     Button("Review the results") { model.section = .review }
                         .buttonStyle(.link)
@@ -104,7 +108,6 @@ struct FetchView: View {
                         : "They're analysed on the next run once an AI key is set."
                 )
                 .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
-                .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

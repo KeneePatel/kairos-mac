@@ -774,6 +774,18 @@ Your decisions:
     - Filters shown above the Review list.
     - Revisiting a daily check with a notification (T44): applications in a posting's first 96 hours get up to 8 times the interviews.
 
+- [x] **P9 · Find jobs pushed the window off the screen** (S), your report (2026-10-22): "when I go back to Fetch options. The screen is actually half cut out. It kind of shifted upwards"
+  - **Cause:**
+    - A Mac window can't be smaller than its screen's minimum size. SwiftUI measures that minimum at the screen's narrowest width.
+    - Find jobs' three panels kept their text at full height (`fixedSize`), so at that width it wrapped a word a line, and Find jobs asked for a window at least 1,185 points tall. Your display is 956.
+    - Opening Find jobs from any shorter screen (Settings, Review) grew the window past the display's edge, and it stayed that size afterwards.
+    - P8's fuller panels made it worse. The keys prompt before it was P6's one-time paste, unrelated.
+  - **Fix:** the panels take their height first by layout priority and the table takes the rest, so the text still wraps in full. Find jobs now needs 241 points. Every other screen needs 156 or less.
+  - **Check:** `Kairos --layout-probe` (debug builds) opens the real window on your data and visits every section and Settings tab. It prints the smallest window each allows, exits 1 if any needs more than 640 points, and snapshots Find jobs. `--size=900x520` sets the window size for that snapshot.
+    - Before the fix: Find jobs needed 1,185.
+    - After: 241, with the panels unclipped at 1470 × 848 and at 900 × 520.
+    - Offscreen snapshots couldn't show this, because they have no window.
+
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 
 Refined with you on 2026-10-21:
