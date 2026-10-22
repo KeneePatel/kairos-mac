@@ -139,6 +139,18 @@ public struct BuildRepository: Sendable {
         ).map(record)
     }
 
+    /// Each job's newest build, by job id: whether it has a resume, or one on the way. Unlike
+    /// `recent`, no job is left out however many builds there are.
+    public func latestByJob() async throws -> [String: BuildRecord] {
+        let rows = try await db.query("SELECT * FROM build WHERE deleted = 0 ORDER BY created_at DESC, rowid DESC")
+        var latest: [String: BuildRecord] = [:]
+        for row in rows {
+            let build = try record(row)
+            if latest[build.jobID] == nil { latest[build.jobID] = build }
+        }
+        return latest
+    }
+
     /// Oldest first, for the queue.
     public func builds(status: Set<BuildStatus>) async throws -> [BuildRecord] {
         let placeholders = Array(repeating: "?", count: status.count).joined(separator: ", ")

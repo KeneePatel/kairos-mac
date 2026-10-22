@@ -49,6 +49,8 @@ final class AppModel {
     private(set) var stretch = StretchSettings()
     /// Every job's builds, newest first, and where each running one is.
     private(set) var builds: [BuildRecord] = []
+    /// Each job's newest build, by job id, however many builds there are: which jobs have a resume.
+    private(set) var latestBuilds: [String: BuildRecord] = [:]
     private(set) var buildSteps: [UUID: BuildStep] = [:]
     var selectedBuild: UUID?
     private(set) var isFetching = false
@@ -125,6 +127,7 @@ final class AppModel {
             lastScreening = try await RunRepository(db).runs(kind: "screen", limit: 1).first
             screenings = try await ScreeningRepository(db).latestByJob()
             builds = try await BuildRepository(db).recent()
+            latestBuilds = try await BuildRepository(db).latestByJob()
             searchPreferences =
                 try await SettingsRepository(db).value(SearchPreferences.storageKey, as: SearchPreferences.self)
                 ?? SearchPreferences()
@@ -536,26 +539,78 @@ final class AppModel {
     /// Stretch when you've turned it on, otherwise strict.
     var defaultBuildMode: BuildMode { stretch.enabled ? .stretch : .strict }
 
-    /// Starts a build for `job`, once your master resume is ready (S14), and shows it.
-    func startBuild(for job: Job, mode: BuildMode? = nil, coverLetter: Bool = false) async -> String? {
-        let mode = mode ?? defaultBuildMode
-        guard let db else { return "The database isn't open." }
+    /// Starts a build for `job`, once your master resume is ready (S14). `show` opens it in Resumes;
+    /// a job's own resume page passes false and shows it there instead.
+    func startBuild(for job: Job, mode: BuildMode? = nil, coverLetter: Bool = false, show: Bool = true) async
+        -> String?
+    {
+        guard let id = await enqueue([job.id], mode: mode, coverLetter: coverLetter).first else {
+            return buildProblem ?? "The build couldn't start."
+        }
+        if show {
+            selectedBuild = id
+            section = .builds
+        }
+        return nil
+    }
+
+    /// "Build resumes for every Yes" (or Maybe): which of the list's jobs get one. Jobs with a
+    /// resume, or one on the way, are skipped, and so are jobs the current prompt hasn't analysed.
+    func bulkBuild(_ filter: ReviewFilter) async -> BulkBuild {
+        var analysed: Set<JobID> = []
+        if let db {
+            analysed =
+                (try? await AnalysisRepository(db).analysedJobs(promptVersion: AnalyzeJobTask.promptVersion)) ?? []
+        }
+        return BulkBuild(
+            candidates: reviewJobs(filter).map(\.id), latest: latestBuilds.mapValues(\.status), analysed: analysed)
+    }
+
+    /// Queues a build for each job, two running at a time, and stays where you are. Nil once
+    /// queued; otherwise why not.
+    func startBuilds(_ jobs: [JobID], mode: BuildMode? = nil, coverLetter: Bool = false) async -> String? {
+        let queued = await enqueue(jobs, mode: mode, coverLetter: coverLetter)
+        return queued.count == jobs.count ? nil : buildProblem ?? "Some builds couldn't start."
+    }
+
+    /// Why the last `enqueue` stopped short, in words.
+    @ObservationIgnored private var buildProblem: String?
+
+    /// Queues builds once your master resume is ready (S14). Returns the ids queued.
+    private func enqueue(_ jobs: [JobID], mode: BuildMode?, coverLetter: Bool) async -> [UUID] {
+        buildProblem = nil
+        guard let db else {
+            buildProblem = "The database isn't open."
+            return []
+        }
         guard let resume, resume.readiness.isReady else {
-            return
+            buildProblem =
                 "Finish your master resume first: \(resume?.readiness.missing.map(\.message).joined(separator: " ") ?? "")"
+            return []
         }
         let queue = queue(db)
         await queue.setRouter(ai?.router())
-        do {
-            let id = try await queue.enqueue(job: job.id, mode: mode, coverLetter: coverLetter)
-            selectedBuild = id
-            section = .builds
-            await reload()
-            return nil
-        } catch {
-            log.error("Starting a build failed: \(String(describing: error), privacy: .public)")
-            return "The build couldn't start."
+        var ids: [UUID] = []
+        for job in jobs {
+            do {
+                ids.append(try await queue.enqueue(job: job, mode: mode ?? defaultBuildMode, coverLetter: coverLetter))
+            } catch {
+                log.error("Starting a build failed: \(String(describing: error), privacy: .public)")
+                buildProblem = "The build couldn't start."
+                break
+            }
         }
+        await reload()
+        return ids
+    }
+
+    /// The job's newest build, if it has one.
+    func latestBuild(for job: Job) -> BuildRecord? { latestBuilds[job.id.rawValue] }
+
+    /// Every build of one job, newest first: its resume page's history.
+    func builds(for job: JobID) async -> [BuildRecord] {
+        guard let db else { return [] }
+        return (try? await BuildRepository(db).builds(for: job)) ?? []
     }
 
     func build(_ id: UUID?) -> BuildRecord? {

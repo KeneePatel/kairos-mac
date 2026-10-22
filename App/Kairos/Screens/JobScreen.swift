@@ -4,7 +4,9 @@ import SwiftUI
 
 /// One job, full width (polish P3, replacing the side inspector): the posting's facts, the verdict
 /// and the rule behind it, what the AI read, every requirement as it was matched with the evidence
-/// from your master resume quoted, then the posting in full. Re-evaluate asks the AI again.
+/// from your master resume quoted, then the posting in full. Re-evaluate asks the AI again. Once
+/// the job has a build, Resume opens its resume page: the resume, the cover letter, and only this
+/// job's history.
 struct JobScreen: View {
     @Environment(AppModel.self) private var model
     let id: JobID
@@ -12,6 +14,7 @@ struct JobScreen: View {
     @State private var reevaluating = false
     @State private var problem: String?
     @AppStorage("buildCoverLetter") private var coverLetter = false
+    @State private var showingResume = false
 
     init(id: JobID, preview: StoredAnalysis? = nil) {
         self.id = id
@@ -32,6 +35,7 @@ struct JobScreen: View {
         .navigationTitle(job?.title ?? "Job")
         .navigationSubtitle(job?.company ?? "")
         .toolbar { if let job { toolbar(job) } }
+        .navigationDestination(isPresented: $showingResume) { BuildsView(job: id) }
         // Reloads when the job's verdict is recorded again (a re-evaluation or a re-screen).
         .task(id: "\(id.rawValue)-\(job.flatMap { model.screening(for: $0)?.at.timeIntervalSince1970 } ?? 0)") {
             if let job { stored = await model.storedAnalysis(for: job) ?? stored }
@@ -84,16 +88,33 @@ struct JobScreen: View {
                     : "You applied. Track it in Applications."
             )
             .help("Takes it off To review. The verdict stays.")
-            Toggle(isOn: $coverLetter) { Label("Cover letter", systemImage: "envelope") }
-                .help("Also write a cover letter when you build.")
-            Button {
-                Task { problem = await model.startBuild(for: job, coverLetter: coverLetter) }
-            } label: {
-                Label("Build resume", systemImage: "doc.text").labelStyle(.titleAndIcon)
+            if let latest = model.latestBuild(for: job) {
+                Button {
+                    showingResume = true
+                } label: {
+                    Label(
+                        latest.status == .queued || latest.status == .running ? "Building resume…" : "Resume",
+                        systemImage: "doc.text.fill"
+                    )
+                    .labelStyle(.titleAndIcon)
+                }
+                .buttonStyle(.borderedProminent)
+                .help("Your resume and cover letter for this job, with its build history. Build again from there.")
+            } else {
+                Toggle(isOn: $coverLetter) { Label("Cover letter", systemImage: "envelope") }
+                    .help("Also write a cover letter when you build.")
+                Button {
+                    Task {
+                        problem = await model.startBuild(for: job, coverLetter: coverLetter, show: false)
+                        if problem == nil { showingResume = true }
+                    }
+                } label: {
+                    Label("Build resume", systemImage: "doc.text").labelStyle(.titleAndIcon)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.buildBlocked(job, analysed: stored != nil) != nil)
+                .help(model.buildBlocked(job, analysed: stored != nil) ?? "Tailor a resume for this job.")
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(model.buildBlocked(job, analysed: stored != nil) != nil)
-            .help(model.buildBlocked(job, analysed: stored != nil) ?? "Tailor a resume for this job.")
         }
     }
 

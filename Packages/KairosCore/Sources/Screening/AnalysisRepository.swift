@@ -33,6 +33,13 @@ public struct AnalysisRepository: Sendable {
         return try rows.first.map(stored)
     }
 
+    /// The jobs `promptVersion` analysed: the ones a build can use (it needs the current prompt's).
+    public func analysedJobs(promptVersion: Int) async throws -> Set<JobID> {
+        let rows = try await db.query(
+            "SELECT job_id FROM job_analysis WHERE prompt_version = ? AND deleted = 0", [SQLValue(promptVersion)])
+        return Set(rows.compactMap { $0.string("job_id").map(JobID.init(rawValue:)) })
+    }
+
     /// The job's analysis whichever prompt made it: the one behind its verdict, for the Job page.
     public func latest(for job: JobID) async throws -> StoredAnalysis? {
         try await db.query("SELECT * FROM job_analysis WHERE job_id = ? AND deleted = 0", [.text(job.rawValue)])

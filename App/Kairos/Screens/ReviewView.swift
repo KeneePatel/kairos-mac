@@ -1,18 +1,35 @@
+import LLM
+import Pipeline
+import Render
 import Screening
 import Store
 import SwiftUI
+import Tailoring
 
 /// Review (polish P3; reworked 2026-10-22): the jobs that passed your filters, best first, grouped
 /// by country in your order. Yes, Maybe and No are what's left to decide; All adds the jobs you've
 /// applied to or marked "Not for me" (dimmed) and those waiting for the AI. What your filters
-/// dropped is in Filtered out. Choosing a job opens it full width.
+/// dropped is in Filtered out. Choosing a job opens it full width. Build resumes queues one for
+/// every Yes or every Maybe job that has none, after saying what it costs.
 struct ReviewView: View {
+    /// A "Build resumes" choice waiting for you to confirm it.
+    struct BulkRequest {
+        let filter: AppModel.ReviewFilter
+        let plan: BulkBuild
+        /// AI calls used today, and the daily budget, when AI is set up.
+        let used: Int?
+        let budget: Int?
+    }
+
     @Environment(AppModel.self) private var model
     @State private var filter: AppModel.ReviewFilter
     @State private var path: [JobID] = []
     @State private var selection: JobID?
     @State private var confirmingRescreen = false
     @State private var callsNeeded = 0
+    @State private var bulk: BulkRequest?
+    @State private var notice: (title: String, message: String)?
+    @AppStorage("buildCoverLetter") private var coverLetter = false
 
     init(filter: AppModel.ReviewFilter = .yes) {
         _filter = State(initialValue: filter)
@@ -25,6 +42,7 @@ struct ReviewView: View {
                 .navigationSubtitle(model.runSummary)
                 .toolbar {
                     ToolbarItem(placement: .principal) { filterPicker }
+                    ToolbarItem(placement: .primaryAction) { buildMenu }
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             Task {
@@ -53,6 +71,32 @@ struct ReviewView: View {
             Text(
                 "\(callsNeeded) job\(callsNeeded == 1 ? " hasn't" : "s haven't") been analysed with the current prompt, so each costs one AI call from your daily budget. The rest reuse their analysis for free."
             )
+        }
+        .confirmationDialog(
+            bulk.map { "Build \($0.plan.jobs.count) resume\($0.plan.jobs.count == 1 ? "" : "s")?" } ?? "",
+            isPresented: Binding(get: { bulk != nil }, set: { if !$0 { bulk = nil } }), titleVisibility: .visible,
+            presenting: bulk
+        ) { request in
+            ForEach(modes, id: \.self) { mode in
+                Button("\(Self.title(of: mode)), about \(calls(request.plan, mode))") {
+                    Task {
+                        if let problem = await model.startBuilds(
+                            request.plan.jobs, mode: mode, coverLetter: coverLetter)
+                        {
+                            notice = ("Couldn't build them all", problem)
+                        }
+                    }
+                }
+            }
+        } message: { request in
+            Text(bulkMessage(request))
+        }
+        .alert(
+            notice?.title ?? "", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(notice?.message ?? "")
         }
         .onChange(of: selection) { _, id in
             guard let id else { return }
@@ -114,6 +158,90 @@ struct ReviewView: View {
         }
     }
 
+    // MARK: - Build resumes
+
+    private var buildMenu: some View {
+        Menu {
+            ForEach([AppModel.ReviewFilter.yes, .maybe]) { list in
+                Button("For every \(list.title) job (\(model.reviewCount(list)))…") {
+                    Task { await prepare(list) }
+                }
+                .disabled(model.reviewCount(list) == 0)
+            }
+        } label: {
+            Label("Build resumes", systemImage: "doc.on.doc").labelStyle(.titleAndIcon)
+        }
+        .disabled(model.reviewCount(.yes) + model.reviewCount(.maybe) == 0)
+        .help("Queue a resume for every Yes or every Maybe job that doesn't have one. You'll see the cost first.")
+    }
+
+    /// Works out what the list needs, then asks; or says why there's nothing to build.
+    private func prepare(_ list: AppModel.ReviewFilter) async {
+        let plan = await model.bulkBuild(list)
+        guard !plan.jobs.isEmpty else {
+            notice = ("Nothing to build", Self.skipped(plan, list: list) ?? "")
+            return
+        }
+        await model.ai?.refreshUsage()
+        bulk = BulkRequest(
+            filter: list, plan: plan, used: model.ai?.usedToday, budget: model.ai?.settings.budget.dailyCalls)
+    }
+
+    /// Your usual mode first, then Lite, the cheapest, unless it's the same.
+    private var modes: [BuildMode] {
+        model.defaultBuildMode == .lite ? [.lite] : [model.defaultBuildMode, .lite]
+    }
+
+    static func title(of mode: BuildMode) -> String {
+        switch mode {
+        case .strict: "Full: rewrite for each job"
+        case .stretch: "Stretch: rewrite, add gap bullets"
+        case .lite: "Lite: copy your bullets"
+        }
+    }
+
+    /// "42–126 AI calls", or "14 AI calls" when it can't vary.
+    private func calls(_ plan: BulkBuild, _ mode: BuildMode) -> String {
+        let range = plan.calls(mode: mode, coverLetter: coverLetter, summary: ResumeTemplate.standard.hasSummary)
+        let count =
+            range.lowerBound == range.upperBound
+            ? "\(range.lowerBound)" : "\(range.lowerBound)–\(range.upperBound)"
+        return "\(count) AI call\(range.upperBound == 1 ? "" : "s")"
+    }
+
+    private func bulkMessage(_ request: BulkRequest) -> String {
+        var parts: [String] = []
+        if let skipped = Self.skipped(request.plan, list: request.filter) { parts.append(skipped) }
+        parts.append(
+            "They build two at a time, so this takes a while; you can keep working. "
+                + (coverLetter
+                    ? "Each gets a cover letter, since Cover letter is on."
+                    : "No cover letters: Cover letter is off on the job pages."))
+        if let used = request.used, let budget = request.budget {
+            parts.append(
+                "You've used \(used) of your \(budget) AI calls today. Builds past the budget stop with \"\(Budget.reachedMessage)\"; build those again tomorrow."
+            )
+        }
+        return parts.joined(separator: "\n\n")
+    }
+
+    /// Why some of the list's jobs aren't built, or nil when none are skipped.
+    static func skipped(_ plan: BulkBuild, list: AppModel.ReviewFilter) -> String? {
+        var reasons: [String] = []
+        if plan.alreadyBuilt > 0 {
+            reasons.append(
+                "\(plan.alreadyBuilt) already \(plan.alreadyBuilt == 1 ? "has a resume or one" : "have a resume or one") on the way"
+            )
+        }
+        if plan.notAnalysed > 0 {
+            reasons.append(
+                "\(plan.notAnalysed) \(plan.notAnalysed == 1 ? "hasn't" : "haven't") been analysed with the current prompt; Re-evaluate \(plan.notAnalysed == 1 ? "it" : "them") first"
+            )
+        }
+        guard !reasons.isEmpty else { return nil }
+        return "Of your \(list.title) jobs, " + ListFormatter.localizedString(byJoining: reasons) + "."
+    }
+
     private var filterPicker: some View {
         Picker("Show", selection: $filter) {
             ForEach(AppModel.ReviewFilter.allCases) { filter in
@@ -153,6 +281,8 @@ struct ReviewView: View {
                     .foregroundStyle(primary(job))
             }
             .width(min: 50, ideal: 60)
+            TableColumn("Resume") { job in ResumeStatus(build: model.latestBuild(for: job), dimmed: dimmed(job)) }
+                .width(min: 100, ideal: 120)
         } rows: {
             ForEach(model.reviewSections(filter)) { section in
                 Section("\(section.title) · \(section.jobs.count) job\(section.jobs.count == 1 ? "" : "s")") {
@@ -174,4 +304,30 @@ struct ReviewView: View {
     private func dimmed(_ job: Job) -> Bool { job.verdict == .no || model.isActedOn(job) }
     private func primary(_ job: Job) -> Color { dimmed(job) ? Color(.inkDimmed) : Color(.ink) }
     private func secondary(_ job: Job) -> Color { dimmed(job) ? Color(.inkDimmed) : Color(.inkSecondary) }
+}
+
+/// Where a job's resume is: an icon and a word, never colour alone.
+struct ResumeStatus: View {
+    let build: BuildRecord?
+    var dimmed = false
+
+    var body: some View {
+        switch build?.status {
+        case nil:
+            Text("—").foregroundStyle(Color(dimmed ? .inkDimmed : .inkSecondary))
+        case .queued?:
+            Label("Waiting", systemImage: "clock").foregroundStyle(Color(dimmed ? .inkDimmed : .inkSecondary))
+        case .running?:
+            HStack(spacing: Spacing.space1) {
+                ProgressView().controlSize(.mini)
+                Text("Building").foregroundStyle(Color(dimmed ? .inkDimmed : .ink2))
+            }
+        case .done?:
+            Label("Built", systemImage: "doc.text.fill").foregroundStyle(Color(dimmed ? .inkDimmed : .ink2))
+        case .failed?:
+            Label("Didn't finish", systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(Color(dimmed ? .inkDimmed : .error))
+                .help(build?.error ?? "")
+        }
+    }
 }

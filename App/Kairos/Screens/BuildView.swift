@@ -5,11 +5,19 @@ import Store
 import SwiftUI
 import Tailoring
 
-/// Builds (design `Build.dc.html`): one build at a time, chosen in the toolbar. Its steps and
-/// score, the PDF, and each line traced to your master resume; build again in either mode, save the
-/// PDF, reveal it in Finder, or mark the job applied.
+/// Builds (design `Build.dc.html`): one build at a time, chosen from History in the toolbar. Its
+/// steps and score, the PDF and cover letter, and each line traced to your master resume; build
+/// again in either mode, save the PDF, reveal it in Finder, or mark the job applied. Opened from a
+/// job's page it's that job's resume page: History lists only its builds, and building again
+/// stays on the page.
 struct BuildsView: View {
     @Environment(AppModel.self) private var model
+    /// The job whose resume page this is; nil for Resumes, every job's builds.
+    private let jobID: JobID?
+    /// The job's builds, newest first, when there's a job.
+    @State private var history: [BuildRecord] = []
+    /// The build chosen from History on a job's page; nil for its newest.
+    @State private var chosen: UUID?
     @State private var pdf: URL?
     @State private var letterPDF: URL?
     @State private var showing = BuildDocument.resume
@@ -19,8 +27,24 @@ struct BuildsView: View {
     @State private var mode = BuildMode.strict
     @State private var problem: String?
 
-    private var build: BuildRecord? { model.build(model.selectedBuild) ?? model.builds.first }
-    private var job: Job? { build.flatMap { build in model.jobs.first { $0.id.rawValue == build.jobID } } }
+    init(job: JobID? = nil) {
+        jobID = job
+    }
+
+    /// The builds History lists: the job's, or every job's latest 50.
+    private var listed: [BuildRecord] { jobID == nil ? model.builds : history }
+
+    private var build: BuildRecord? {
+        guard jobID != nil else { return model.build(model.selectedBuild) ?? model.builds.first }
+        guard let id = chosen ?? history.first?.id else { return nil }
+        // The model's copy follows a running build; the page's list is read when the job's newest changes.
+        return model.build(id) ?? history.first { $0.id == id }
+    }
+
+    private var job: Job? {
+        if let jobID { return model.job(jobID) }
+        return build.flatMap { build in model.jobs.first { $0.id.rawValue == build.jobID } }
+    }
 
     var body: some View {
         Group {
@@ -29,15 +53,22 @@ struct BuildsView: View {
                     build: build, job: job, pdf: shown, step: model.buildSteps[build.id],
                     master: model.resume?.resume, pdfMissing: pdfMissing, letter: letterPDF != nil,
                     showing: $showing)
+            } else if jobID != nil {
+                ContentUnavailableView {
+                    Label("No resume for this job yet", systemImage: "doc.text")
+                } description: {
+                    Text("Choose Build resume.").foregroundStyle(Color(.inkSecondary))
+                }
             } else {
                 ContentUnavailableView {
-                    Label("No builds yet", systemImage: "doc.text")
+                    Label("No resumes yet", systemImage: "doc.text")
                 } description: {
-                    Text("Open a job in Today and choose Build resume.")
+                    Text("Open a job in Review and choose Build resume, or build for every Yes job at once.")
+                        .foregroundStyle(Color(.inkSecondary))
                 }
             }
         }
-        .navigationTitle(job.map { "\($0.title) · \($0.company)" } ?? "Builds")
+        .navigationTitle(job.map { "\($0.title) · \($0.company)" } ?? "Resumes")
         .navigationSubtitle(subtitle)
         .toolbar { toolbar }
         .task(id: "\(build?.id.uuidString ?? "")-\(build?.status.rawValue ?? "")") {
@@ -56,6 +87,10 @@ struct BuildsView: View {
             }
             if let build { mode = build.mode == .stretch && !model.stretch.enabled ? .strict : build.mode }
         }
+        // A job's page reads its builds again when its newest one is added or changes state.
+        .task(id: jobID.map { "\($0.rawValue)-\(newest?.id.uuidString ?? "")-\(newest?.status.rawValue ?? "")" }) {
+            if let jobID { history = await model.builds(for: jobID) }
+        }
         .onChange(of: model.stretch.enabled) { _, on in
             if !on, mode == .stretch { mode = .strict }
         }
@@ -68,6 +103,9 @@ struct BuildsView: View {
 
     /// The PDF in the middle pane.
     private var shown: URL? { showing == .letter ? letterPDF : pdf }
+
+    /// The job's newest build, when this is a job's page.
+    private var newest: BuildRecord? { jobID.flatMap { model.latestBuilds[$0.rawValue] } }
 
     private var subtitle: String {
         guard let build else { return "" }
@@ -91,23 +129,22 @@ struct BuildsView: View {
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .navigation) {
             Menu {
-                ForEach(model.builds) { other in
+                ForEach(listed) { other in
                     Button {
-                        model.selectedBuild = other.id
+                        if jobID == nil { model.selectedBuild = other.id } else { chosen = other.id }
                     } label: {
-                        let title = model.jobs.first { $0.id.rawValue == other.jobID }.map {
-                            "\($0.title) · \($0.company)"
+                        if other.id == build?.id {
+                            Label(historyLabel(other), systemImage: "checkmark")
+                        } else {
+                            Text(historyLabel(other))
                         }
-                        Text(
-                            "\(title ?? "A removed job") · \(other.createdAt.formatted(date: .abbreviated, time: .shortened))"
-                        )
                     }
                 }
             } label: {
-                Label("Builds", systemImage: "clock.arrow.circlepath")
+                Label("History", systemImage: "clock.arrow.circlepath")
             }
-            .disabled(model.builds.isEmpty)
-            .help("Choose another build")
+            .disabled(listed.isEmpty)
+            .help(jobID == nil ? "Choose another build" : "This job's builds, newest first")
         }
         ToolbarItemGroup(placement: .primaryAction) {
             Picker("Mode", selection: $mode) {
@@ -122,9 +159,17 @@ struct BuildsView: View {
                     + "; Lite copies them word for word and writes only the summary and skills."
             )
             Button {
-                Task { if let job { problem = await model.startBuild(for: job, mode: mode, coverLetter: coverLetter) } }
+                Task {
+                    guard let job else { return }
+                    problem = await model.startBuild(for: job, mode: mode, coverLetter: coverLetter, show: jobID == nil)
+                    if jobID != nil, problem == nil {
+                        chosen = nil
+                        history = await model.builds(for: job.id)
+                    }
+                }
             } label: {
-                Label("Build again", systemImage: "arrow.clockwise").labelStyle(.titleAndIcon)
+                Label(build == nil ? "Build resume" : "Build again", systemImage: "arrow.clockwise")
+                    .labelStyle(.titleAndIcon)
             }
             .buttonStyle(.borderedProminent)
             .disabled(job == nil || build?.status == .running || build?.status == .queued)
@@ -153,6 +198,29 @@ struct BuildsView: View {
             }
             .disabled(job == nil || job?.state == .applied)
         }
+    }
+
+    /// A History item: on a job's page when and how it was built; in Resumes, for which job.
+    private func historyLabel(_ build: BuildRecord) -> String {
+        let when = build.createdAt.formatted(date: .abbreviated, time: .shortened)
+        guard jobID == nil else {
+            let mode =
+                switch build.mode {
+                case .strict: "Full"
+                case .stretch: "Stretch"
+                case .lite: "Lite"
+                }
+            let status =
+                switch build.status {
+                case .done: build.coverLetter?.status == .done ? "with cover letter" : nil
+                case .queued: "waiting"
+                case .running: "building"
+                case .failed: "didn't finish"
+                }
+            return ([when, mode] + [status].compactMap { $0 }).joined(separator: " · ")
+        }
+        let title = model.jobs.first { $0.id.rawValue == build.jobID }.map { "\($0.title) · \($0.company)" }
+        return "\(title ?? "A removed job") · \(when)"
     }
 
     /// Saves a copy where you choose, named for the job.
@@ -331,8 +399,10 @@ private struct BuildStepsColumn: View {
             ),
             (
                 "Wrote sections",
+                // A template without a summary (Harvard) doesn't write one.
                 build.mode == .lite
-                    ? "Summary and skills; bullets copied word for word" : "Summary, experience, projects, skills"
+                    ? (content?.summary == nil ? "Skills" : "Summary and skills") + "; bullets copied word for word"
+                    : content?.summary == nil ? "Experience, projects, skills" : "Summary, experience, projects, skills"
             ),
             ("Checked every claim", checked),
             (

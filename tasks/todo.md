@@ -786,6 +786,22 @@ Your decisions:
     - After: 241, with the panels unclipped at 1470 × 848 and at 900 × 520.
     - Offscreen snapshots couldn't show this, because they have no window.
 
+- [x] **P10 · Resumes for a whole list, and each job's own resume page** (M), your request (2026-10-22): "a button that will make Resumes for all Yeses or all Maybes … when I go to the job posting and Resume is already built, it will take me to the Resume page … with only the History related to that job posting"
+  - **Build resumes (Review's toolbar):** For every Yes job, or For every Maybe job.
+    - It skips jobs that already have a resume or one on the way. A job whose last build failed is built again.
+    - It also skips jobs the current prompt hasn't analysed, since a build needs that analysis. It says how many and to Re-evaluate them.
+    - Before queueing, it asks, with the AI calls it costs: your usual mode (Full, or Stretch when it's on) and Lite, the cheapest, each with "about N AI calls", and how many of today's budget you've used. Builds past the budget stop with "Daily AI budget reached" and can be built again tomorrow.
+    - Cover letters follow the same Cover letter switch as single builds, and the dialog says which.
+    - Builds run two at a time in the background and you stay in Review. A new Resume column shows each job's resume: Built, Building, Waiting, Didn't finish (with the reason on hover), or —.
+    - **Calls per build:** a writer each for experience, projects and skills (Harvard has no summary), up to 3 rewrite passes over two sections in Full, 1 for Stretch's gap bullets and 1 for a letter: 3 to 9 in Full, 1 in Lite. A reply that fails its checks costs one more call, which isn't counted, hence "about".
+  - **A job's resume page:** once a job has a build, its page's main button is Resume (Building resume… while one runs). It opens the Resumes screen for that job only: the resume and cover letter, its steps, score and lines, and History listing only this job's builds (when, mode, and whether it has a letter or didn't finish). Build again stays on the page and shows the new build. Back returns to the job.
+    - Build resume on a job without one now opens that page too, instead of switching to Resumes.
+    - Resumes in the sidebar is unchanged, with History listing every job's builds.
+  - **Also:** "Wrote sections" no longer claims a summary for Harvard builds, which don't write one.
+  - **Core:** `BuildRepository.latestByJob()` (each job's newest build, with no 50-build limit), `AnalysisRepository.analysedJobs(promptVersion:)`, and `BulkBuild` (which jobs, which skipped, the call estimate). 4 tests: the latest build skipping deleted ones; only the current prompt's analyses counting; skipping built, running and waiting jobs but rebuilding a failed one; the call ranges per mode, letter and summary.
+  - **Checked:** with `Kairos --layout-probe --screens`, a new probe mode that snapshots screens with their toolbars in titled windows, on your data: Review with the menu and column, a job with a resume showing Resume, that job's resume page with History, and a job without one showing Build resume. The confirmation dialog only appears on a click, so it wasn't snapshotted.
+  - **Visual differences:** none of these are drawn in `Build.dc.html` or the Review mockup. The Resume column reuses the verdict column's pattern of an icon and a word, with `error` for a failed build. Resume is the page's one prominent button, taking Build resume's place.
+
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 
 Refined with you on 2026-10-21:
