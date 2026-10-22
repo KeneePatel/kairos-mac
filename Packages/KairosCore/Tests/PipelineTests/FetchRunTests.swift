@@ -133,6 +133,38 @@ struct FetchRunTests {
         #expect(last.sourcesTotal == 0 && last.phase == .finished)
     }
 
+    /// Your "posted within" limit applies while fetching: an older posting is never stored, a
+    /// posting with no date is kept (its age can't be told), and the run says how many it skipped.
+    @Test func postingsOlderThanYourLimitAreNeverStored() async throws {
+        let db = try await database()
+        let source = try await SourceRepository(db).add(kind: .lever)
+        func dated(_ path: String, daysAgo: Double?) -> Posting {
+            var posting = posting(source.id, "Engineer \(path)", "Toronto, ON", path: path)
+            posting.postedAt = daysAgo.map { seenAt.addingTimeInterval(-$0 * 86_400) }
+            return posting
+        }
+        let postings = [
+            dated("fresh", daysAgo: 3), dated("edge", daysAgo: 7), dated("old", daysAgo: 10),
+            dated("undated", daysAgo: nil),
+        ]
+        let replies = [source.id: FakeSource(id: source.id) { postings }]
+        let run = FetchRun(
+            db: db, now: { seenAt }, postedWithinDays: 7,
+            makeSource: { source in
+                guard let fake = replies[source.id] else { throw SourceError.invalidConfiguration("no fake") }
+                return (fake, SourceQuery())
+            })
+        let last = try #require(await collect(run).last)
+        #expect(last.found == 4 && last.tooOld == 1 && last.added == 3)
+        #expect(
+            try await JobRepository(db).jobs().map(\.title).sorted() == [
+                "Engineer edge", "Engineer fresh", "Engineer undated",
+            ])
+        let stats = try #require(
+            try await RunRepository(db).runs(kind: "fetch", limit: 1).first.flatMap { FetchRun.Stats.decode($0.stats) })
+        #expect(stats.tooOld == 1)
+    }
+
     /// T46: a fetch ends by retiring old jobs you never engaged with, and records how many.
     @Test func aFetchEndsByRetiringOldJobs() async throws {
         let db = try await database()

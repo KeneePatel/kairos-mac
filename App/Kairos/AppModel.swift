@@ -263,7 +263,9 @@ final class AppModel {
                 titles: preferences.titleInclude, countries: preferences.countries, maxAgeDays: preferences.maxAgeDays),
             adzuna: adzunaCredentials)
         let run = PipelineRun(
-            fetch: FetchRun(db: db, makeSource: { try SourceFactory.make($0, http: http, search: search) }),
+            fetch: FetchRun(
+                db: db, postedWithinDays: preferences.maxAgeDays,
+                makeSource: { try SourceFactory.make($0, http: http, search: search) }),
             screening: ScreeningRun(db: db, router: ai?.router()))
         fetchTask = Task { [weak self] in
             for await event in run.start() {
@@ -660,6 +662,7 @@ final class AppModel {
             "\(stats.added) new",
         ]
         if stats.failed > 0 { parts.append("\(stats.failed) board\(stats.failed == 1 ? "" : "s") failed") }
+        if let tooOld = stats.tooOld { parts.append("\(tooOld) older ones skipped") }
         // Retention (T46): old jobs you never engaged with leave after a fetch.
         let retired = (stats.archived ?? 0) + (stats.removed ?? 0)
         if retired > 0 { parts.append("\(retired) old job\(retired == 1 ? "" : "s") tidied away") }

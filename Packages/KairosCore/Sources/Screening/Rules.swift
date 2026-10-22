@@ -80,7 +80,9 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
     public var remoteAllowed = true
     /// Companies you never want to see, matched on whole words ("Amazon" also blocks Amazon Web Services).
     public var blacklist: [String] = []
-    /// Postings older than this many days are out.
+    /// Postings older than this many days are out: never stored by a fetch (the Fetch screen's
+    /// "Posted" menu; Adzuna asks for it in its search), and rejected by the prefilter when a job
+    /// stored earlier is screened again.
     public var maxAgeDays: Int?
     /// How much of a posting your skills must cover for a yes or a maybe (the verdict, T29).
     public var thresholds = VerdictThresholds()

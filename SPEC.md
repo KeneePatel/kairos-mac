@@ -215,7 +215,7 @@ flowchart LR
 - **One database per account:** `Application Support/Kairos/<user-id>/kairos.sqlite`, plus a `local/` database for use before signing in. On first sign-in the app offers to adopt the local data into the account.
 
 ### 5.2 Pipeline
-1. **Fetch** from enabled sources in a `TaskGroup` (≤ 4 HTTP sources and 1 WebKit source at a time), with per-host delays and timeouts.
+1. **Fetch** from enabled sources in a `TaskGroup` (≤ 4 HTTP sources at a time; company boards before search sources), with per-host delays and timeouts. Postings older than your "Posted" limit (Fetch screen) are never stored; undated ones are kept.
 2. **Normalize:** canonical URL, Markdown description, and `job.id` = hash of the canonical URL (stable across devices). Parse `country` (CA or US), province or state, city, remote scope and currency.
 3. **De-duplicate:** known ids, then cross-board near-duplicates (company + title + city similarity ≥ 0.9).
 4. **Prefilter** (deterministic; the first failing rule wins and is recorded):

@@ -146,9 +146,7 @@ struct SearchPreferencesView: View {
             optionalStepper(
                 "Skip jobs asking for more than", unit: "years", value: $preferences.maxYearsRequired, start: 8,
                 range: 1...30, step: 1)
-            optionalStepper(
-                "Skip postings older than", unit: "days", value: $preferences.maxAgeDays, start: 30, range: 7...180,
-                step: 7)
+            // How recent a posting must be is on the Fetch screen ("Posted"), since it acts while fetching.
         }
     }
 

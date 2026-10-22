@@ -30,6 +30,7 @@ struct FetchView: View {
                     Label("Add", systemImage: "plus").labelStyle(.titleAndIcon)
                 }
             }
+            ToolbarItem(placement: .primaryAction) { PostedWithinMenu() }
             RunControls(model: model, title: "Fetch now")
         }
         .sheet(isPresented: $addingCompany) { AddCompanySheet() }
@@ -112,5 +113,50 @@ extension PrefilterRule {
         case .postingAge: "Older than your limit"
         case .alreadyApplied: "Already applied"
         }
+    }
+}
+
+/// "Posted: past week": how recent a posting must be to be fetched at all. Older ones are never
+/// stored, so they don't fill Prefiltered; a posting with no date is kept. It's Search's posting-age
+/// limit, moved here from Settings because it now acts while fetching.
+struct PostedWithinMenu: View {
+    @Environment(AppModel.self) private var model
+
+    static let choices: [(days: Int?, title: String)] = [
+        (nil, "Any time"), (1, "Past day"), (3, "Past 3 days"), (7, "Past week"), (14, "Past 2 weeks"),
+        (30, "Past month"), (60, "Past 2 months"),
+    ]
+
+    private var current: Int? { model.searchPreferences.maxAgeDays }
+
+    /// A limit set before the menu existed (28 days, say) stays a choice.
+    private var choices: [(days: Int?, title: String)] {
+        guard let current, !Self.choices.contains(where: { $0.days == current }) else { return Self.choices }
+        return Self.choices + [(current, "Past \(current) days")]
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(choices, id: \.title) { choice in
+                Button {
+                    var preferences = model.searchPreferences
+                    preferences.maxAgeDays = choice.days
+                    Task { await model.save(preferences) }
+                } label: {
+                    if choice.days == current {
+                        Label(choice.title, systemImage: "checkmark")
+                    } else {
+                        Text(choice.title)
+                    }
+                }
+            }
+        } label: {
+            Label(
+                "Posted: \(choices.first { $0.days == current }?.title.lowercased() ?? "any time")",
+                systemImage: "calendar"
+            )
+            .labelStyle(.titleAndIcon)
+        }
+        .help("Fetch only jobs posted this recently. Older postings aren't saved at all; undated ones are kept.")
     }
 }

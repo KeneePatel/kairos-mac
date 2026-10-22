@@ -4,8 +4,9 @@ import Store
 
 /// One "Fetch now": every enabled source is fetched (a few at a time), each posting normalized,
 /// postings outside Canada and the US and duplicates dropped, and the rest stored (SPEC §5.2, steps
-/// 1–3). Then old jobs you never engaged with leave (`Retention`, T46). Progress arrives as an
-/// `AsyncStream`; stopping the stream cancels the run.
+/// 1–3). Postings older than your "posted within" limit are never stored. Then old jobs you never
+/// engaged with leave (`Retention`, T46). Progress arrives as an `AsyncStream`; stopping the
+/// stream cancels the run.
 public struct FetchRun: Sendable {
     public struct Progress: Sendable, Equatable {
         public enum Phase: Sendable, Equatable { case running, finished, cancelled }
@@ -18,6 +19,8 @@ public struct FetchRun: Sendable {
         public var outside = 0
         /// Dropped because they were stored before or are another board's copy.
         public var duplicates = 0
+        /// Dropped because they were posted before your "posted within" limit.
+        public var tooOld = 0
         public var added = 0
         public var failures: [Failure] = []
         /// Old jobs archived (60 days) and removed (120 days) at the end of the run.
@@ -42,6 +45,8 @@ public struct FetchRun: Sendable {
         /// Old jobs the run archived and removed; nil when none, as in runs from before retention.
         public var archived: Int?
         public var removed: Int?
+        /// Postings skipped as older than your "posted within" limit; nil when none.
+        public var tooOld: Int?
 
         public static func decode(_ json: String) -> Stats? {
             try? JSONDecoder().decode(Stats.self, from: Data(json.utf8))
@@ -54,16 +59,19 @@ public struct FetchRun: Sendable {
     let makeSource: MakeSource
     let maxConcurrent: Int
     let now: @Sendable () -> Date
+    let postedWithinDays: Int?
 
-    /// At most 4 HTTP sources at a time (SPEC §5.2).
+    /// At most 4 HTTP sources at a time (SPEC §5.2). `postedWithinDays` is your Fetch screen's
+    /// "Posted" setting: older postings are never stored; nil keeps every age.
     public init(
         db: Database, maxConcurrent: Int = 4, now: @escaping @Sendable () -> Date = { Date() },
-        makeSource: @escaping MakeSource
+        postedWithinDays: Int? = nil, makeSource: @escaping MakeSource
     ) {
         self.db = db
         self.makeSource = makeSource
         self.maxConcurrent = max(1, maxConcurrent)
         self.now = now
+        self.postedWithinDays = postedWithinDays
     }
 
     public func start() -> AsyncStream<Progress> {
@@ -112,7 +120,8 @@ public struct FetchRun: Sendable {
                 sources: progress.sourcesTotal, failed: progress.failures.count, found: progress.found,
                 outside: progress.outside, duplicates: progress.duplicates, added: progress.added,
                 archived: progress.retired.archived > 0 ? progress.retired.archived : nil,
-                removed: progress.retired.removed > 0 ? progress.retired.removed : nil)
+                removed: progress.retired.removed > 0 ? progress.retired.removed : nil,
+                tooOld: progress.tooOld > 0 ? progress.tooOld : nil)
             let json = (try? JSONEncoder().encode(stats)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
             try? await runs.finish(runID, stats: json, error: progress.phase == .cancelled ? "cancelled" : nil)
         }
@@ -141,7 +150,9 @@ public struct FetchRun: Sendable {
         case .success(let postings):
             progress.found += postings.count
             do {
-                let (added, outside, duplicates) = try await store(postings)
+                let recent = recentOnly(postings)
+                progress.tooOld += postings.count - recent.count
+                let (added, outside, duplicates) = try await store(recent)
                 progress.added += added
                 progress.outside += outside
                 progress.duplicates += duplicates
@@ -150,6 +161,14 @@ public struct FetchRun: Sendable {
             }
             _ = try? await sources.recordRun(of: source.id, found: postings.count, at: now())
         }
+    }
+
+    /// The postings within your "posted within" limit. One without a date is kept: its age can't be
+    /// told, and screening still reads it.
+    private func recentOnly(_ postings: [Posting]) -> [Posting] {
+        guard let days = postedWithinDays else { return postings }
+        let cutoff = now().addingTimeInterval(-Double(days) * 86_400)
+        return postings.filter { posting in posting.postedAt.map { $0 >= cutoff } ?? true }
     }
 
     /// Normalizes, de-duplicates against what's stored (including jobs saved earlier in this run),

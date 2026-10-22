@@ -722,6 +722,14 @@ Your decisions:
   - **Checked:** a debug build run read all 4 keys from the file in 0.0 s and queued in 0.3 s, against about 20 s before, with no Keychain access.
   - **Release:** recorded on T57: ask you before moving keys back, and find the cause of the prompts first. SPEC §5.7 and §12 note the exception.
 
+- [x] **P7 · "Posted within" applies while fetching** (S), your request (2026-10-22): "only fetch jobs which are posted x days ago … instead of prefiltering them … have the option baked while fetching"
+  - **Before:** Settings, Search had "Skip postings older than N days" (7 to 180, in weeks). Every posting was fetched and stored, then the prefilter rejected the old ones, so they filled Prefiltered. Only Adzuna asked for the limit in its search.
+  - **Done:**
+    - **Fetch screen:** a "Posted" menu next to Fetch now: Any time, past day, 3 days, week, 2 weeks, month, 2 months. It's the same setting, so your current value carries over, and a value set before (28 days, say) stays a choice. It's gone from Settings, Search.
+    - **While fetching:** postings older than the limit are dropped before they're stored, for every source. One with no date is kept, since its age can't be told. The run records how many it skipped (nil when none, so older run records read as before), and Fetch's summary says "N older ones skipped".
+    - **The prefilter rule stays** for jobs stored before the limit or before this change, when they're screened again.
+  - **Tests:** a fetch with a 7-day limit stores postings 3 and 7 days old and one undated, skips one 10 days old, and records it. The other fetch tests are unchanged.
+
 ## Phase 2: R2 Daily driver (refined at Checkpoint E)
 
 Refined with you on 2026-10-21:
