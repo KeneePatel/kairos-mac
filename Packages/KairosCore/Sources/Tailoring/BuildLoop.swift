@@ -61,6 +61,8 @@ public struct BuildOutcome: Sendable, Equatable {
     /// Sections whose writer failed even after its repair, so they use your master resume's words.
     public var fellBack: [MatchScore.Section]
     public var pages: Int?
+    /// How the final resume fills its pages, when it was measured.
+    public var layout: PageLayout?
     /// Bullets dropped to fit the page budget.
     public var dropped: Int
     /// When one was asked for; nil if it still failed its checks after the repair.
@@ -98,9 +100,9 @@ public struct BuildLoop: Sendable {
         self.context = context
     }
 
-    public typealias Measure = @Sendable (TailoredResume) async throws -> Int
+    public typealias Measure = @Sendable (TailoredResume) async throws -> PageLayout
 
-    /// `measure` renders the resume and counts its pages; without it nothing is fitted.
+    /// `measure` renders the resume and measures how it fills its pages; without it nothing is fitted.
     public func run(
         _ request: BuildRequest, measure: Measure? = nil, progress: @Sendable (BuildStep) -> Void = { _ in }
     )
@@ -200,16 +202,17 @@ public struct BuildLoop: Sendable {
             }
         }
 
-        var pages: Int?
+        var layout: PageLayout?
         var dropped = 0
         if let measure {
-            pages = try await measure(resume)
-            while let count = pages, count > request.pageBudget, Self.dropLowest(&resume) {
+            layout = try await measure(resume)
+            while let count = layout?.pages, count > request.pageBudget, Self.dropLowest(&resume) {
                 progress(.fitting(pages: count))
                 dropped += 1
-                pages = try await measure(resume)
+                layout = try await measure(resume)
             }
         }
+        let pages = layout?.pages
         score = MatchScore.score(resume, for: request.requirements, pages: pages, pageBudget: request.pageBudget)
 
         var letter: CoverLetter?
@@ -222,8 +225,8 @@ public struct BuildLoop: Sendable {
             letter = try await coverLetter(input, header: resume.header)
         }
         return BuildOutcome(
-            resume: resume, score: score, rewrites: rewrites, fellBack: fellBack, pages: pages, dropped: dropped,
-            coverLetter: letter)
+            resume: resume, score: score, rewrites: rewrites, fellBack: fellBack, pages: pages, layout: layout,
+            dropped: dropped, coverLetter: letter)
     }
 
     // MARK: - Writers

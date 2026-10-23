@@ -180,7 +180,7 @@ struct BuildLoopTests {
             .writeExperience: [.reply(goodExperience)], .writeProjects: [.reply(projects)],
             .writeSummary: [.reply(summary)], .writeSkills: [.reply(skills)],
         ])
-        let outcome = try await loop.run(request) { resume in resume.allBullets.count > 5 ? 2 : 1 }
+        let outcome = try await loop.run(request) { resume in PageLayout(pages: resume.allBullets.count > 5 ? 2 : 1) }
         #expect(outcome.pages == 1 && outcome.dropped == 2)
         let kept = outcome.resume.experience.flatMap(\.bullets).map(\.sourceIDs).flatMap { $0 }
         #expect(!kept.contains(Sample.onCall.id))  // the lowest-ranked went first
@@ -256,7 +256,7 @@ struct BuildLoopTests {
         var scripts = Self.writers
         scripts[.gapBullets] = [.reply(Self.gaps)]
         let (loop, _) = try loop(scripts)
-        let outcome = try await loop.run(stretch) { resume in resume.allBullets.count > 7 ? 2 : 1 }
+        let outcome = try await loop.run(stretch) { resume in PageLayout(pages: resume.allBullets.count > 7 ? 2 : 1) }
         #expect(outcome.dropped == 2 && outcome.pages == 1)
         #expect(outcome.resume.allBullets.allSatisfy { $0.verified })
         #expect(outcome.resume.allBullets.count == 7)

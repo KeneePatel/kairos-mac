@@ -1,5 +1,6 @@
 import Foundation
 import PDFKit
+import Tailoring
 
 /// What a resume template reads, as JSON (SPEC §5.6): a header from the contact block, then
 /// sections in the order given, each shown only if `visible`. Everything is already final text:
@@ -147,15 +148,21 @@ public struct ResumeDocument: Codable, Sendable, Equatable {
     }
 }
 
-/// A rendered PDF and its page count (SPEC §5.3, Render: the page budget is checked from it).
+/// A rendered PDF and its page count (SPEC §5.3, Render: the page budget is checked from it), with
+/// its layout when the template measures one.
 public struct RenderedPDF: Sendable, Equatable {
     public let data: Data
     public let pageCount: Int
+    public let layout: ResumeLayout?
 
-    public init(data: Data, pageCount: Int) {
+    public init(data: Data, pageCount: Int, layout: ResumeLayout? = nil) {
         self.data = data
         self.pageCount = pageCount
+        self.layout = layout
     }
+
+    /// For the page fitter: the measured layout, or just the page count.
+    public var pageLayout: PageLayout { layout?.pageLayout ?? PageLayout(pages: pageCount) }
 }
 
 /// The resume templates shipped in `Templates/`, vendored and never fetched (SPEC §5.6).
@@ -181,6 +188,10 @@ public enum ResumeTemplate: String, Codable, Sendable, CaseIterable {
     /// Whether the template prints a summary. Harvard's don't, so a build for one doesn't write it.
     public var hasSummary: Bool { self == .classic }
 
+    /// Whether the template measures its layout for the page fitter (`ResumeLayout`). The one builds
+    /// use does; Classic gives only its page count.
+    public var isMeasured: Bool { self == .harvard }
+
     public func source() throws(RenderError) -> String {
         try Self.source(named: rawValue)
     }
@@ -203,7 +214,8 @@ public struct ResumeRenderer: Sendable {
     }
 
     /// `createdAt` fixes the PDF's creation date, so the same document gives the same bytes.
-    /// With the document's own template unless `template` says otherwise.
+    /// With the document's own template unless `template` says otherwise, and its layout when the
+    /// template measures one.
     public func render(_ document: ResumeDocument, template: ResumeTemplate? = nil, createdAt: Date? = nil)
         async throws(RenderError) -> RenderedPDF
     {
@@ -214,7 +226,14 @@ public struct ResumeRenderer: Sendable {
         } catch {
             throw .workspace("the resume couldn't be encoded: \(error.localizedDescription)")
         }
-        return try await compile(template.source(), data: data, createdAt: createdAt)
+        let source = try template.source()
+        let pdf = try await compile(source, data: data, createdAt: createdAt)
+        guard template.isMeasured else { return pdf }
+        let value = try await runner.evaluate(ResumeLayout.expression, template: source, data: data)
+        guard let layout = try? JSONDecoder().decode([ResumeLayout].self, from: value).first else {
+            throw .compile("the template's layout couldn't be read")
+        }
+        return RenderedPDF(data: pdf.data, pageCount: pdf.pageCount, layout: layout)
     }
 
     /// A cover letter with `cover.typ`.

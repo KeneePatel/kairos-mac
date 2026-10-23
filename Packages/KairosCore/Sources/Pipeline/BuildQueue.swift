@@ -194,7 +194,7 @@ public actor BuildQueue {
         let continuation = self.continuation
         let template = self.template
         let outcome = try await loop.run(
-            request, measure: { try await render(.resume(ResumeDocument($0, for: template))).pageCount },
+            request, measure: { try await render(.resume(ResumeDocument($0, for: template))).pageLayout },
             progress: { step in
                 // A build stopped at its deadline reports nothing more.
                 if !Task.isCancelled { continuation.yield(.step(id, step)) }

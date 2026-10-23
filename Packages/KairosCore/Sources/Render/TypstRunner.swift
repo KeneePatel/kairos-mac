@@ -23,6 +23,40 @@ public struct TypstRunner: Sendable {
     /// Compiles `template` (Typst source) with `data` (JSON bytes) and returns the PDF bytes.
     /// `createdAt` fixes the PDF's creation date, for reproducible output.
     public func compile(template: String, data: Data, createdAt: Date? = nil) async throws(RenderError) -> Data {
+        try await inWorkspace(template: template, data: data) { work throws(RenderError) in
+            let output = work.appendingPathComponent("out.pdf")
+            var arguments = ["compile"] + options(work)
+            if let createdAt { arguments += ["--creation-timestamp", String(Int(createdAt.timeIntervalSince1970))] }
+            arguments += [work.appendingPathComponent("template.typ").path, output.path]
+            let result = try await run(arguments, home: work)
+            guard result.status == 0 else { throw .compile(Self.summary(of: result.stderr)) }
+            guard let pdf = FileManager.default.contents(atPath: output.path) else {
+                throw .compile("typst wrote no PDF")
+            }
+            return pdf
+        }
+    }
+
+    /// Lays `template` out with `data` and returns what `expression` (Typst code, ours, never
+    /// content) evaluates to there, as JSON: how the page fitter reads a resume's layout.
+    public func evaluate(_ expression: String, template: String, data: Data) async throws(RenderError) -> Data {
+        try await inWorkspace(template: template, data: data) { work throws(RenderError) in
+            let output = work.appendingPathComponent("value.json")
+            let arguments =
+                ["eval"] + options(work) + ["--in", work.appendingPathComponent("template.typ").path, expression]
+            let result = try await run(arguments, home: work, output: output)
+            guard result.status == 0 else { throw .compile(Self.summary(of: result.stderr)) }
+            guard let value = FileManager.default.contents(atPath: output.path) else {
+                throw .compile("typst returned nothing")
+            }
+            return value
+        }
+    }
+
+    /// A throwaway folder holding the template and its data, removed afterwards.
+    private func inWorkspace<T>(
+        template: String, data: Data, _ body: (URL) async throws(RenderError) -> T
+    ) async throws(RenderError) -> T {
         let fm = FileManager.default
         let work = fm.temporaryDirectory.appendingPathComponent("kairos-render-\(UUID().uuidString)")
         do {
@@ -33,10 +67,11 @@ public struct TypstRunner: Sendable {
             throw .workspace(error.localizedDescription)
         }
         defer { try? fm.removeItem(at: work) }
+        return try await body(work)
+    }
 
-        let output = work.appendingPathComponent("out.pdf")
-        var arguments = [
-            "compile",
+    private func options(_ work: URL) -> [String] {
+        var options = [
             "--root", work.path,
             "--input", "data=data.json",
             // Reproducible output: only typst's built-in fonts and the bundled ones, never this Mac's.
@@ -44,13 +79,8 @@ public struct TypstRunner: Sendable {
             // One line per problem ("template.typ:3:9: error: …"), without colour codes.
             "--diagnostic-format", "short",
         ]
-        if let fonts { arguments += ["--font-path", fonts.path] }
-        if let createdAt { arguments += ["--creation-timestamp", String(Int(createdAt.timeIntervalSince1970))] }
-        arguments += [work.appendingPathComponent("template.typ").path, output.path]
-        let result = try await run(arguments, home: work)
-        guard result.status == 0 else { throw .compile(Self.summary(of: result.stderr)) }
-        guard let pdf = fm.contents(atPath: output.path) else { throw .compile("typst wrote no PDF") }
-        return pdf
+        if let fonts { options += ["--font-path", fonts.path] }
+        return options
     }
 
     private struct Result: Sendable {
@@ -70,8 +100,9 @@ public struct TypstRunner: Sendable {
     /// termination handler, never `waitUntilExit()`, which spins a run loop and can miss an exit
     /// that already happened: a build froze for hours that way (2026-10-20), waiting on a typst that
     /// had exited. The timeout always wins: it stops waiting, asks typst to stop, and kills it if
-    /// it doesn't. typst's messages go to a file, so no pipe can fill up and stall it.
-    private func run(_ arguments: [String], home: URL) async throws(RenderError) -> Result {
+    /// it doesn't. typst's messages go to a file, and so does its output when `output` names one, so
+    /// no pipe can fill up and stall it.
+    private func run(_ arguments: [String], home: URL, output: URL? = nil) async throws(RenderError) -> Result {
         let process = Process()
         process.executableURL = executable
         process.arguments = arguments
@@ -84,7 +115,15 @@ public struct TypstRunner: Sendable {
         else { throw .workspace("can't create typst's message log") }
         defer { try? messages.close() }
         process.standardError = messages
-        process.standardOutput = FileHandle.nullDevice
+        var written: FileHandle?
+        if let output {
+            guard FileManager.default.createFile(atPath: output.path, contents: nil),
+                let file = FileHandle(forWritingAtPath: output.path)
+            else { throw .workspace("can't create typst's output file") }
+            written = file
+        }
+        defer { try? written?.close() }
+        process.standardOutput = written ?? FileHandle.nullDevice
         process.standardInput = FileHandle.nullDevice
         let exit = ExitSignal()
         process.terminationHandler = { exit.finish($0.terminationStatus) }

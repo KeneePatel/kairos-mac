@@ -15,12 +15,35 @@
 #let settings = data.at("style", default: (:))
 #let size = settings.at("fontSize", default: 11) * 1pt
 #let opt(dict, key) = dict.at(key, default: none)
+#let margin = settings.at("margin", default: 0.75) * 1in
 
 #set document(title: data.header.name + ", resume")
-#set page(paper: settings.at("paper", default: "us-letter"), margin: settings.at("margin", default: 0.75) * 1in)
+#set page(paper: settings.at("paper", default: "us-letter"), margin: margin)
 #set text(font: "Liberation Serif", size: size, lang: "en")
 #set par(leading: 0.4em, spacing: 0.5em)
 #set list(indent: 0.15in, body-indent: 0.12in, spacing: 0.4em, marker: [•])
+
+// What the page fitter reads (`typst eval` of `query(<kairos-layout>)`): the lines each bullet takes
+// at the list's width, its width set on one line, and where the document ends. It draws nothing.
+#context {
+  let column = page.width - 2 * margin - list.indent - list.body-indent - measure([•]).width
+  let one = measure(block(width: column, [A])).height
+  let step = measure(block(width: column, [A #linebreak() A])).height - one
+  let bullets = ()
+  for section in data.sections.filter(section => section.at("visible", default: true)) {
+    for (item, entry) in section.at("items", default: ()).enumerate() {
+      for (index, bullet) in entry.at("bullets", default: ()).enumerate() {
+        let lines = int(calc.round((measure(block(width: column, bullet)).height - one) / step)) + 1
+        bullets.push((section: section.kind, item: item, bullet: index, lines: lines, width: measure(bullet).width / 1pt))
+      }
+    }
+  }
+  let end = locate(<kairos-end>).position()
+  [#metadata((
+    column: column / 1pt, step: step / 1pt, top: margin / 1pt, bottom: (page.height - margin) / 1pt,
+    end: (page: end.page, y: end.y / 1pt), bullets: bullets,
+  ))<kairos-layout>]
+}
 
 // Header: the contact block, set by code, never by the model. One size, like everything else.
 #align(center, {
@@ -78,3 +101,6 @@
     block(above: 0.35em, below: 0.35em, [#text(weight: "bold", group.label + ":") #group.items.join(", ")])
   }
 }
+
+// Where the document ends, for the measurement above.
+#metadata(none)<kairos-end>

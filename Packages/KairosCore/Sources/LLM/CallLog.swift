@@ -85,6 +85,22 @@ public struct CallLog: Sendable {
         return usage
     }
 
+    /// What one build cost, per task: its report card's calls and tokens.
+    public func usage(build id: String) async throws -> [TaskID: Usage] {
+        let rows = try await db.query(
+            """
+            SELECT task_id, coalesce(sum(attempt), 0) AS calls,
+                   coalesce(sum(coalesce(input_tokens, 0) + coalesce(output_tokens, 0)), 0) AS tokens
+            FROM llm_call WHERE build_id = ? GROUP BY task_id
+            """, [.text(id)])
+        var usage: [TaskID: Usage] = [:]
+        for row in rows {
+            guard let task = row.string("task_id").flatMap(TaskID.init(rawValue:)) else { continue }
+            usage[task] = Usage(calls: row.int("calls") ?? 0, tokens: row.int("tokens") ?? 0)
+        }
+        return usage
+    }
+
     @discardableResult
     public func deleteOlder(than date: Date) async throws -> Int {
         try await db.transaction { connection in

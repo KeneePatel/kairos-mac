@@ -46,7 +46,7 @@ struct LiveBuildTests {
             locale: .canada)
         let started = ContinuousClock.now
         let outcome = try await loop.run(
-            request, measure: { try await renderer.render(ResumeDocument($0)).pageCount },
+            request, measure: { try await renderer.render(ResumeDocument($0)).pageLayout },
             progress: { print("live: step \($0)") })
         print("live: score \(outcome.score.total) · \(outcome.score.breakdown) · sections \(outcome.score.sections)")
         print(

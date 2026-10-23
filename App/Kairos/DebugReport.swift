@@ -1,5 +1,6 @@
 #if DEBUG
     import Foundation
+    import LLM
     import MasterResume
     import Screening
     import Store
@@ -101,7 +102,8 @@
                 "Work profile: "
                 + profile.authorization.map { "\($0.key.rawValue): \($0.value.rawValue)" }.sorted().joined(
                     separator: ", ")
-                + " · clearance: \(profile.hasClearance)\n"
+                + " · clearance: \(profile.hasClearance)"
+                + " · student status: \(profile.enrolment.map { "\($0)" } ?? "not set")\n"
 
             out += "\n## Sources\n"
             for source in try await SourceRepository(db).sources() {
@@ -162,10 +164,12 @@
             return out
         }
 
-        /// `--run-build=<words> [--stretch]`: one build with a cover letter, strict unless `--stretch`,
-        /// for the first job whose "title · company" has those words, run exactly as the app runs it
-        /// but on a copy of your database (so nothing of yours changes), printing each step and
-        /// render with timings.
+        /// `--run-build=<words> [--stretch] [--report] [--dump]`: one build with a cover letter, strict
+        /// unless `--stretch`, for the first job whose "title · company" has those words, run exactly
+        /// as the app runs it but on a copy of your database (so nothing of yours changes), printing
+        /// the routes it uses and each step and render with timings. `--report` adds its report card
+        /// and its calls and tokens per task; `--dump` the resume and letter as JSON and both PDFs as
+        /// base64, for reviewing a build outside the app (the PDFs carry your contact line).
         @MainActor private static func runBuild(_ filter: String) async {
             let started = Date()
             func say(_ text: String) {
@@ -223,6 +227,13 @@
                     defer { print("run-build: render \(kind) end after \(Date().timeIntervalSince(renderStarted)) s") }
                     return try await renderer.render(printable)
                 }
+                // Which model each build task goes to, and what's been spent today. Never a key.
+                for task in [TaskID.writeExperience, .writeProjects, .writeSkills, .rewriteSection, .coverLetter] {
+                    let route = (ai.settings.routes[task.rawValue] ?? []).map { "\($0.provider)/\($0.model)" }
+                    say("route \(task.rawValue): \(route.joined(separator: " > "))")
+                }
+                let today = try await CallLog(db).usage(since: Calendar.current.startOfDay(for: Date()))
+                say("calls today: \(today.calls) of \(ai.settings.budget.dailyCalls)")
                 let mode: BuildMode = CommandLine.arguments.contains("--stretch") ? .stretch : .strict
                 let id = try await queue.enqueue(job: job.id, mode: mode, coverLetter: true)
                 say("queued \(id)")
@@ -230,12 +241,19 @@
                     guard (try? await Task.sleep(for: .seconds(180))) != nil else { return }
                     say("STILL RUNNING after 180 s (pid \(ProcessInfo.processInfo.processIdentifier))")
                 }
+                var dropped = 0
                 for await event in queue.events {
                     switch event {
                     case .queued: continue
-                    case .step(_, let step): say("step \(step)")
+                    case .step(_, let step):
+                        if case .fitting = step { dropped += 1 }
+                        say("step \(step)")
                     case .finished(_, let score, _):
                         say("finished, score \(score)")
+                        if CommandLine.arguments.contains("--report") {
+                            try await report(id, db: db, renderer: renderer, dropped: dropped)
+                        }
+                        if CommandLine.arguments.contains("--dump") { try await dump(id, db: db) }
                         // The dates Harvard prints, by section: no names or contact details.
                         if let content = try await BuildRepository(db).build(id)?.content {
                             for section in ResumeDocument(content, for: .standard).sections where !section.items.isEmpty
@@ -255,6 +273,45 @@
                 }
             } catch {
                 say("error \(error)")
+            }
+        }
+
+        /// The report card of a finished build: its resume measured again as the app renders it.
+        @MainActor private static func report(_ id: UUID, db: Database, renderer: ResumeRenderer, dropped: Int)
+            async throws
+        {
+            guard let record = try await BuildRepository(db).build(id), let content = record.content,
+                let score = record.score
+            else { return }
+            let layout = try await renderer.render(ResumeDocument(content, for: .standard)).pageLayout
+            let master = try await MasterResumeRepository(db).load()
+            let card = BuildReport(resume: content, score: score, layout: layout, dropped: dropped, master: master)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            print("run-build: report " + String(decoding: try encoder.encode(card), as: UTF8.self))
+            let usage = try await CallLog(db).usage(build: id.lowercased).sorted { $0.key.rawValue < $1.key.rawValue }
+            for (task, cost) in usage {
+                print("run-build: cost \(task.rawValue) \(cost.calls) calls, \(cost.tokens) tokens")
+            }
+        }
+
+        /// What a build made, one line each, for reading outside the app's container.
+        @MainActor private static func dump(_ id: UUID, db: Database) async throws {
+            let builds = BuildRepository(db)
+            guard let record = try await builds.build(id) else { return }
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            if let content = record.content {
+                print("run-build: content " + String(decoding: try encoder.encode(content), as: UTF8.self))
+            }
+            if let letter = record.coverLetter {
+                print("run-build: letter " + String(decoding: try encoder.encode(letter), as: UTF8.self))
+            }
+            for artifact in try await builds.artifacts(for: id) {
+                guard let path = artifact.localPath, let data = FileManager.default.contents(atPath: path) else {
+                    continue
+                }
+                print("run-build: pdf \(artifact.kind) \(data.base64EncodedString())")
             }
         }
 
