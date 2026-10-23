@@ -413,7 +413,9 @@
                 ),
             ]
             for (label, path, items) in probes {
-                var components = URLComponents(string: "https://api.adzuna.com/v1/api/jobs/ca/\(path)")!
+                guard var components = URLComponents(string: "https://api.adzuna.com/v1/api/jobs/ca/\(path)") else {
+                    continue
+                }
                 components.queryItems =
                     [URLQueryItem(name: "app_id", value: id), URLQueryItem(name: "app_key", value: key)]
                     + (items.contains { $0.0 == "results_per_page" } || path == "categories"
