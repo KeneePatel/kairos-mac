@@ -27,6 +27,8 @@ final class AISettingsModel {
     private(set) var usage: [String: Usage] = [:]
     /// Dollars a paid provider's calls cost since the 1st, from its tokens at the guide's prices.
     private(set) var spentThisMonth: [String: Double] = [:]
+    /// How each model has done since midnight: calls, failures and average answer time.
+    private(set) var health: [ModelRef: ModelHealth] = [:]
     /// Key name → masked key, for display only. From the hint saved beside the key, so
     /// showing it never unlocks the key; a key saved before hints shows its mask once something
     /// reads it (opening AI providers lists models, which does).
@@ -54,7 +56,7 @@ final class AISettingsModel {
         init(
             preview settings: LLMSettings, models: [String: Models], usage: [String: Usage], masked: [String: String],
             keyChecks: [String: KeyCheck] = [:], rests: [String: KeyRests] = [:], spent: [String: Double] = [:],
-            db: Database
+            health: [ModelRef: ModelHealth] = [:], db: Database
         ) {
             self.db = db
             secrets = InMemorySecretStore()
@@ -65,6 +67,7 @@ final class AISettingsModel {
             self.keyChecks = keyChecks
             self.rests = rests
             spentThisMonth = spent
+            self.health = health
         }
     #endif
 
@@ -80,6 +83,7 @@ final class AISettingsModel {
     func refreshUsage() async {
         let midnight = Calendar.current.startOfDay(for: Date())
         usage = (try? await CallLog(db).usageByProvider(since: midnight)) ?? [:]
+        health = (try? await CallLog(db).health(since: midnight)) ?? [:]
         let month = Calendar.current.dateInterval(of: .month, for: Date())?.start ?? midnight
         for provider in settings.providers where !provider.preset.plans.isEmpty {
             let tokens = (try? await CallLog(db).tokens(provider: provider.id, since: month)) ?? [:]
@@ -293,6 +297,31 @@ final class AISettingsModel {
     /// "Keep everything on this Mac": every task on one local model.
     func keepEverythingLocal(on model: String, providerID: String) async {
         settings.routeEverything(to: ModelRef(provider: providerID, model: model))
+        await save()
+    }
+
+    /// Every task of `job` on `chain`, primary first.
+    func setChain(_ chain: [ModelRef], for job: AIJob) async {
+        settings.setChain(chain, for: job)
+        await save()
+    }
+
+    /// The setups that fit the providers and models you have.
+    var setups: [AISetup] {
+        AISetup.recommended(
+            for: settings,
+            models: models.compactMapValues { state in if case .loaded(let ids) = state { ids } else { nil } })
+    }
+
+    /// Whether every job already runs as `setup` says.
+    func isInUse(_ setup: AISetup) -> Bool {
+        setup.chains.allSatisfy { job, chain in
+            chain.isEmpty || (settings.chain(for: job) == chain && settings.isUniform(job))
+        }
+    }
+
+    func apply(_ setup: AISetup) async {
+        settings.apply(setup)
         await save()
     }
 

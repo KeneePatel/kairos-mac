@@ -85,6 +85,10 @@
                 render(
                     ProvidersView().environment(ai).frame(width: 980, height: 1_640).background(Color(.surface)),
                     to: folder.appending(path: "ai-settings-\(name).png"), appearance: appearance)
+                render(
+                    ScrollView { TaskRoutingView().padding(Spacing.space6) }.environment(ai)
+                        .frame(width: 980, height: 1_500).background(Color(.surface)),
+                    to: folder.appending(path: "ai-routing-\(name).png"), appearance: appearance)
             }
             let today = sampleToday(resume: resume)
             // S14: a resume without a phone or LinkedIn keeps Build blocked, and says why.
@@ -492,7 +496,16 @@
                 keyChecks: [
                     "llm.gemini.primary": .works, "llm.gemini.backup": .works, "llm.ollama-cloud.primary": .works,
                 ],
-                rests: ["gemini": rests], spent: ["ollama-cloud": 0.04], db: db
+                rests: ["gemini": rests], spent: ["ollama-cloud": 0.04],
+                // Flash overloaded today; Flash-Lite and gemma fine.
+                health: [
+                    ModelRef(provider: "gemini", model: "gemini-flash-latest"): .init(
+                        calls: 9, failed: 7, averageSeconds: 41),
+                    ModelRef(provider: "gemini", model: "gemini-flash-lite-latest"): .init(
+                        calls: 52, failed: 1, averageSeconds: 6),
+                    ModelRef(provider: "ollama-cloud", model: "gemma4:31b"): .init(
+                        calls: 24, failed: 0, averageSeconds: 9),
+                ], db: db
             )
         }
 

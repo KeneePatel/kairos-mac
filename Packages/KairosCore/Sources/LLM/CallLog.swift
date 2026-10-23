@@ -20,6 +20,20 @@ public struct CallRecord: Sendable, Equatable {
     public let buildID: String?
 }
 
+/// How a model has done lately: its calls, how many failed, and how long an answer took.
+public struct ModelHealth: Sendable, Equatable {
+    public let calls: Int
+    public let failed: Int
+    /// Over calls that answered; nil when none did.
+    public let averageSeconds: Double?
+
+    public init(calls: Int, failed: Int, averageSeconds: Double?) {
+        self.calls = calls
+        self.failed = failed
+        self.averageSeconds = averageSeconds
+    }
+}
+
 /// Tokens a model read and wrote.
 public struct TokenCount: Sendable, Equatable {
     public let input: Int
@@ -109,6 +123,26 @@ public struct CallLog: Sendable {
             tokens[model] = TokenCount(input: row.int("input") ?? 0, output: row.int("output") ?? 0)
         }
         return tokens
+    }
+
+    /// How each model has done since `date`: calls, how many failed, and their average time, by
+    /// provider and model. Settings shows it beside each model in a chain.
+    public func health(since date: Date) async throws -> [ModelRef: ModelHealth] {
+        let rows = try await db.query(
+            """
+            SELECT provider, model, count(*) AS calls,
+                sum(CASE WHEN outcome IN ('failed', 'rate_limited') THEN 1 ELSE 0 END) AS failed,
+                avg(CASE WHEN outcome IN ('failed', 'rate_limited') THEN NULL ELSE latency_ms END) AS average
+            FROM llm_call WHERE at >= ? GROUP BY provider, model
+            """, [SQLValue(date)])
+        var health: [ModelRef: ModelHealth] = [:]
+        for row in rows {
+            guard let provider = row.string("provider"), let model = row.string("model") else { continue }
+            health[ModelRef(provider: provider, model: model)] = ModelHealth(
+                calls: row.int("calls") ?? 0, failed: row.int("failed") ?? 0,
+                averageSeconds: row.double("average").map { $0 / 1_000 })
+        }
+        return health
     }
 
     /// One build's calls, oldest first: what its "What happened" list is made from once it's over.
