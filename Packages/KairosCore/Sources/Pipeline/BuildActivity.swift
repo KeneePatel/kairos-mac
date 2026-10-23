@@ -88,7 +88,13 @@ public struct BuildActivity: Sendable, Equatable {
         case .retrying(let task, _, let reason):
             if let index = open(task) { runs[index].state = .retrying(reason) }
         case .failed(let task, let model, let reason, _):
-            guard let index = open(task) else { return }
+            // A model skipped for failing a moment ago fails before anything was asked.
+            let index =
+                open(task)
+                ?? {
+                    runs.append(Run(id: runs.count, task: task, model: model, started: date, state: .asking))
+                    return runs.count - 1
+                }()
             runs[index].failures.append(Failure(model: model, reason: reason))
             // Given up until the chain's next model is asked; a build's end settles it.
             runs[index].state = .gaveUp(reason)

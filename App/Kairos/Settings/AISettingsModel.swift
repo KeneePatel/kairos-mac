@@ -25,6 +25,8 @@ final class AISettingsModel {
     private(set) var settings = LLMSettings.defaults()
     private(set) var models: [String: Models] = [:]
     private(set) var usage: [String: Usage] = [:]
+    /// Dollars a paid provider's calls cost since the 1st, from its tokens at the guide's prices.
+    private(set) var spentThisMonth: [String: Double] = [:]
     /// Key name → masked key, for display only. From the hint saved beside the key, so
     /// showing it never unlocks the key; a key saved before hints shows its mask once something
     /// reads it (opening AI providers lists models, which does).
@@ -51,7 +53,8 @@ final class AISettingsModel {
         /// For previews and snapshots.
         init(
             preview settings: LLMSettings, models: [String: Models], usage: [String: Usage], masked: [String: String],
-            keyChecks: [String: KeyCheck] = [:], rests: [String: KeyRests] = [:], db: Database
+            keyChecks: [String: KeyCheck] = [:], rests: [String: KeyRests] = [:], spent: [String: Double] = [:],
+            db: Database
         ) {
             self.db = db
             secrets = InMemorySecretStore()
@@ -61,6 +64,7 @@ final class AISettingsModel {
             self.masked = masked
             self.keyChecks = keyChecks
             self.rests = rests
+            spentThisMonth = spent
         }
     #endif
 
@@ -76,6 +80,20 @@ final class AISettingsModel {
     func refreshUsage() async {
         let midnight = Calendar.current.startOfDay(for: Date())
         usage = (try? await CallLog(db).usageByProvider(since: midnight)) ?? [:]
+        let month = Calendar.current.dateInterval(of: .month, for: Date())?.start ?? midnight
+        for provider in settings.providers where !provider.preset.plans.isEmpty {
+            let tokens = (try? await CallLog(db).tokens(provider: provider.id, since: month)) ?? [:]
+            spentThisMonth[provider.id] = tokens.reduce(0) { total, item in
+                total + (ModelGuide.entry(for: item.key)?.cost(input: item.value.input, output: item.value.output) ?? 0)
+            }
+        }
+    }
+
+    /// The plan you're on, where the provider sells plans: how many calls run at once.
+    func setPlan(_ plan: String, for providerID: String) async {
+        guard let index = settings.providers.firstIndex(where: { $0.id == providerID }) else { return }
+        settings.providers[index].plan = plan
+        await save()
     }
 
     var usedToday: Int { usage.values.reduce(0) { $0 + $1.calls } }
@@ -224,7 +242,10 @@ final class AISettingsModel {
         for (name, key) in keys {
             if let name { keyChecks[name] = .checking }
             do {
-                let ids = try await OpenAICompatibleProvider(preset: provider.preset, key: key).listModels()
+                let client = OpenAICompatibleProvider(preset: provider.preset, key: key)
+                // A public model list says nothing about the key: one tiny chat does (Ollama Cloud).
+                if let model = provider.preset.keyCheckModel, key != nil { try await client.checkKey(model: model) }
+                let ids = try await client.listModels()
                 if let name { keyChecks[name] = .works }
                 if case .loaded? = result {} else { result = .loaded(provider.preset.chatModels(from: ids)) }
             } catch {

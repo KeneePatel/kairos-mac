@@ -58,12 +58,18 @@ public struct ProviderSetup: Sendable, Equatable {
     public let keyNames: [SecretKey]
     /// Overrides the preset's limit, for paid plans with more headroom.
     public let requestsPerMinute: Int?
+    /// Calls at once on your plan, where the provider sells plans.
+    public let concurrent: Int?
 
-    public init(id: String, preset: ProviderPreset, keyNames: [SecretKey] = [], requestsPerMinute: Int? = nil) {
+    public init(
+        id: String, preset: ProviderPreset, keyNames: [SecretKey] = [], requestsPerMinute: Int? = nil,
+        concurrent: Int? = nil
+    ) {
         self.id = id
         self.preset = preset
         self.keyNames = keyNames
         self.requestsPerMinute = requestsPerMinute
+        self.concurrent = concurrent
     }
 
     /// A client over every key found, which together form the rotation pool.
@@ -87,6 +93,7 @@ public struct ProviderSetup: Sendable, Equatable {
         }
         var policy = ClientPolicy(preset: preset)
         if let requestsPerMinute { policy.requestsPerMinute = requestsPerMinute }
+        if let concurrent { policy.maxConcurrent = concurrent }
         return LLMClient(keys: providers, keyIDs: keys.map(\.id), rests: rests, policy: policy, clock: clock)
     }
 }
@@ -101,6 +108,11 @@ public actor LLMRouter {
     private let cache: ResultCache?
     private let now: @Sendable () -> Date
     private let calendar: Calendar
+    /// Models that just failed with an overload, a timeout or a network error, and until when:
+    /// skipped while another model in the chain can go first, so each section doesn't wait to find
+    /// out again (2026-10-23: an overloaded Flash cost every section of a build its own two minutes).
+    private var troubled: [ModelRef: Date] = [:]
+    static let troubledFor: TimeInterval = 120
 
     /// `routes` lists each task's models, primary first; `clients` is keyed by provider id.
     public init(
@@ -135,6 +147,11 @@ public actor LLMRouter {
                 lastError = .noProvider(T.id)
                 continue
             }
+            if position < chain.count - 1, let until = troubled[ref], until > now() {
+                context.events?(
+                    .failed(task: T.id, model: ref, reason: "was skipped after failing a moment ago", detail: nil))
+                continue
+            }
             let started = now()
             context.events?(.asking(task: T.id, model: ref, fallback: position > 0))
             do {
@@ -150,6 +167,7 @@ public actor LLMRouter {
                 let outcome = position == 0 ? result.outcome : .fellBack
                 await record(
                     T.self, ref: ref, result: result, outcome: outcome, error: nil, started: started, context: context)
+                troubled[ref] = nil
                 if let cache { try? await cache.store(result.json, for: key, at: now()) }
                 context.events?(
                     .answered(task: T.id, model: ref, seconds: now().timeIntervalSince(started), cached: false))
@@ -165,6 +183,10 @@ public actor LLMRouter {
                     T.self, ref: ref, result: nil, outcome: outcome, error: error, started: started, context: context)
                 // Stopping is the user's call; everything else may work on the next provider.
                 if error.stopsEverything { throw error }
+                switch error {
+                case .server, .timedOut, .network: troubled[ref] = now().addingTimeInterval(Self.troubledFor)
+                default: break
+                }
                 let detail: String? =
                     switch error {
                     case .invalidOutput(let problem), .invalidJSON(let problem), .badRequest(let problem): problem

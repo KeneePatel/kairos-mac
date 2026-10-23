@@ -16,10 +16,13 @@ public struct LLMSettings: Codable, Sendable, Equatable {
         public var keyNames: [String]
         /// Overrides the preset's requests per minute.
         public var requestsPerMinute: Int?
+        /// The plan you're on, for a provider that sells them (`ProviderPreset.plans`): how many
+        /// calls run at once. Nil: the first, its free one.
+        public var plan: String?
 
         public init(
             id: String, presetID: String, name: String? = nil, baseURL: String? = nil, keyNames: [String] = [],
-            requestsPerMinute: Int? = nil
+            requestsPerMinute: Int? = nil, plan: String? = nil
         ) {
             self.id = id
             self.presetID = presetID
@@ -27,6 +30,13 @@ public struct LLMSettings: Codable, Sendable, Equatable {
             self.baseURL = baseURL
             self.keyNames = keyNames
             self.requestsPerMinute = requestsPerMinute
+            self.plan = plan
+        }
+
+        /// Calls at once on your plan; nil where the preset sells none.
+        public var concurrent: Int? {
+            let plans = preset.plans
+            return (plans.first { $0.id == plan } ?? plans.first)?.concurrent
         }
 
         public var preset: ProviderPreset {
@@ -38,7 +48,8 @@ public struct LLMSettings: Codable, Sendable, Equatable {
 
         public var setup: ProviderSetup {
             ProviderSetup(
-                id: id, preset: preset, keyNames: keyNames.map(SecretKey.init), requestsPerMinute: requestsPerMinute)
+                id: id, preset: preset, keyNames: keyNames.map(SecretKey.init), requestsPerMinute: requestsPerMinute,
+                concurrent: concurrent)
         }
     }
 

@@ -20,6 +20,17 @@ public struct CallRecord: Sendable, Equatable {
     public let buildID: String?
 }
 
+/// Tokens a model read and wrote.
+public struct TokenCount: Sendable, Equatable {
+    public let input: Int
+    public let output: Int
+
+    public init(input: Int, output: Int) {
+        self.input = input
+        self.output = output
+    }
+}
+
 /// What was used in a day, for the budget and the Activity screen.
 public struct Usage: Sendable, Equatable {
     public let calls: Int
@@ -83,6 +94,21 @@ public struct CallLog: Sendable {
             usage[provider] = Usage(calls: row.int("calls") ?? 0, tokens: row.int("tokens") ?? 0)
         }
         return usage
+    }
+
+    /// Tokens in and out per model at one provider since `date`: what a paid provider's calls cost.
+    public func tokens(provider: String, since date: Date) async throws -> [String: TokenCount] {
+        let rows = try await db.query(
+            """
+            SELECT model, coalesce(sum(input_tokens), 0) AS input, coalesce(sum(output_tokens), 0) AS output
+            FROM llm_call WHERE provider = ? AND at >= ? GROUP BY model
+            """, [.text(provider), SQLValue(date)])
+        var tokens: [String: TokenCount] = [:]
+        for row in rows {
+            guard let model = row.string("model") else { continue }
+            tokens[model] = TokenCount(input: row.int("input") ?? 0, output: row.int("output") ?? 0)
+        }
+        return tokens
     }
 
     /// One build's calls, oldest first: what its "What happened" list is made from once it's over.

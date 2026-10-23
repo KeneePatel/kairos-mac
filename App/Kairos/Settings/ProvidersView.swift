@@ -72,6 +72,20 @@ private struct ProviderCard: View {
             models
             HStack {
                 Text(usageLine).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).monospacedDigit()
+                if !preset.plans.isEmpty {
+                    Picker(
+                        "Plan",
+                        selection: Binding(
+                            get: { provider.plan ?? preset.plans[0].id },
+                            set: { plan in Task { await model.setPlan(plan, for: provider.id) } })
+                    ) {
+                        ForEach(preset.plans) { plan in
+                            Text("\(plan.name) · \(plan.concurrent) at a time").tag(plan.id)
+                        }
+                    }
+                    .fixedSize()
+                    .help("Your plan on \(preset.name): Kairos sends no more calls at once than it allows.")
+                }
                 Stepper(
                     "\(model.requestsPerMinute(for: provider.id)) requests a minute",
                     value: Binding(
@@ -114,9 +128,11 @@ private struct ProviderCard: View {
 
     private var usageLine: String {
         let calls = model.usage[provider.id]?.calls ?? 0
-        return preset.isLocal
-            ? "\(calls) call\(calls == 1 ? "" : "s") today · nothing leaves this Mac"
-            : "\(calls) call\(calls == 1 ? "" : "s") today"
+        let today = "\(calls) call\(calls == 1 ? "" : "s") today"
+        if preset.isLocal { return today + " · nothing leaves this Mac" }
+        guard let spent = model.spentThisMonth[provider.id] else { return today }
+        // Ollama bills in US dollars: "$0.04", not the locale's "US$0.04".
+        return today + " · about $" + spent.formatted(.number.precision(.fractionLength(2))) + " this month"
     }
 
     /// Always an icon and a word with the colour.
@@ -216,7 +232,10 @@ private struct ProviderCard: View {
     }
 
     @ViewBuilder private var models: some View {
-        if case .loaded(let ids) = model.models[provider.id] {
+        if case .loaded(let ids) = model.models[provider.id], ids.contains(where: { ModelGuide.entry(for: $0) != nil })
+        {
+            ModelGuideList(ids: ids)
+        } else if case .loaded(let ids) = model.models[provider.id] {
             VStack(alignment: .leading, spacing: 6) {
                 Text(ids.isEmpty ? "No models installed" : "\(ids.count) model\(ids.count == 1 ? "" : "s") available")
                     .font(TypeStyle.callout.weight(.semibold)).foregroundStyle(Color(.ink))
@@ -357,6 +376,62 @@ private struct CustomProviderSheet: View {
             } else {
                 dismiss()
             }
+        }
+    }
+}
+
+/// The live models a provider lists, as the guide judges them for resumes: what to use, what to
+/// fall back on, what's worth a try with credits, and what isn't worth it (folded away).
+private struct ModelGuideList: View {
+    let ids: [String]
+    @State private var showingSkipped = false
+
+    private func entries(_ advice: ModelGuide.Advice) -> [(id: String, guide: ModelGuide)] {
+        ids.compactMap { id in ModelGuide.entry(for: id).map { (id, $0) } }.filter { $0.guide.advice == advice }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.space3) {
+            Text("Model guide for resumes").font(TypeStyle.callout.weight(.semibold)).foregroundStyle(Color(.ink))
+            group("Use", .recommended)
+            group("Fall back on", .fallback)
+            group("Worth a try", .untried)
+            let skipped = entries(.skip)
+            if !skipped.isEmpty {
+                DisclosureGroup("Not worth it for resumes (\(skipped.count))", isExpanded: $showingSkipped) {
+                    VStack(alignment: .leading, spacing: Spacing.space2) {
+                        ForEach(skipped, id: \.id) { row($0.id, $0.guide) }
+                    }
+                    .padding(.top, Spacing.space1)
+                }
+                .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+            }
+            Text("Prices from Ollama's pricing page and advice from Kairos's own test builds, October 23, 2026.")
+                .font(TypeStyle.caption).foregroundStyle(Color(.inkSecondary))
+        }
+        .padding(Spacing.space3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+    }
+
+    @ViewBuilder private func group(_ title: String, _ advice: ModelGuide.Advice) -> some View {
+        let found = entries(advice)
+        if !found.isEmpty {
+            VStack(alignment: .leading, spacing: Spacing.space2) {
+                Text(title).font(TypeStyle.caption.weight(.semibold)).foregroundStyle(Color(.inkSecondary))
+                ForEach(found, id: \.id) { row($0.id, $0.guide) }
+            }
+        }
+    }
+
+    private func row(_ id: String, _ guide: ModelGuide) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
+                Text(id).font(.system(.callout, design: .monospaced)).foregroundStyle(Color(.ink))
+                Text(guide.costLine).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+            }
+            Text(guide.note).font(TypeStyle.callout).foregroundStyle(Color(.ink2))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

@@ -34,6 +34,21 @@ struct BuildActivityTests {
         #expect(activity.hasFallbacks && !activity.hasGivenUp)
     }
 
+    /// A model skipped for failing a moment ago, before anything was asked: the fallback's run
+    /// still says why it wrote it.
+    @Test func aSkippedModelStillExplainsTheFallback() {
+        var activity = BuildActivity()
+        let reason = "was skipped after failing a moment ago"
+        activity.apply(.failed(task: .writeProjects, model: flash, reason: reason, detail: nil), at: start)
+        activity.apply(.asking(task: .writeProjects, model: lite, fallback: true), at: start)
+        activity.apply(.answered(task: .writeProjects, model: lite, seconds: 5, cached: false), at: start + 5)
+        #expect(activity.runs.count == 1 && activity.runs[0].model == lite)
+        #expect(
+            activity.notes.map(\.text) == [
+                "Projects: gemini-flash-latest was skipped after failing a moment ago, so gemini-flash-lite-latest wrote it."
+            ])
+    }
+
     /// When every model fails, the note says what the build did instead.
     @Test func noModelAnsweringIsNotedByWhatTheStepDidInstead() {
         var activity = BuildActivity()

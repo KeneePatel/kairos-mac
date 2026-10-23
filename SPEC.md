@@ -445,9 +445,10 @@ Whatever the provider promises, every reply goes through the same checks:
 #### Setup for each user
 - Add a provider from a preset or a custom base URL.
 - Add one or more keys; together they form the rotation pool.
-- **Test** lists the provider's models through `GET /models`.
+- **Test** lists the provider's models through `GET /models`. Where that list is public (Ollama Cloud), each key is also checked with one tiny chat on a free model; a 402 or 403 about the model still proves the key.
 - Pick a model per task.
 - Set the fallback chain, requests per minute and the daily budget.
+- **Ollama Cloud** (added 2026-10-23): keys from ollama.com/settings/keys at `https://ollama.com/v1/`, with a plan setting (Free, Pro, Max: 1, 3 or 10 calls at once). Its card shows a model guide for resumes (Ollama's per-million-token prices and Kairos's own eval: use, fall back on, worth a try, not worth it) and about what this month's calls cost. Its cloud ignores JSON schemas, so the schema goes in the prompt (JSON mode). It starts on gemma4:31b, free and the best of the free models in the eval.
 
 New accounts start with the Gemini preset. Writing tasks use its newest Flash model, extraction tasks its newest Flash-Lite, and `triage` runs on device when available.
 

@@ -359,3 +359,31 @@ struct RouterFailoverTests {
         #expect(CallContext(jobID: "j") != CallContext(jobID: "k"))
     }
 }
+
+@Suite("LLM router: a model that just failed")
+struct RouterTroubledTests {
+    /// Once Gemini is overloaded, the next task goes straight to the fallback, saying why; two
+    /// minutes on, Gemini is tried again. Alone in a chain, a model is always tried.
+    @Test func aModelThatJustFailedIsSkippedForAWhile() async throws {
+        let db = try await database()
+        let today = Today()
+        let busy = FakeProvider([
+            .analyzeJob: [.failure(.server(status: 503)), .failure(.server(status: 503)), .reply(valid)]
+        ])
+        let spare = FakeProvider([.analyzeJob: [.reply(valid), .reply(valid)]])
+        let route = router(
+            db, providers: ["gemini": busy, "ollama": spare], chain: [gemini, ollama], cache: false, today: today)
+        _ = try await route.run(RequirementsTask(), input: posting)
+        #expect(busy.requests.count == 2 && spare.requests.count == 1)
+        let heard = Heard()
+        _ = try await route.run(RequirementsTask(), input: posting, context: CallContext(events: heard.add))
+        #expect(busy.requests.count == 2 && spare.requests.count == 2)  // straight to the fallback
+        #expect(
+            heard.all.first
+                == .failed(
+                    task: .analyzeJob, model: gemini, reason: "was skipped after failing a moment ago", detail: nil))
+        today.advance(121)
+        let result = try await route.run(RequirementsTask(), input: posting)
+        #expect(busy.requests.count == 3 && result.outcome == .ok)  // tried again, and it answered
+    }
+}

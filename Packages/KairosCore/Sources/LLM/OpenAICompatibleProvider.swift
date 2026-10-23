@@ -78,6 +78,21 @@ public struct OpenAICompatibleProvider: LLMProvider {
         .sorted()
     }
 
+    /// Whether the key works, by one tiny chat on `model`: for a provider whose model list needs no
+    /// key. A model this account can't use still proves the key (it got that far).
+    public func checkKey(model: String) async throws(LLMError) {
+        let body = Data(
+            #"{"model":\#(Self.quote(model)),"messages":[{"role":"user","content":"Reply with: ok"}],"max_tokens":5}"#
+                .utf8)
+        let (data, response) = try await transport.send(try urlRequest("chat/completions", body: body))
+        guard response.statusCode != 200 else { return }
+        let error = Self.error(
+            status: response.statusCode, message: Self.errorMessage(in: data) ?? "", response: response, data: data,
+            model: model, provider: preset.name)
+        if case .modelUnavailable = error { return }
+        throw error
+    }
+
     // MARK: - Requests
 
     /// The task's limit for cloud providers; local ones keep their own, longer one (T20).

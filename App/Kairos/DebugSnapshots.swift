@@ -460,6 +460,9 @@
         @MainActor private static func sampleAISettings(db: Database) -> AISettingsModel {
             var settings = LLMSettings.defaults()
             settings.providers[0].keyNames = ["llm.gemini.primary", "llm.gemini.backup"]
+            settings.providers.append(
+                LLMSettings.Provider(
+                    id: "ollama-cloud", presetID: "ollama-cloud", keyNames: ["llm.ollama-cloud.primary"]))
             settings.routes["writeExperience"] = [
                 ModelRef(provider: "gemini", model: "gemini-flash-latest"),
                 ModelRef(provider: "ollama-local", model: "qwen3.5:4B"),
@@ -475,10 +478,21 @@
                         "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-3.5-flash", "gemini-2.5-flash",
                     ]),
                     "ollama-local": .loaded(["qwen3.5:4B"]),
+                    // Ollama's own list, 2026-10-23.
+                    "ollama-cloud": .loaded(ModelGuide.ollamaCloud.map(\.model)),
                 ],
-                usage: ["gemini": Usage(calls: 131, tokens: 48_000), "ollama-local": Usage(calls: 12, tokens: 9_000)],
-                masked: ["llm.gemini.primary": "AIza••••••••••••Q2xk", "llm.gemini.backup": "AIza••••••••••••7mPa"],
-                keyChecks: ["llm.gemini.primary": .works, "llm.gemini.backup": .works], rests: ["gemini": rests], db: db
+                usage: [
+                    "gemini": Usage(calls: 131, tokens: 48_000), "ollama-local": Usage(calls: 12, tokens: 9_000),
+                    "ollama-cloud": Usage(calls: 24, tokens: 110_000),
+                ],
+                masked: [
+                    "llm.gemini.primary": "AIza••••••••••••Q2xk", "llm.gemini.backup": "AIza••••••••••••7mPa",
+                    "llm.ollama-cloud.primary": "8f2c••••••••••••d41e",
+                ],
+                keyChecks: [
+                    "llm.gemini.primary": .works, "llm.gemini.backup": .works, "llm.ollama-cloud.primary": .works,
+                ],
+                rests: ["gemini": rests], spent: ["ollama-cloud": 0.04], db: db
             )
         }
 
