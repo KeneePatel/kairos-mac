@@ -49,9 +49,18 @@ public struct Prefilter: Sendable {
 
     private func titleInclude(_ posting: Posting) -> Rejection? {
         let phrases = preferences.titleInclude.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-        guard !phrases.isEmpty, !TextScan.containsAny(posting.title, phrases) else { return nil }
+        guard !preferences.roles.isEmpty else {
+            guard !phrases.isEmpty, !TextScan.containsAny(posting.title, phrases) else { return nil }
+            return Rejection(
+                rule: .titleInclude, reason: "The title has none of your phrases (\(phrases.joined(separator: ", "))).")
+        }
+        guard !preferences.roleMatcher.matches(posting.job.title) else { return nil }
+        let roles = RoleFamily.allCases.filter(preferences.roles.contains).map(\.title)
         return Rejection(
-            rule: .titleInclude, reason: "The title has none of your phrases (\(phrases.joined(separator: ", "))).")
+            rule: .titleInclude,
+            reason: "The title isn't one of your roles (\(roles.joined(separator: "; ")))"
+                + (phrases.isEmpty ? "." : " or other titles (\(phrases.joined(separator: ", "))).")
+        )
     }
 
     private func titleExclude(_ posting: Posting) -> Rejection? {

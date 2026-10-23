@@ -947,8 +947,16 @@ Plan: `docs/design/job-collection.md`. Research: `docs/research/job-collection/`
     - **Live check on a copy of your database:** migration 10 → 11 kept all 395 jobs (276 full, 119 snippets). First fetch 11.8 s: 3,634 postings, 164 new, 12 edited (GitLab, Stripe, Affirm, 1Password), none failed. Second fetch 8 s: 19 of 20 sources unchanged, 4 jobs no longer posted closed.
     - **Debug:** `Kairos --fetch-dry` (two fetches on a migrated copy, no AI calls) and `Kairos --adzuna-probe`.
     - **Undrawn, decided here:** "Where it's posted" is a grouped box like the requirements, one row per source with an Open link; Adzuna's row is its linked credit. The Closed mark is secondary ink with an archive-box icon and words.
+- [x] **J3 · Role families** (M) · done before J2, since SmartRecruiters and BambooHR need a call per job and roles keep those few
+  - **Done 2026-10-23:**
+    - **`RoleFamily`, `RoleMatcher`** (Store): software development; DevOps, cloud and SRE; data, ML and AI engineering; QA and test automation. Titles match on whole words after abbreviations expand (SDE, SWE, SRE, ML, Sr., dev), with each family's look-alikes left out ("Business Development", "Developer Advocate", "QA Technician, Food Production"). Your own phrases still count.
+    - **`012_roles.sql`:** saved search settings without roles get your four; a fresh install starts with none (nothing left out).
+    - **Title rule:** with roles set, a title must be one of them or one of your other titles. "Software Development Engineer, Navigator · Amazon" now passes; the reason names your roles.
+    - **Searches:** Adzuna asks each family's searches (software engineer, full stack, devops, data engineer, qa engineer…), then your phrases.
+    - **Fetch gate:** a new posting at another role is counted ("N at other roles left out"), not stored; one already stored is still seen. Changing roles makes every board answer in full.
+    - **Settings, Search:** a Roles section with the four, each with examples; "Job titles" becomes "Other titles" once a role is on.
+    - **Live check on a copy of your database:** first fetch 509 new (164 without roles), 635 Adzuna results (130 before), 105 at other roles left out.
 - [ ] **J2 · More public boards:** SmartRecruiters, Workable, Recruitee, Personio, BambooHR, Teamtailor; the detector for all of them; Workday addresses explained, not fetched
-- [ ] **J3 · Role families:** variants and exclusions for searches, the title filter and the fetch gate; Settings, Search
 - [ ] **J4 · Adzuna v2:** query plan, pagination, incremental days, area parsing, budget and its bar
 - [ ] **J5 · Board catalog:** `scripts/discover-boards`, the bundled catalog, Companies list, auto-watch, cadence, gone boards
 - [ ] **J6 · Snippet upgrade:** company finder, listing matching, upgrade and re-screen

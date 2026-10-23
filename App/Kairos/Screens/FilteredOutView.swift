@@ -153,7 +153,12 @@ struct FilteredOutView: View {
         func list(_ items: [String], none: String) -> String { items.isEmpty ? none : items.joined(separator: ", ") }
         switch rule {
         case nil: return "Every job your filters removed, newest first. Choose a reason to see its setting."
-        case .titleInclude?: return "Your titles: " + list(preferences.titleInclude, none: "none set")
+        case .titleInclude?:
+            let roles = RoleFamily.allCases.filter(preferences.roles.contains).map(\.title)
+            return roles.isEmpty
+                ? "Your titles: " + list(preferences.titleInclude, none: "none set")
+                : "Your roles: " + roles.joined(separator: "; ") + ". Other titles: "
+                    + list(preferences.titleInclude, none: "none")
         case .titleExclude?: return "Titles you skip: " + list(preferences.titleExclude, none: "none set")
         case .seniority?:
             let off = Seniority.allCases.filter { !preferences.seniority.contains($0) }.map(\.title)

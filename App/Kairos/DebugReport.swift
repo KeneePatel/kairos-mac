@@ -425,14 +425,14 @@
                     } else { nil }
                 let search = SearchContext(
                     query: SourceQuery(
-                        titles: preferences.titleInclude, countries: preferences.countries,
+                        titles: preferences.roleMatcher.searches, countries: preferences.countries,
                         maxAgeDays: preferences.maxAgeDays),
                     adzuna: adzuna)
                 let http = URLSessionHTTPClient()
                 for pass in 1...2 {
                     let started = Date()
                     let run = FetchRun(
-                        db: db, postedWithinDays: preferences.maxAgeDays,
+                        db: db, postedWithinDays: preferences.maxAgeDays, roles: preferences.roleMatcher,
                         makeSource: { try SourceFactory.make($0, http: http, search: search) })
                     var last = FetchRun.Progress()
                     for await progress in run.start() { last = progress }
@@ -441,6 +441,7 @@
                             + "\(last.found) found, \(last.added) new, \(last.attached) attached, \(last.upgraded) upgraded, "
                             + "\(last.changed) changed, \(last.closed) closed, \(last.reopened) reopened, "
                             + "\(last.unchanged) unchanged, \(last.outside) outside, \(last.tooOld) too old, "
+                            + "\(last.otherRoles) other roles, "
                             + "\(last.failures.count) failed")
                     for failure in last.failures { say("  failed: \(failure.message)") }
                 }

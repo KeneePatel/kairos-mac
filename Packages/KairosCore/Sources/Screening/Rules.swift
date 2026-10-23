@@ -65,7 +65,11 @@ public enum Seniority: String, Codable, Sendable, CaseIterable {
 /// What you're looking for: the synced "screening" setting (SPEC §6.2, `setting`). Every rule is
 /// off until you set it, so a fresh install drops nothing it shouldn't.
 public struct SearchPreferences: Codable, Sendable, Equatable {
-    /// When any are set, a title must contain one of them (whole words, any case).
+    /// The kinds of work you look for (job collection v2, J3). With any set, a title must be one of
+    /// them or contain one of `titleInclude`; searches ask for them; a board's other jobs aren't kept.
+    public var roles: Set<RoleFamily> = []
+    /// When any are set, a title must contain one of them (whole words, any case); with roles set,
+    /// these are your other titles.
     public var titleInclude: [String] = []
     /// A title containing any of these is out.
     public var titleExclude: [String] = []
@@ -91,8 +95,12 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
 
     public init() {}
 
+    /// Your roles and other titles, as one matcher for searches, the title rule and fetches.
+    public var roleMatcher: RoleMatcher { RoleMatcher(families: roles, extra: titleInclude) }
+
     private enum CodingKeys: String, CodingKey {
-        case titleInclude, titleExclude, seniority, maxYearsRequired, countries, regions, remoteAllowed, blacklist
+        case roles, titleInclude, titleExclude, seniority, maxYearsRequired, countries, regions, remoteAllowed,
+            blacklist
         case maxAgeDays, thresholds
     }
 
@@ -100,6 +108,7 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = SearchPreferences()
+        roles = try container.decodeIfPresent(Set<RoleFamily>.self, forKey: .roles) ?? defaults.roles
         titleInclude = try container.decodeIfPresent([String].self, forKey: .titleInclude) ?? defaults.titleInclude
         titleExclude = try container.decodeIfPresent([String].self, forKey: .titleExclude) ?? defaults.titleExclude
         seniority = try container.decodeIfPresent(Set<Seniority>.self, forKey: .seniority) ?? defaults.seniority

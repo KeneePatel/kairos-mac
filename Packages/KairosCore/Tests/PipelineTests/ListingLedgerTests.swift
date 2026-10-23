@@ -176,6 +176,23 @@ struct ListingLedgerTests {
         #expect(last.total == 1)
     }
 
+    /// With roles set, a new posting at another role is counted, not stored; one already stored is
+    /// still seen, so narrowing your roles doesn't close it.
+    @Test func otherRolesAreCountedNotStored() async throws {
+        let f = try await Fixture()
+        try await f.fromBoard([posting(f.board.id, "gh/1"), posting(f.board.id, "gh/2", title: "Account Executive")])
+        let roles = RoleMatcher(families: [.software])
+        let outcome = try await f.ledger.record(
+            [
+                posting(f.board.id, "gh/1"), posting(f.board.id, "gh/2", title: "Account Executive"),
+                posting(f.board.id, "gh/3", title: "Sales Development Representative"),
+                posting(f.board.id, "gh/4", title: "SDE II"),
+            ], from: f.board.id, kind: .greenhouse, complete: true, at: day(1), roles: roles)
+        #expect(outcome.otherRoles == 1 && outcome.added == 1 && outcome.known == 2)
+        let jobs = try await f.jobs()
+        #expect(jobs.count == 3 && jobs.allSatisfy(\.isOpen))
+    }
+
     /// A job stays open while any of its listings is.
     @Test func aJobClosesOnlyWhenAllItsListingsHave() async throws {
         let f = try await Fixture()

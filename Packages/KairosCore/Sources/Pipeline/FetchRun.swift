@@ -32,6 +32,8 @@ public struct FetchRun: Sendable {
         public var reopened = 0
         /// Boards that said nothing changed since last time.
         public var unchanged = 0
+        /// New postings left out because their titles aren't among your roles.
+        public var otherRoles = 0
         /// Dropped because they were posted before your "posted within" limit.
         public var tooOld = 0
         public var added = 0
@@ -66,6 +68,7 @@ public struct FetchRun: Sendable {
         public var upgraded: Int?
         public var closed: Int?
         public var unchanged: Int?
+        public var otherRoles: Int?
 
         public static func decode(_ json: String) -> Stats? {
             try? JSONDecoder().decode(Stats.self, from: Data(json.utf8))
@@ -79,18 +82,21 @@ public struct FetchRun: Sendable {
     let maxConcurrent: Int
     let now: @Sendable () -> Date
     let postedWithinDays: Int?
+    let roles: RoleMatcher?
 
     /// At most 4 HTTP sources at a time (SPEC §5.2). `postedWithinDays` is your Fetch screen's
-    /// "Posted" setting: older postings are never stored; nil keeps every age.
+    /// "Posted" setting: older postings are never stored; nil keeps every age. `roles`: new
+    /// postings whose titles aren't among them are counted, not stored (J3).
     public init(
         db: Database, maxConcurrent: Int = 4, now: @escaping @Sendable () -> Date = { Date() },
-        postedWithinDays: Int? = nil, makeSource: @escaping MakeSource
+        postedWithinDays: Int? = nil, roles: RoleMatcher? = nil, makeSource: @escaping MakeSource
     ) {
         self.db = db
         self.makeSource = makeSource
         self.maxConcurrent = max(1, maxConcurrent)
         self.now = now
         self.postedWithinDays = postedWithinDays
+        self.roles = roles.flatMap { $0.isOpen ? nil : $0 }
     }
 
     public func start() -> AsyncStream<Progress> {
@@ -162,7 +168,8 @@ public struct FetchRun: Sendable {
                 changed: progress.changed > 0 ? progress.changed : nil,
                 upgraded: progress.upgraded > 0 ? progress.upgraded : nil,
                 closed: progress.closed > 0 ? progress.closed : nil,
-                unchanged: progress.unchanged > 0 ? progress.unchanged : nil)
+                unchanged: progress.unchanged > 0 ? progress.unchanged : nil,
+                otherRoles: progress.otherRoles > 0 ? progress.otherRoles : nil)
             let json = (try? JSONEncoder().encode(stats)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
             try? await runs.finish(runID, stats: json, error: progress.phase == .cancelled ? "cancelled" : nil)
         }
@@ -172,7 +179,9 @@ public struct FetchRun: Sendable {
 
     /// The settings an ETag's answer was taken under: a board's "unchanged" only counts while the
     /// "Posted" limit (which decides which new postings are kept) is the same.
-    var fingerprint: String { "v2|posted:\(postedWithinDays.map(String.init) ?? "any")" }
+    var fingerprint: String {
+        "v2|posted:\(postedWithinDays.map(String.init) ?? "any")|roles:\(roles?.fingerprint ?? "any")"
+    }
 
     /// One source's answer, with whether it lists everything the source has open, and how long it took.
     struct Fetched: Sendable {
@@ -230,11 +239,12 @@ public struct FetchRun: Sendable {
                 let cutoff = postedWithinDays.map { at.addingTimeInterval(-Double($0) * 86_400) }
                 let outcome = try await ListingLedger(db).record(
                     postings, from: source.id, kind: source.kind, complete: fetched.listsEverything, at: at,
-                    postedAfter: cutoff)
+                    postedAfter: cutoff, roles: roles)
                 progress.added += outcome.added
                 progress.outside += outcome.outside
                 progress.duplicates += outcome.duplicates
                 progress.tooOld += outcome.tooOld
+                progress.otherRoles += outcome.otherRoles
                 progress.attached += outcome.attached
                 progress.changed += outcome.changed
                 progress.upgraded += outcome.upgraded

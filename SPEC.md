@@ -219,7 +219,7 @@ flowchart LR
 2. **Normalize:** canonical URL, Markdown description, and `job.id` = hash of the canonical URL (stable across devices). Parse `country` (CA or US), province or state, city, remote scope and currency.
 3. **De-duplicate and track** (job collection v2, 2026-10-23; `docs/design/job-collection.md`): every source's copy of a job is a *listing*. A posting seen before is seen again (an edit updates the job and screens it again); a new posting whose company, title and city match a stored job from another source (similarity ≥ 0.9) is attached to it, and a full posting replaces a snippet. Only a complete answer (a company board) can close: a listing missing from two in a row closes, a job closes when all its listings have, and closed jobs leave Review's to-do lists. A board answers "unchanged" (HTTP 304) to its last ETag, which counts as repeating its last answer. Search listings close 30 days unseen and 45 after posting. Each job keeps a short history.
 4. **Prefilter** (deterministic; the first failing rule wins and is recorded):
-   - title include and exclude patterns
+   - title include and exclude patterns: with roles set (job collection v2, J3), a title must be one of your role families (software development; DevOps, cloud and SRE; data, ML and AI engineering; QA and test automation; matched on whole words with abbreviations such as SDE and SRE, and each family's look-alikes left out) or one of your other titles. A fetch doesn't store new postings at other roles, and searches ask for your roles.
    - seniority policy
    - years required above your maximum
    - location policy: allowed provinces and states, remote allowed

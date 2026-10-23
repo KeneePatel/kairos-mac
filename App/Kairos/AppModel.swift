@@ -278,13 +278,15 @@ final class AppModel {
         let http = self.http
         // A search source (Adzuna) asks by your titles, countries and posting age.
         let preferences = searchPreferences
+        // Searches ask for your roles (J3); a board's jobs at other roles aren't kept.
+        let roles = preferences.roleMatcher
         let search = SearchContext(
             query: SourceQuery(
-                titles: preferences.titleInclude, countries: preferences.countries, maxAgeDays: preferences.maxAgeDays),
+                titles: roles.searches, countries: preferences.countries, maxAgeDays: preferences.maxAgeDays),
             adzuna: adzunaCredentials)
         let run = PipelineRun(
             fetch: FetchRun(
-                db: db, postedWithinDays: preferences.maxAgeDays,
+                db: db, postedWithinDays: preferences.maxAgeDays, roles: roles,
                 makeSource: { try SourceFactory.make($0, http: http, search: search) }),
             screening: ScreeningRun(db: db, router: ai?.router()))
         fetchTask = Task { [weak self] in
@@ -950,6 +952,7 @@ final class AppModel {
         if let upgraded = stats.upgraded { parts.append("\(upgraded) snippet\(upgraded == 1 ? "" : "s") filled in") }
         if let changed = stats.changed { parts.append("\(changed) edited") }
         if let closed = stats.closed { parts.append("\(closed) no longer posted") }
+        if let other = stats.otherRoles { parts.append("\(other) at other roles left out") }
         if let unchanged = stats.unchanged {
             parts.append("\(unchanged) board\(unchanged == 1 ? "" : "s") unchanged")
         }

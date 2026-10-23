@@ -29,9 +29,11 @@ public struct ListingLedger: Sendable {
         /// Jobs that closed, and jobs that came back.
         public var closed = 0
         public var reopened = 0
-        /// Postings left out: every place outside Canada and the US, or older than your limit.
+        /// Postings left out: every place outside Canada and the US, older than your limit, or not
+        /// one of your roles.
         public var outside = 0
         public var tooOld = 0
+        public var otherRoles = 0
 
         public init() {}
 
@@ -54,12 +56,15 @@ public struct ListingLedger: Sendable {
 
     /// Records `postings`, everything `source` answered. `complete` when that's every job it has
     /// open. `postedAfter`: new postings older than it aren't stored (your "Posted" limit).
+    /// `roles`: a new posting whose title isn't one of them isn't stored (one already stored is
+    /// still seen, so it doesn't close).
     public func record(
         _ postings: [Posting], from source: SourceID, kind: SourceKind, complete: Bool, at now: Date,
-        postedAfter: Date? = nil
+        postedAfter: Date? = nil, roles: RoleMatcher? = nil
     ) async throws -> Outcome {
         try await db.write { connection, stamp in
             var writer = Writer(connection: connection, hlc: stamp.hlc, now: now, source: source)
+            writer.roles = roles
             return try writer.record(postings, kind: kind, complete: complete, postedAfter: postedAfter)
         }
     }
@@ -125,6 +130,7 @@ private struct Writer {
     let source: SourceID?
     var ids = UUIDv7Generator()
     var outcome = ListingLedger.Outcome()
+    var roles: RoleMatcher?
 
     init(connection: Connection, hlc: HLCTimestamp, now: Date, source: SourceID?) {
         self.connection = connection
@@ -177,6 +183,10 @@ private struct Writer {
         }
         if let postedAfter, let posted = candidate.postedAt, posted < postedAfter {
             outcome.tooOld += 1
+            return
+        }
+        if let roles, !roles.matches(candidate.title) {
+            outcome.otherRoles += 1
             return
         }
         if let copyOf = try storedCopy(of: candidate, from: source) {

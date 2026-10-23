@@ -15,8 +15,27 @@ struct SearchPreferencesView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.space6) {
                 FormSection(
-                    title: "Job titles",
-                    caption: "A title must contain one of these. Leave it empty to see every title."
+                    title: "Roles",
+                    caption:
+                        "Searches ask for these, and a company's jobs at other roles aren't kept. Titles match with their usual variants: SDE, full-stack, Sr."
+                ) {
+                    VStack(alignment: .leading, spacing: Spacing.space2) {
+                        ForEach(RoleFamily.allCases) { role in
+                            Toggle(isOn: roleBinding(role)) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(role.title).font(TypeStyle.body).foregroundStyle(Color(.ink))
+                                    Text(role.example).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                                }
+                            }
+                            .toggleStyle(.checkbox)
+                        }
+                    }
+                }
+                FormSection(
+                    title: preferences.roles.isEmpty ? "Job titles" : "Other titles",
+                    caption: preferences.roles.isEmpty
+                        ? "A title must contain one of these. Leave it empty to see every title."
+                        : "Titles outside your roles that you want too, such as Technical Writer."
                 ) {
                     PhraseList(items: $preferences.titleInclude, prompt: "Add a job title, such as Backend Developer")
                 }
@@ -192,6 +211,14 @@ struct SearchPreferencesView: View {
         Binding(
             get: { percentValue(preferences.thresholds[keyPath: path]) },
             set: { preferences.thresholds[keyPath: path] = Double($0) / 100 })
+    }
+
+    private func roleBinding(_ role: RoleFamily) -> Binding<Bool> {
+        Binding(
+            get: { preferences.roles.contains(role) },
+            set: { on in
+                if on { preferences.roles.insert(role) } else { preferences.roles.remove(role) }
+            })
     }
 
     private func levelBinding(_ level: Seniority) -> Binding<Bool> {

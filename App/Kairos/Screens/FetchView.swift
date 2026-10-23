@@ -140,7 +140,7 @@ extension PrefilterRule {
     /// Why the prefilter dropped a job, as a list label.
     var reason: String {
         switch self {
-        case .titleInclude: "Title not in your list"
+        case .titleInclude: "Not one of your roles"
         case .titleExclude: "Title you skip"
         case .seniority: "Level you've turned off"
         case .yearsRequired: "Asks for too many years"
