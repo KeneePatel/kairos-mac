@@ -29,12 +29,12 @@
           "source_ids": ["b5"]
         },
         {
-          "text": "Tuned SQL reports, cutting the slowest from 6 minutes to 40 seconds.",
-          "source_ids": ["b7"]
-        },
-        {
           "text": "Built React and TypeScript dashboards used by 120 analysts.",
           "source_ids": ["b6"]
+        },
+        {
+          "text": "Tuned SQL reports, cutting the slowest from 6 minutes to 40 seconds.",
+          "source_ids": ["b7"]
         }
       ]
     }

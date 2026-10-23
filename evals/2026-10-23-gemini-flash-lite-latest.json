@@ -1,0 +1,810 @@
+{
+  "analysisRepaired" : 0,
+  "date" : "2026-10-23",
+  "firstWritePassRate" : 1,
+  "meetsThresholds" : true,
+  "models" : {
+    "analyzeJob" : "gemini-flash-lite-latest",
+    "writeExperience" : "gemini-flash-lite-latest"
+  },
+  "mustPrecision" : 1,
+  "mustRecall" : 1,
+  "postings" : [
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "01-backend-go",
+      "labels" : [
+        "3+ years building backend services in Go or Java",
+        "PostgreSQL",
+        "Message queues such as Kafka or RabbitMQ",
+        "Legally entitled to work in Canada"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years building backend services in Go or Java",
+        "Strong PostgreSQL skills",
+        "Experience with message queues such as Kafka or RabbitMQ",
+        "Legally entitled to work in Canada"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "02-frontend-react",
+      "labels" : [
+        "2+ years of React",
+        "TypeScript",
+        "Accessible, responsive CSS",
+        "Testing UIs with Jest or Testing Library"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "2+ years of professional React experience",
+        "Strong TypeScript",
+        "Experience writing accessible, responsive CSS",
+        "Experience testing UIs with Jest or Testing Library"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "03-data-engineer",
+      "labels" : [
+        "4+ years of Python",
+        "Airflow or a similar orchestrator",
+        "Advanced SQL",
+        "Cloud data warehouse such as Snowflake or BigQuery"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "4+ years of Python",
+        "Airflow or a similar orchestrator",
+        "Advanced SQL",
+        "Experience with a cloud data warehouse such as Snowflake or BigQuery"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "04-devops",
+      "labels" : [
+        "3+ years running production workloads on AWS",
+        "Terraform",
+        "Kubernetes in production",
+        "CI/CD pipelines",
+        "On-call experience"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years running production workloads on AWS",
+        "Terraform",
+        "Kubernetes in production",
+        "CI/CD pipelines (GitHub Actions, GitLab CI or similar)",
+        "On-call experience"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "05-ios",
+      "labels" : [
+        "3+ years of Swift for iOS",
+        "SwiftUI",
+        "Shipping apps to the App Store",
+        "French and English"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years building iOS apps in Swift",
+        "SwiftUI",
+        "Experience shipping apps to the App Store",
+        "Professional proficiency in French and English"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "06-ml-engineer",
+      "labels" : [
+        "Degree in computer science or related field, or equivalent experience",
+        "3+ years of Python",
+        "PyTorch or TensorFlow",
+        "Deploying models to production",
+        "Authorized to work in the United States"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "MS or PhD in computer science, statistics or a related field, or equivalent experience",
+        "3+ years of Python",
+        "PyTorch or TensorFlow",
+        "Experience deploying models to production",
+        "Must be authorized to work in the United States"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "07-qa-automation",
+      "labels" : [
+        "2+ years of test automation",
+        "Playwright or Selenium",
+        "JavaScript or TypeScript",
+        "Testing REST APIs"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "2+ years of test automation",
+        "Playwright or Selenium",
+        "JavaScript or TypeScript",
+        "Experience testing REST APIs"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "08-fullstack-django",
+      "labels" : [
+        "3+ years with Python and Django",
+        "React",
+        "PostgreSQL",
+        "Docker"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years with Python and Django",
+        "React",
+        "PostgreSQL",
+        "Comfortable with Docker"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "09-security",
+      "labels" : [
+        "4+ years in application security",
+        "Threat modelling and secure code review",
+        "OWASP Top 10",
+        "Python or Go scripting",
+        "Reliability Status clearance"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "4+ years in application security",
+        "Threat modelling and secure code review",
+        "Experience with OWASP Top 10",
+        "Scripting in Python or Go",
+        "Must be eligible for Reliability Status security clearance"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "10-android",
+      "labels" : [
+        "2+ years of Android in Kotlin",
+        "Jetpack Compose",
+        "Room or SQLite"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "2+ years of Android development in Kotlin",
+        "Jetpack Compose",
+        "Room or SQLite"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "11-sre",
+      "labels" : [
+        "5+ years in SRE or infrastructure",
+        "Linux administration",
+        "Prometheus, Grafana or Datadog",
+        "Kubernetes",
+        "Python or Go"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "5+ years in SRE or infrastructure",
+        "Linux administration",
+        "Prometheus, Grafana or Datadog",
+        "Kubernetes",
+        "Python or Go"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "12-java-spring",
+      "labels" : [
+        "4+ years of Java",
+        "Spring Boot",
+        "SQL (Oracle or PostgreSQL)",
+        "Building REST APIs"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "4+ years of Java",
+        "Spring Boot",
+        "SQL (Oracle or PostgreSQL)",
+        "Experience building REST APIs"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "13-data-analyst",
+      "labels" : [
+        "2+ years of analytics",
+        "Advanced SQL",
+        "Tableau or Power BI",
+        "Excel"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "2+ years of analytics experience",
+        "Advanced SQL",
+        "Tableau or Power BI",
+        "Excel"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "14-platform-rust",
+      "labels" : [
+        "3+ years of Rust or C++",
+        "Linux",
+        "Networking protocols"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years of systems programming in Rust or C++",
+        "Linux",
+        "Experience with networking protocols"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "15-node-backend",
+      "labels" : [
+        "3+ years of Node.js",
+        "TypeScript",
+        "MongoDB or PostgreSQL",
+        "AWS",
+        "Authorized to work in the US"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years of Node.js",
+        "TypeScript",
+        "MongoDB or PostgreSQL",
+        "AWS",
+        "Authorized to work in the US"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "16-salesforce",
+      "labels" : [
+        "3+ years of Salesforce development",
+        "Apex and Lightning Web Components",
+        "Platform Developer I certification"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years of Salesforce development",
+        "Apex and Lightning Web Components",
+        "Salesforce Platform Developer I certification"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "17-embedded",
+      "labels" : [
+        "Bachelor's degree in electrical or computer engineering",
+        "3+ years of embedded C",
+        "RTOS",
+        "Debugging with oscilloscopes and logic analyzers"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "Bachelor's degree in electrical or computer engineering",
+        "3+ years of embedded C",
+        "Experience with RTOS",
+        "Debugging with oscilloscopes and logic analyzers"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "18-dotnet",
+      "labels" : [
+        "3+ years of C# and .NET",
+        "SQL Server",
+        "Azure",
+        "REST APIs"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years of C# and .NET",
+        "SQL Server",
+        "Azure",
+        "Experience with REST APIs"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "19-junior-python",
+      "labels" : [
+        "Python experience",
+        "Git",
+        "Basic SQL",
+        "Clear written communication"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "Up to 2 years of Python experience, including internships or co-ops",
+        "Git",
+        "Basic SQL",
+        "Clear written communication"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "20-staff-backend",
+      "labels" : [
+        "8+ years of backend development",
+        "Distributed systems design",
+        "Go, Java or Kotlin",
+        "Mentoring engineers",
+        "Legally entitled to work in Canada"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "8+ years of backend development",
+        "Distributed systems design at scale",
+        "Go, Java or Kotlin",
+        "Mentoring other engineers",
+        "Legally entitled to work in Canada"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "21-analytics-engineer",
+      "labels" : [
+        "2+ years of analytics engineering",
+        "dbt",
+        "SQL",
+        "Snowflake"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "2+ years of analytics engineering",
+        "dbt",
+        "SQL",
+        "Snowflake"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "22-game-dev",
+      "labels" : [
+        "3+ years of C# in Unity",
+        "Shipped a mobile game",
+        "Math for gameplay",
+        "French"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years of C# in Unity",
+        "Shipped at least one mobile game",
+        "Strong math for gameplay (vectors, physics)",
+        "French is required for this Montreal role"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "23-cloud-architect",
+      "labels" : [
+        "7+ years in infrastructure",
+        "AWS Solutions Architect Professional certification",
+        "Terraform",
+        "Networking (VPCs, VPNs, DNS)"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "7+ years in infrastructure",
+        "3+ years as an architect",
+        "AWS Solutions Architect – Professional certification",
+        "Terraform",
+        "Networking (VPCs, VPNs, DNS)"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "24-product-designer-dev",
+      "labels" : [
+        "3+ years of React UI",
+        "Figma",
+        "CSS animation",
+        "Portfolio of shipped work"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years building UI with React",
+        "Figma",
+        "CSS animation",
+        "A portfolio of shipped work"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "25-backend-python-us",
+      "labels" : [
+        "4+ years of Python",
+        "FastAPI or Django",
+        "PostgreSQL",
+        "HIPAA compliance",
+        "Authorized to work in the U.S."
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "4+ years of Python",
+        "FastAPI or Django",
+        "PostgreSQL",
+        "Experience with HIPAA or similar compliance",
+        "Must be authorized to work in the U.S. without sponsorship"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "26-support-engineer",
+      "labels" : [
+        "2+ years in technical support",
+        "SQL",
+        "Reading logs and debugging web apps",
+        "English and French"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "2+ years in technical support",
+        "SQL for investigating data",
+        "Reading logs and debugging web apps",
+        "Bilingual in English and French"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "27-search-engineer",
+      "labels" : [
+        "3+ years of Elasticsearch or OpenSearch",
+        "Java or Python",
+        "Relevance tuning and ranking"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years of Elasticsearch or OpenSearch",
+        "Java or Python",
+        "Relevance tuning and ranking"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "28-mobile-react-native",
+      "labels" : [
+        "3+ years of React Native",
+        "TypeScript",
+        "Publishing to App Store and Google Play",
+        "Legally entitled to work in Canada"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "3+ years of React Native",
+        "TypeScript",
+        "Publishing apps to the App Store and Google Play",
+        "Legally entitled to work in Canada"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "29-data-scientist",
+      "labels" : [
+        "Master's degree in statistics, math or related field",
+        "3+ years of Python",
+        "scikit-learn",
+        "SQL"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "Master's degree in statistics, math or a related field",
+        "3+ years of Python",
+        "Experience with scikit-learn",
+        "SQL"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    },
+    {
+      "bullets" : 7,
+      "bulletsPassing" : 7,
+      "id" : "30-engineering-manager",
+      "labels" : [
+        "2+ years managing engineers",
+        "5+ years as a software engineer",
+        "Agile delivery",
+        "Hiring"
+      ],
+      "missedLabels" : [
+
+      ],
+      "predictedMusts" : [
+        "2+ years managing software engineers",
+        "5+ years as a software engineer before that",
+        "Experience running agile delivery",
+        "Hiring experience"
+      ],
+      "violations" : [
+
+      ],
+      "wrongMusts" : [
+
+      ]
+    }
+  ],
+  "promptVersions" : {
+    "analyzeJob" : 2,
+    "writeExperience" : 2
+  },
+  "thresholds" : {
+    "firstWritePassRate" : 0.95,
+    "mustPrecision" : 0.85,
+    "mustRecall" : 0.8
+  }
+}

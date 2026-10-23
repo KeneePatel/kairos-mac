@@ -1,20 +1,24 @@
 {
   "requirements": [
     {
-      "text": "managing software engineers",
+      "text": "2+ years managing software engineers",
       "kind": "must",
       "category": "experience",
       "match": "no"
     },
     {
-      "text": "as a software engineer before that",
+      "text": "5+ years as a software engineer before that",
       "kind": "must",
       "category": "experience",
       "match": "yes",
-      "evidence": ["y1", "x1"]
+      "evidence": [
+        "y1",
+        "x1",
+        "x2"
+      ]
     },
     {
-      "text": "running agile delivery",
+      "text": "Experience running agile delivery",
       "kind": "must",
       "category": "experience",
       "match": "no"

@@ -11,7 +11,9 @@
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": ["s2"]
+      "evidence": [
+        "s2"
+      ]
     },
     {
       "text": "Relevance tuning and ranking",
@@ -30,14 +32,16 @@
       "kind": "nice",
       "category": "skill",
       "match": "yes",
-      "evidence": ["s8"]
+      "evidence": [
+        "s8"
+      ]
     }
   ],
   "years_required": 3,
   "seniority": "unspecified",
   "domains": [
-    "education",
-    "search"
+    "search",
+    "education"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

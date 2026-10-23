@@ -26,7 +26,7 @@
       "text": "A portfolio of shipped work",
       "kind": "must",
       "category": "experience",
-      "match": "partial",
+      "match": "yes",
       "evidence": [
         "p1"
       ]
@@ -39,10 +39,9 @@
     }
   ],
   "years_required": 3,
-  "seniority": "mid",
+  "seniority": "unspecified",
   "domains": [
     "retail",
-    "design",
     "storefront"
   ],
   "flags": {

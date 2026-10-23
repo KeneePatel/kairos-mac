@@ -62,7 +62,8 @@
   "seniority": "unspecified",
   "domains": [
     "energy",
-    "infrastructure"
+    "infrastructure",
+    "smart meters"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

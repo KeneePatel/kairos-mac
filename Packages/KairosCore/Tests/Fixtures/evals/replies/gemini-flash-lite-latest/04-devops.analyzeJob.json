@@ -7,7 +7,7 @@
       "match": "yes",
       "evidence": [
         "y1",
-        "x1"
+        "x1b2"
       ]
     },
     {
@@ -34,7 +34,10 @@
       "text": "CI/CD pipelines (GitHub Actions, GitLab CI or similar)",
       "kind": "must",
       "category": "skill",
-      "match": "no"
+      "match": "partial",
+      "evidence": [
+        "x1b2"
+      ]
     },
     {
       "text": "On-call experience",
@@ -68,7 +71,7 @@
   "seniority": "unspecified",
   "domains": [
     "transit",
-    "logistics"
+    "platform"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

@@ -3,7 +3,7 @@
     {
       "text": "3+ years with Python and Django",
       "kind": "must",
-      "category": "experience",
+      "category": "skill",
       "match": "partial",
       "evidence": [
         "y1",
@@ -34,8 +34,11 @@
     {
       "text": "Comfortable with Docker",
       "kind": "must",
-      "category": "soft",
-      "match": "not_judged"
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s15"
+      ]
     },
     {
       "text": "Celery",
@@ -54,7 +57,6 @@
   "seniority": "unspecified",
   "domains": [
     "bookkeeping",
-    "accounting",
     "software"
   ],
   "flags": {

@@ -23,7 +23,7 @@
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": ["s1", "s2"]
+      "evidence": ["s1", "s2", "x1b1", "x2b1"]
     },
     {
       "text": "Must be eligible for Reliability Status security clearance",
@@ -40,16 +40,16 @@
     {
       "text": "Cloud security on AWS",
       "kind": "nice",
-      "category": "experience",
+      "category": "skill",
       "match": "partial",
-      "evidence": ["x1b2", "s6"]
+      "evidence": ["s6", "x1b2"]
     }
   ],
   "years_required": 4,
   "seniority": "unspecified",
   "domains": [
     "insurance",
-    "application security"
+    "security"
   ],
   "flags": {
     "sponsorship": "not_mentioned",

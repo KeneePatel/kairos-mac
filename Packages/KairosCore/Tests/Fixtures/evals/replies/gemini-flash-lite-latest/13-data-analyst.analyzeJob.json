@@ -5,20 +5,14 @@
       "kind": "must",
       "category": "experience",
       "match": "partial",
-      "evidence": [
-        "y1",
-        "x2"
-      ]
+      "evidence": ["y1"]
     },
     {
       "text": "Advanced SQL",
       "kind": "must",
       "category": "skill",
-      "match": "yes",
-      "evidence": [
-        "s4",
-        "x2b3"
-      ]
+      "match": "partial",
+      "evidence": ["s4", "x2b3"]
     },
     {
       "text": "Tableau or Power BI",
@@ -37,10 +31,7 @@
       "kind": "nice",
       "category": "skill",
       "match": "yes",
-      "evidence": [
-        "s2",
-        "x2b1"
-      ]
+      "evidence": ["s2"]
     },
     {
       "text": "Retail experience",

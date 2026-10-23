@@ -11,11 +11,7 @@
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": [
-        "y1",
-        "s2",
-        "x2"
-      ]
+      "evidence": ["y1", "s2", "x2b1"]
     },
     {
       "text": "Experience with scikit-learn",
@@ -28,10 +24,7 @@
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": [
-        "s4",
-        "x2b3"
-      ]
+      "evidence": ["s4", "x2b3"]
     },
     {
       "text": "Actuarial background",
@@ -48,10 +41,7 @@
   ],
   "years_required": 3,
   "seniority": "unspecified",
-  "domains": [
-    "insurance",
-    "risk modeling"
-  ],
+  "domains": ["insurance"],
   "flags": {
     "sponsorship": "not_mentioned",
     "clearance": "not_mentioned",

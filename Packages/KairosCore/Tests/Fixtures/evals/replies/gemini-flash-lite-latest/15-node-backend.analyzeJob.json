@@ -58,7 +58,8 @@
   "years_required": 3,
   "seniority": "unspecified",
   "domains": [
-    "education"
+    "education",
+    "apis"
   ],
   "flags": {
     "sponsorship": "not_offered",

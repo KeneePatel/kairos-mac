@@ -4,7 +4,7 @@
       "text": "MS or PhD in computer science, statistics or a related field, or equivalent experience",
       "kind": "must",
       "category": "education",
-      "match": "partial",
+      "match": "yes",
       "evidence": ["y1"]
     },
     {
@@ -12,7 +12,7 @@
       "kind": "must",
       "category": "skill",
       "match": "yes",
-      "evidence": ["s2", "x2"]
+      "evidence": ["y1", "s2", "x2b1"]
     },
     {
       "text": "PyTorch or TensorFlow",

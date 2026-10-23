@@ -14,6 +14,18 @@
           "source_ids": [
             "b1"
           ]
+        },
+        {
+          "text": "Moved 9 services to Kubernetes on AWS with Terraform, cutting deploy time from 30 to 8 minutes.",
+          "source_ids": [
+            "b3"
+          ]
+        },
+        {
+          "text": "Mentored 3 junior developers and ran the weekly on-call review.",
+          "source_ids": [
+            "b4"
+          ]
         }
       ]
     },
@@ -24,6 +36,18 @@
           "text": "Tuned SQL reports, cutting the slowest from 6 minutes to 40 seconds.",
           "source_ids": [
             "b5"
+          ]
+        },
+        {
+          "text": "Wrote Python and Airflow pipelines loading 40 GB a day into Snowflake.",
+          "source_ids": [
+            "b6"
+          ]
+        },
+        {
+          "text": "Built React and TypeScript dashboards used by 120 analysts.",
+          "source_ids": [
+            "b7"
           ]
         }
       ]
