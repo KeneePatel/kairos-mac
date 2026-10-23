@@ -282,7 +282,8 @@ final class AppModel {
         let roles = preferences.roleMatcher
         let search = SearchContext(
             query: SourceQuery(
-                titles: roles.searches, countries: preferences.countries, maxAgeDays: preferences.maxAgeDays),
+                titles: roles.searches, countries: preferences.countries, maxAgeDays: preferences.maxAgeDays,
+                roles: roles.isOpen ? nil : roles),
             adzuna: adzunaCredentials)
         let run = PipelineRun(
             fetch: FetchRun(

@@ -3,6 +3,10 @@ import Foundation
 /// Where jobs come from (SPEC §5.4): company ATS boards, the Adzuna aggregator, or a page runner.
 public enum SourceKind: String, Sendable, CaseIterable {
     case greenhouse, lever, ashby, adzuna
+    case smartRecruiters = "smartrecruiters"
+    case workable, recruitee, personio
+    case bambooHR = "bamboohr"
+    case teamtailor
     case linkedIn = "linkedin"
     case indeedCanada = "indeed_ca"
     case indeedUS = "indeed_us"
@@ -13,7 +17,12 @@ public enum SourceKind: String, Sendable, CaseIterable {
 
     /// Searches across companies (Adzuna, the page runners) rather than one company's own board.
     /// Boards run first in a fetch, so their full postings win over a search's copy.
-    public var isSearch: Bool { self != .greenhouse && self != .lever && self != .ashby }
+    public var isSearch: Bool { !Self.boards.contains(self) }
+
+    /// Companies' own public job boards (SPEC §5.4, tier A; job collection v2, J2).
+    public static let boards: Set<SourceKind> = [
+        .greenhouse, .lever, .ashby, .smartRecruiters, .workable, .recruitee, .personio, .bambooHR, .teamtailor,
+    ]
 
     /// Its descriptions are snippets, not the whole posting (Adzuna's API sends 500 characters).
     public var sendsSnippets: Bool { self == .adzuna }

@@ -193,6 +193,22 @@ struct ListingLedgerTests {
         #expect(jobs.count == 3 && jobs.allSatisfy(\.isOpen))
     }
 
+    /// A board that didn't send a known job's text (SmartRecruiters, BambooHR) still saw it, and
+    /// nothing about it changes; a new job without its text waits for the next fetch.
+    @Test func aPostingWithoutItsTextCountsAsSeen() async throws {
+        let f = try await Fixture()
+        try await f.fromBoard([posting(f.board.id, "gh/1")])
+        var bare = posting(f.board.id, "gh/1", text: "")
+        bare.textOmitted = true
+        var newBare = posting(f.board.id, "gh/2", title: "Data Engineer", text: "")
+        newBare.textOmitted = true
+        let outcome = try await f.fromBoard([bare, newBare], at: day(1))
+        #expect(outcome.known == 1 && outcome.changed == 0 && outcome.unread == 1 && outcome.added == 0)
+        let job = try #require(try await f.jobs().first)
+        #expect(job.descriptionMarkdown?.contains("Build APIs") == true && job.lastSeenAt == day(1))
+        #expect(try await f.events(job) == [.found])
+    }
+
     /// A job stays open while any of its listings is.
     @Test func aJobClosesOnlyWhenAllItsListingsHave() async throws {
         let f = try await Fixture()

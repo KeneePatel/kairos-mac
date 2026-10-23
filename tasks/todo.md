@@ -956,7 +956,13 @@ Plan: `docs/design/job-collection.md`. Research: `docs/research/job-collection/`
     - **Fetch gate:** a new posting at another role is counted ("N at other roles left out"), not stored; one already stored is still seen. Changing roles makes every board answer in full.
     - **Settings, Search:** a Roles section with the four, each with examples; "Job titles" becomes "Other titles" once a role is on.
     - **Live check on a copy of your database:** first fetch 509 new (164 without roles), 635 Adzuna results (130 before), 105 at other roles left out.
-- [ ] **J2 · More public boards:** SmartRecruiters, Workable, Recruitee, Personio, BambooHR, Teamtailor; the detector for all of them; Workday addresses explained, not fetched
+- [x] **J2 · More public boards** (M)
+  - **Done 2026-10-23:**
+    - **Readers** (one each, behind `JobSource`): SmartRecruiters (asked per country, 100 a page; the text of a job is one more request, asked only for jobs at your roles that Kairos doesn't already have), Workable (its careers widget feed, every job with its text), Recruitee (Careers Site API; requirements follow the description), Personio (XML feed, with ETag), BambooHR (list, then the text of jobs at your roles), Teamtailor (RSS on `*.teamtailor.com`, with ETag). Personio and BambooHR redirect a name that isn't a customer: "not found", never an empty board.
+    - **Known jobs:** a fetch tells each board which of its jobs Kairos has open; a board needing a request per job lists those without their text, which counts as seen and changes nothing. A new job whose text didn't come is left for the next fetch.
+    - **Detector:** all nine boards from a pasted address (`jobs.smartrecruiters.com/Acme`, `apply.workable.com/acme`, `acme.recruitee.com`, `acme.jobs.personio.de`, `acme.bamboohr.com`, `acme.teamtailor.com`); a vendor's own site isn't a company; a Workday address says Workday's terms don't allow automated access and that its jobs often reach Kairos through Adzuna.
+    - **Live check** on a copy of your database with six real boards added (Ubisoft on SmartRecruiters, Maropost on BambooHR, and one each on Workable, Recruitee, Personio, Teamtailor): no failures; Ubisoft gave 5 Canadian postings at your roles with full text; the second fetch found 21 boards unchanged, Personio and Teamtailor among them. `Kairos --fetch-dry --add=<careers URL>` tries a board on the copy only.
+    - **Not done:** Teamtailor companies on their own domain; Breezy and Rippling (no text in their lists).
 - [ ] **J4 · Adzuna v2:** query plan, pagination, incremental days, area parsing, budget and its bar
 - [ ] **J5 · Board catalog:** `scripts/discover-boards`, the bundled catalog, Companies list, auto-watch, cadence, gone boards
 - [ ] **J6 · Snippet upgrade:** company finder, listing matching, upgrade and re-screen

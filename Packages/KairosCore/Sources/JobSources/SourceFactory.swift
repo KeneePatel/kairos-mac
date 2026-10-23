@@ -44,17 +44,28 @@ public enum SourceFactory {
         throws(SourceError) -> (any JobSource, SourceQuery)
     {
         switch source.kind {
-        case .greenhouse, .lever, .ashby:
+        case .greenhouse, .lever, .ashby, .smartRecruiters, .workable, .recruitee, .personio, .bambooHR, .teamtailor:
             guard let config = BoardConfig.decode(source.config) else {
                 throw .invalidConfiguration("\(source.kind.rawValue) source has no board slug")
             }
-            let query = SourceQuery(companyName: config.company)
-            switch source.kind {
-            case .greenhouse: return (GreenhouseSource(id: source.id, boardToken: config.slug, http: http), query)
-            case .lever:
-                return (LeverSource(id: source.id, slug: config.slug, region: config.region, http: http), query)
-            default: return (AshbySource(id: source.id, organization: config.slug, http: http), query)
-            }
+            // A board needing a request per job asks only for your roles, with your posting age.
+            let query = SourceQuery(
+                companyName: config.company, countries: search.query.countries, maxAgeDays: search.query.maxAgeDays,
+                roles: search.query.roles)
+            let slug = config.slug
+            let board: any JobSource =
+                switch source.kind {
+                case .greenhouse: GreenhouseSource(id: source.id, boardToken: slug, http: http)
+                case .lever: LeverSource(id: source.id, slug: slug, region: config.region, http: http)
+                case .ashby: AshbySource(id: source.id, organization: slug, http: http)
+                case .smartRecruiters: SmartRecruitersSource(id: source.id, company: slug, http: http)
+                case .workable: WorkableSource(id: source.id, account: slug, http: http)
+                case .recruitee: RecruiteeSource(id: source.id, company: slug, http: http)
+                case .personio: PersonioSource(id: source.id, company: slug, http: http)
+                case .bambooHR: BambooHRSource(id: source.id, company: slug, http: http)
+                default: TeamtailorSource(id: source.id, company: slug, http: http)
+                }
+            return (board, query)
         case .adzuna:
             guard let credentials = search.adzuna else {
                 throw .invalidConfiguration("add your Adzuna app ID and key in Fetch, Adzuna")

@@ -44,6 +44,21 @@ private func run(_ db: Database, _ board: Board, at date: Date, postedWithin: In
     return last
 }
 
+/// A board that remembers what it was asked.
+private final class Asked: JobSource, Sendable {
+    let id: SourceID
+    let queries = Mutex<[SourceQuery]>([])
+
+    init(id: SourceID) { self.id = id }
+
+    var listsEverything: Bool { true }
+
+    func fetch(_ query: SourceQuery) async throws -> [Posting] {
+        queries.withLock { $0.append(query) }
+        return [posting(id, "1", "Backend Developer")]
+    }
+}
+
 /// Job collection v2 inside a fetch: ETags, closing, failures and the fetch log.
 @Suite("Fetch run: lifecycle")
 struct FetchRunLifecycleTests {
@@ -76,6 +91,22 @@ struct FetchRunLifecycleTests {
         let stats = try #require(
             try await RunRepository(db).runs(kind: "fetch").first.flatMap { FetchRun.Stats.decode($0.stats) })
         #expect(stats.unchanged == 1)
+    }
+
+    /// Each board is told which of its jobs Kairos already has open, and your roles.
+    @Test func boardsHearWhatsKnownAndYourRoles() async throws {
+        let db = try Database(path: ":memory:")
+        try await Migrator.migrate(db, with: Migrator.bundled())
+        let source = try await SourceRepository(db).add(kind: .smartRecruiters)
+        let board = Asked(id: source.id)
+        let roles = RoleMatcher(families: [.software])
+        for _ in 0..<2 {
+            let fetch = FetchRun(db: db, now: { day0 }, roles: roles, makeSource: { _ in (board, SourceQuery()) })
+            for await _ in fetch.start() {}
+        }
+        let queries = board.queries.withLock { $0 }
+        #expect(queries.map(\.knownURLs) == [[], ["https://jobs.example/1"]])
+        #expect(queries.allSatisfy { $0.roles == roles })
     }
 
     /// An ETag taken under another "Posted" limit isn't used: the board is read in full.

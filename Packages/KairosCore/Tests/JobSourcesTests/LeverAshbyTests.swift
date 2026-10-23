@@ -127,7 +127,10 @@ struct ATSDetectorTests {
     }
 
     @Test(arguments: [
-        ("https://acme.com/careers", "Not a Greenhouse, Lever or Ashby job board."),
+        (
+            "https://acme.com/careers",
+            "Not a job board Kairos reads. It reads Greenhouse, Lever, Ashby, SmartRecruiters, Workable, Recruitee, Personio, BambooHR and Teamtailor."
+        ),
         (
             "https://acme.com/careers?gh_jid=4012001002",
             "This company page embeds its job board. Open the board itself and paste that address."

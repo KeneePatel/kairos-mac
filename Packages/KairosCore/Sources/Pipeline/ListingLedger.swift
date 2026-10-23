@@ -34,6 +34,9 @@ public struct ListingLedger: Sendable {
         public var outside = 0
         public var tooOld = 0
         public var otherRoles = 0
+        /// New postings whose text the board didn't send this time (a failed request): left for
+        /// the next fetch.
+        public var unread = 0
 
         public init() {}
 
@@ -156,7 +159,7 @@ private struct Writer {
             }
             let text: DescriptionKind =
                 candidate.descriptionMarkdown == nil ? .none : kind.sendsSnippets ? .snippet : .full
-            try take(candidate, kind: text, from: source, postedAfter: postedAfter)
+            try take(candidate, kind: text, omitted: posting.textOmitted, from: source, postedAfter: postedAfter)
         }
         if complete { try closeMissing(from: source, seen: seen) }
         return outcome
@@ -164,16 +167,20 @@ private struct Writer {
 
     // MARK: - One posting
 
-    private mutating func take(_ candidate: Job, kind: DescriptionKind, from source: SourceID, postedAfter: Date?)
-        throws
-    {
+    private mutating func take(
+        _ candidate: Job, kind: DescriptionKind, omitted: Bool, from source: SourceID, postedAfter: Date?
+    ) throws {
         if let row = try connection.query("SELECT * FROM listing WHERE id = ?", [.text(candidate.id.rawValue)]).first {
             let stored = try ListingRepository.listing(row)
             let deleted = row.bool("deleted") ?? false
             // A job you cleared comes back as new; one retention removed stays gone.
             let cleared = try JobRepository.job(stored.jobID, in: connection)?.cleared ?? false
             if !deleted {
-                try seenAgain(stored, as: candidate, kind: kind)
+                if omitted {
+                    try seenOnly(stored)
+                } else {
+                    try seenAgain(stored, as: candidate, kind: kind)
+                }
                 return
             }
             if !cleared {
@@ -187,6 +194,10 @@ private struct Writer {
         }
         if let roles, !roles.matches(candidate.title) {
             outcome.otherRoles += 1
+            return
+        }
+        if omitted {
+            outcome.unread += 1
             return
         }
         if let copyOf = try storedCopy(of: candidate, from: source) {
@@ -254,6 +265,25 @@ private struct Writer {
         }
         try JobRepository.upsert(job, hlc: hlc, in: connection)
         if edited && isPrimary { try screenAgain(job) }
+    }
+
+    /// Listed again without its text: seen, and nothing about it changes.
+    private mutating func seenOnly(_ stored: Listing) throws {
+        outcome.known += 1
+        var listing = stored
+        let reopened = listing.closedAt != nil
+        listing.lastSeenAt = now
+        listing.missingRuns = 0
+        listing.closedAt = nil
+        try ListingRepository.upsert(listing, hlc: hlc, in: connection)
+        guard var job = try JobRepository.job(stored.jobID, in: connection)?.job else { return }
+        job.lastSeenAt = now
+        if reopened || job.closedAt != nil {
+            job.closedAt = nil
+            try event(job.id, .reopened, stored.sourceID)
+            outcome.reopened += 1
+        }
+        try JobRepository.upsert(job, hlc: hlc, in: connection)
     }
 
     /// The job shows this listing: its text, its link and what it says about the place.

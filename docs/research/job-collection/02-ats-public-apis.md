@@ -54,3 +54,29 @@ undocumented on all of them: space requests per host and back off on 429.
 3. Fix Lever's `on-site` mapping and ask Lever's EU host when the global one has nothing.
 4. Ask each ATS for pay where it offers it, and store it.
 5. Workday stays out; say so in the app where a Workday careers URL is pasted.
+
+## Measured shapes (2026-10-23, read from live boards before building the readers)
+
+- **SmartRecruiters** (Ubisoft2): the list takes `country=ca` (141 Canadian postings) and sends an
+  ETag; items carry `id`, `name`, `releasedDate`, `location.{city, region, country, remote,
+  hybrid, fullLocation}`, `company.name`; the text is in `GET …/postings/{id}` →
+  `jobAd.sections.{jobDescription, qualifications, additionalInformation, companyDescription}.text`.
+  `jobs.smartrecruiters.com/{company}/{id}` (without the title slug) opens the posting, so it's a
+  stable identity.
+- **Workable** widget: `{name, description, jobs[]}`, each job `title`, `url`
+  (`apply.workable.com/j/{shortcode}`), `published_on` (a date), `telecommuting`,
+  `locations[].{country, countryCode, city, region, hidden}`, `description` (HTML). No ETag.
+- **Recruitee**: `offers[]` with `careers_url`, `location`, `country_code`, `remote`, `hybrid`,
+  `on_site`, `published_at` ("2026-09-22 13:58:01 UTC"), `description`, `requirements`, `salary`.
+  No ETag.
+- **Personio** XML: `<position>` with `id`, `subcompany`, `office`, `additionalOffices/office`,
+  `name`, `jobDescriptions/jobDescription/{name, value (CDATA HTML)}`, `createdAt`; ETag.
+  Job pages are `{company}.jobs.personio.de/job/{id}`.
+- **BambooHR** (Maropost, Toronto): non-customers redirect to www.bamboohr.com (confirmed);
+  `result[].{id, jobOpeningName, atsLocation.{country, province, city}, isRemote,
+  locationType}`; text in `/careers/{id}/detail` → `result.jobOpening.{description,
+  datePosted}`. Several Canadian companies (KOHO, FreshBooks, Thinkific, League, Trulioo) have
+  BambooHR pages with no jobs: they hire elsewhere.
+- **Teamtailor** RSS (`career.teamtailor.com`): items with `title`, `description` (HTML escaped
+  once), `pubDate` (RFC 822), `link`, `remoteStatus`, `tt:locations/tt:location/{tt:name,
+  tt:city, tt:country}`; ETag.

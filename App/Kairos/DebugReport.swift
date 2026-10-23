@@ -408,6 +408,17 @@
                 let before = try await db.userVersion()
                 try await Migrator.migrate(db, with: Migrator.bundled())
                 say("migrated \(before) → \(try await db.userVersion())")
+                // `--add=<careers URL>`: a board added to the copy only, to try a reader live.
+                for argument in CommandLine.arguments where argument.hasPrefix("--add=") {
+                    let address = String(argument.dropFirst(6))
+                    guard case .detected(let kind, let slug) = ATSDetector.detect(address) else {
+                        say("can't add \(address)")
+                        continue
+                    }
+                    let config = BoardConfig(slug: slug, region: ATSDetector.leverRegion(address)).json
+                    let added = try await SourceRepository(db).add(kind: kind, config: config)
+                    say("added \(kind.rawValue) \(slug) as \(added.id)")
+                }
                 for row in try await db.query(
                     "SELECT description_kind, COUNT(*) AS n FROM listing WHERE deleted = 0 GROUP BY description_kind")
                 {
@@ -476,6 +487,20 @@
                     """)
                 {
                     say("  edited: \(row.string("title") ?? "") · \(row.string("company") ?? "")")
+                }
+                for row in try await db.query(
+                    """
+                    SELECT source.kind, COUNT(listing.id) AS n, SUM(listing.description_kind = 'full') AS full
+                    FROM source LEFT JOIN listing ON listing.source_id = source.id AND listing.deleted = 0
+                    WHERE source.deleted = 0 GROUP BY source.kind ORDER BY source.kind
+                    """)
+                {
+                    say("  \(row.string("kind") ?? "?"): \(row.int("n") ?? 0) listings, \(row.int("full") ?? 0) full")
+                }
+                for row in try await db.query(
+                    "SELECT source_id, outcome, error FROM fetch_log WHERE outcome = 'failed' LIMIT 10")
+                {
+                    say("  failed \(row.string("source_id") ?? "?"): \(row.string("error") ?? "")")
                 }
                 for row in try await db.query(
                     "SELECT outcome, COUNT(*) AS n, SUM(ms) AS ms FROM fetch_log GROUP BY outcome")

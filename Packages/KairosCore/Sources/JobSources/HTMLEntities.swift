@@ -11,6 +11,11 @@ public enum HTMLEntities {
         "ocirc": "ô", "ucirc": "û", "icirc": "î", "euml": "ë", "iuml": "ï", "Eacute": "É",
     ]
 
+    /// Plain text made safe inside HTML: "&", "<" and ">" escaped.
+    public static func escape(_ text: String) -> String {
+        text.replacing("&", with: "&amp;").replacing("<", with: "&lt;").replacing(">", with: "&gt;")
+    }
+
     public static func decode(_ text: String) -> String {
         guard text.contains("&") else { return text }
         var output = ""

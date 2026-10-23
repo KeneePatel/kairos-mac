@@ -194,7 +194,12 @@ public struct FetchRun: Sendable {
         let started = Date()
         func took() -> Int { Int(Date().timeIntervalSince(started) * 1_000) }
         do {
-            let (jobSource, query) = try makeSource(source)
+            var (jobSource, query) = try makeSource(source)
+            // A board that needs a request per job skips the ones Kairos already has, and asks
+            // only for your roles.
+            let open = (try? await ListingRepository(db).openListings(of: source.id)) ?? []
+            query.knownURLs = Set(open.map(\.canonicalURL))
+            if query.roles == nil { query.roles = roles }
             let answer = try await jobSource.fetch(query, since: memo)
             return Fetched(answer: .success(answer), listsEverything: jobSource.listsEverything, milliseconds: took())
         } catch {

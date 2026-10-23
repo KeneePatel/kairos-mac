@@ -49,15 +49,23 @@ public struct SourceQuery: Sendable, Equatable {
     public var countries: [Country]
     /// Postings older than this many days are left out, when set.
     public var maxAgeDays: Int?
+    /// Your roles: a board that needs a request per job for its text (SmartRecruiters, BambooHR)
+    /// asks only for jobs at your roles. Nil asks for all.
+    public var roles: RoleMatcher?
+    /// Canonical URLs of the jobs this source listed before and Kairos still has open: such a
+    /// board doesn't ask for their text again, it says they're still there.
+    public var knownURLs: Set<String>
 
     public init(
         companyName: String? = nil, titles: [String] = [], countries: [Country] = [.canada, .unitedStates],
-        maxAgeDays: Int? = nil
+        maxAgeDays: Int? = nil, roles: RoleMatcher? = nil, knownURLs: Set<String> = []
     ) {
         self.companyName = companyName
         self.titles = titles
         self.countries = countries
         self.maxAgeDays = maxAgeDays
+        self.roles = roles
+        self.knownURLs = knownURLs
     }
 }
 
@@ -81,11 +89,17 @@ public struct Posting: Sendable, Equatable {
     /// The main location's country as the board reports it: a code ("CA") or a name ("Canada").
     public var countryHint: String?
     public var workplace: Workplace?
+    /// The board listed it, but its text wasn't asked for (a job already known, or not at your
+    /// roles, on a board that needs a request per job): it counts as seen, and nothing about its
+    /// text changes.
+    public var textOmitted: Bool
 
     public init(
         sourceID: SourceID, url: URL, company: String, title: String, location: String, postedAt: Date?,
-        descriptionHTML: String, otherLocations: [String] = [], countryHint: String? = nil, workplace: Workplace? = nil
+        descriptionHTML: String, otherLocations: [String] = [], countryHint: String? = nil, workplace: Workplace? = nil,
+        textOmitted: Bool = false
     ) {
+        self.textOmitted = textOmitted
         self.sourceID = sourceID
         self.url = url
         self.company = company
