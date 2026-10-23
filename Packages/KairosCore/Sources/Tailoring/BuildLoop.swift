@@ -50,6 +50,14 @@ public struct BuildRequest: Sendable, Equatable {
     }
 }
 
+/// Why a build has no letter though one was asked for.
+public enum CoverLetterProblem: Sendable, Equatable {
+    /// Its reply still failed the checks after the repair; what they found.
+    case checks(String)
+    /// No model in the chain answered; the last one's reason ("was overloaded (503)").
+    case unavailable(String)
+}
+
 /// Where a build is, for progress.
 public enum BuildStep: Sendable, Equatable {
     case selecting, writing, scoring
@@ -76,8 +84,8 @@ public struct BuildOutcome: Sendable, Equatable {
     public var dropped: Int
     /// When one was asked for; nil if it still failed its checks after the repair.
     public var coverLetter: CoverLetter?
-    /// What the checks still found wrong with a letter left out.
-    public var coverLetterProblem: String?
+    /// Why a letter that was asked for was left out.
+    public var coverLetterProblem: CoverLetterProblem?
 }
 
 /// One build (SPEC §5.3): select, write the four sections in parallel, polish, score, rewrite any
@@ -249,7 +257,7 @@ public struct BuildLoop: Sendable {
         score = MatchScore.score(resume, for: request.requirements, pages: pages, pageBudget: budget)
 
         var letter: CoverLetter?
-        var problem: String?
+        var problem: CoverLetterProblem?
         if request.coverLetter {
             progress(.coverLetter)
             let input = CoverLetterInput(
@@ -284,6 +292,9 @@ public struct BuildLoop: Sendable {
 
     /// The writer's bullets, or your own word for word: in lite mode, or when the writer's reply
     /// still fails its checks after the repair call.
+    /// The writer's bullets, or your own word for word: in lite mode, or when no model in the
+    /// task's chain gives a reply that passes its checks (overloaded, unreachable, or wrong after
+    /// the repair). Only your stopping it or the budget running out ends the build.
     private func section<T: LLMTask>(_ task: T, _ input: WriteSectionInput, lite: Bool) async throws -> (
         entries: [WrittenEntry], fellBack: Bool
     ) where T.Input == WriteSectionInput, T.Output == SectionOutput {
@@ -292,40 +303,38 @@ public struct BuildLoop: Sendable {
         do {
             let result = try await run(task, input)
             return (SectionWriter.written(result.output, input: input), false)
-        } catch .invalidOutput {
+        } catch {
+            if error.stopsEverything { throw error }
             return (Self.originals(input), true)
         }
     }
 
-    private func summary(_ input: WriteSummaryInput) async throws -> String? {
+    /// Nil when no model gave a usable reply: the build goes on without what it would have added.
+    private func optional<T: LLMTask>(_ task: T, _ input: T.Input) async throws -> T.Output? {
         do {
-            return try await run(WriteSummaryTask(), input).output.summary
-        } catch .invalidOutput {
+            return try await run(task, input).output
+        } catch {
+            if error.stopsEverything { throw error }
             return nil
         }
+    }
+
+    private func summary(_ input: WriteSummaryInput) async throws -> String? {
+        try await optional(WriteSummaryTask(), input)?.summary
     }
 
     private func skills(_ input: WriteSkillsInput) async throws -> [SkillGroup]? {
-        do {
-            let result = try await run(WriteSkillsTask(), input)
-            return WriteSkillsTask.groups(result.output, input: input)
-        } catch .invalidOutput {
-            return nil
-        }
+        try await optional(WriteSkillsTask(), input).map { WriteSkillsTask.groups($0, input: input) }
     }
 
-    /// Nil when the rewrite fails its checks: the section keeps its current bullets.
+    /// Nil when the rewrite can't be had: the section keeps its current bullets.
     private func rewrite(_ input: RewriteSectionInput) async throws -> SectionOutput? {
-        do {
-            return try await run(RewriteSectionTask(), input).output
-        } catch .invalidOutput {
-            return nil
-        }
+        try await optional(RewriteSectionTask(), input)
     }
 
-    /// No letter when the reply still fails its checks after the repair, and what they found.
+    /// No letter when the reply still fails its checks after the repair, or no model answers, and why.
     private func coverLetter(_ input: CoverLetterInput, header: TailoredResume.Header) async throws -> (
-        CoverLetter?, String?
+        CoverLetter?, CoverLetterProblem?
     ) {
         do {
             let result = try await run(CoverLetterTask(), input)
@@ -333,27 +342,21 @@ public struct BuildLoop: Sendable {
                 CoverLetterTask.letter(result.output, input: input, header: header, date: settings.selector.now), nil
             )
         } catch .invalidOutput(let problems) {
-            return (nil, problems)
+            return (nil, .checks(problems))
+        } catch {
+            if error.stopsEverything { throw error }
+            return (nil, .unavailable(error.reason))
         }
     }
 
-    /// Nil when the reply still fails its checks after the repair: the bullets stay as written.
+    /// Nil when it can't be had: the bullets stay as written.
     private func shorten(_ input: ShortenBulletsInput) async throws -> ShortenBulletsOutput? {
-        do {
-            return try await run(ShortenBulletsTask(), input).output
-        } catch .invalidOutput {
-            return nil
-        }
+        try await optional(ShortenBulletsTask(), input)
     }
 
-    /// Nil when the reply still fails its checks after the repair: the build has no gap bullets.
+    /// Nil when it can't be had: the build has no gap bullets.
     private func gapBullets(_ input: GapBulletsInput) async throws -> [UUID: [TailoredBullet]]? {
-        do {
-            let result = try await run(GapBulletsTask(), input)
-            return GapBulletsTask.written(result.output, input: input)
-        } catch .invalidOutput {
-            return nil
-        }
+        try await optional(GapBulletsTask(), input).map { GapBulletsTask.written($0, input: input) }
     }
 
     static func originals(_ input: WriteSectionInput) -> [WrittenEntry] {

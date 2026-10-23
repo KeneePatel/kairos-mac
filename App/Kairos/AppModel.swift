@@ -54,6 +54,14 @@ final class AppModel {
     /// Each job's newest build, by job id, however many builds there are: which jobs have a resume.
     private(set) var latestBuilds: [String: BuildRecord] = [:]
     private(set) var buildSteps: [UUID: BuildStep] = [:]
+    /// Each running or just-finished build's model calls, live (`BuildQueue.Event.call`).
+    private(set) var buildActivity: [UUID: BuildActivity] = [:]
+    /// A build failed, or a batch of them is over with something to say: the dialog shows it. A
+    /// fallback alone never interrupts; it shows on the build (decided 2026-10-23).
+    var buildNotice: BuildNotice?
+    /// The builds of the last "Build resumes" run, and how each ended (true: made).
+    @ObservationIgnored private var batch: Set<UUID> = []
+    @ObservationIgnored private var batchEnded: [UUID: Bool] = [:]
     var selectedBuild: UUID?
     private(set) var isFetching = false
     /// The master resume editor's state; there once the database is open.
@@ -585,6 +593,7 @@ final class AppModel {
     /// queued; otherwise why not.
     func startBuilds(_ jobs: [JobID], mode: BuildMode? = nil, coverLetter: Bool = false) async -> String? {
         let queued = await enqueue(jobs, mode: mode, coverLetter: coverLetter)
+        batch.formUnion(queued)
         return queued.count == jobs.count ? nil : buildProblem ?? "Some builds couldn't start."
     }
 
@@ -621,6 +630,56 @@ final class AppModel {
 
     /// The job's newest build, if it has one.
     func latestBuild(for job: Job) -> BuildRecord? { latestBuilds[job.id.rawValue] }
+
+    /// A build's model calls: live while it runs, else replayed from the call log (kept 30 days).
+    func activity(for build: UUID) async -> BuildActivity? {
+        if let live = buildActivity[build] { return live }
+        guard let db, let calls = try? await CallLog(db).calls(build: build.lowercased), !calls.isEmpty else {
+            return nil
+        }
+        return BuildActivity(calls: calls)
+    }
+
+    /// The same job, mode and letter again.
+    func rebuild(_ id: UUID) async -> String? {
+        guard let db, let record = try? await BuildRepository(db).build(id),
+            let job = jobs.first(where: { $0.id.rawValue == record.jobID })
+        else { return "That build is gone." }
+        return await startBuild(for: job, mode: record.mode, coverLetter: record.coverLetter != nil)
+    }
+
+    /// One of the last batch's builds is over; once all are, a summary when there's something to say.
+    private func ended(_ id: UUID, made: Bool) {
+        guard batch.contains(id) else { return }
+        batchEnded[id] = made
+        guard batchEnded.count == batch.count else { return }
+        let failed = batchEnded.filter { !$0.value }.map(\.key)
+        let helped = batch.filter { buildActivity[$0]?.hasFallbacks == true || buildActivity[$0]?.hasGivenUp == true }
+        defer {
+            batch = []
+            batchEnded = [:]
+        }
+        guard !failed.isEmpty || !helped.isEmpty else { return }
+        var lines: [String] = []
+        for id in failed {
+            let title = build(id).flatMap { record in jobs.first { $0.id.rawValue == record.jobID }?.title } ?? "A job"
+            lines.append("\(title): \(build(id)?.error ?? "didn't finish").")
+        }
+        if !helped.isEmpty {
+            lines.append(
+                "\(helped.count) used a fallback model or left a step out; each says what on its resume page.")
+        }
+        buildNotice = BuildNotice(
+            title: "\(batch.count - failed.count) of \(batch.count) resumes made",
+            message: lines.joined(separator: "\n"),
+            retry: nil)
+    }
+
+    /// A failure's message with what the build tried, from its calls.
+    static func explain(_ message: String, _ activity: BuildActivity?) -> String {
+        let notes = activity?.notes.map { "• \($0.text)" } ?? []
+        return notes.isEmpty ? message : message + "\n\nWhat happened:\n" + notes.joined(separator: "\n")
+    }
 
     /// Every build of one job, newest first: its resume page's history.
     func builds(for job: JobID) async -> [BuildRecord] {
@@ -727,12 +786,21 @@ final class AppModel {
         switch event {
         case .step(let id, let step):
             buildSteps[id] = step
+        case .call(let id, let event):
+            buildActivity[id, default: BuildActivity()].apply(event, at: Date())
         case .finished(let id, _, _):
             buildSteps[id] = nil
             await reload()
-        case .failed:
+            ended(id, made: true)
+        case .failed(let id, let message):
             // The last step stays, so the screen can show where it stopped.
             await reload()
+            if batch.contains(id) {
+                ended(id, made: false)
+            } else {
+                buildNotice = BuildNotice(
+                    title: "The resume couldn't be made", message: Self.explain(message, buildActivity[id]), retry: id)
+            }
         case .queued:
             await reload()
         }
@@ -879,4 +947,13 @@ final class AppModel {
         }
         return parts.joined(separator: " · ")
     }
+}
+
+/// What a build needs you to know now: one that failed, or how a batch of builds went.
+struct BuildNotice: Identifiable, Equatable {
+    let id = UUID()
+    let title: String
+    let message: String
+    /// A single failed build, to try again.
+    let retry: UUID?
 }

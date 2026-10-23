@@ -140,6 +140,9 @@ public enum LLMError: Error, Equatable, Sendable {
     case rateLimited(retryAfterSeconds: Int?)
     /// A 429 whose quota limit is 0: the model isn't on this key's plan, so waiting won't help (T20).
     case modelNotOnPlan(String)
+    /// The provider won't serve this model to this account now, in its own words: Ollama's 402
+    /// ("add usage credits") and a 403 about the model ("not yet available to you").
+    case modelUnavailable(model: String, reason: String)
     case server(status: Int)
     case network(String)
     case timedOut
@@ -160,6 +163,13 @@ public enum LLMError: Error, Equatable, Sendable {
 /// How hard a thinking model may think. Local models default to `.none` (decided 2026-10-19, T20).
 public enum ReasoningEffort: String, Sendable, CaseIterable {
     case none, low, medium, high
+
+    /// `effort` as `model` can take it. gpt-oss can't stop reasoning: asked for none it reasons at
+    /// length and can spend its whole reply on it (2026-10-23, on Ollama Cloud), so it gets low.
+    public static func fitting(_ effort: ReasoningEffort?, model: String) -> ReasoningEffort? {
+        if effort == ReasoningEffort.none, model.lowercased().hasPrefix("gpt-oss") { return .low }
+        return effort
+    }
 }
 
 extension LLMError {
@@ -171,6 +181,7 @@ extension LLMError {
         case .badRequest: "bad_request"
         case .rateLimited: "rate_limited"
         case .modelNotOnPlan: "model_not_on_plan"
+        case .modelUnavailable: "model_unavailable"
         case .server(let status): "server_\(status)"
         case .network: "network"
         case .timedOut: "timed_out"
@@ -183,6 +194,50 @@ extension LLMError {
         case .noScriptedReply: "no_scripted_reply"
         }
     }
+}
+
+extension LLMError {
+    /// What went wrong, in a few plain words for a build's notes: "was overloaded or down (503)".
+    /// It never carries prompt or reply text, only what the provider said about itself.
+    public var reason: String {
+        switch self {
+        case .keyRejected: "rejected the key"
+        case .modelNotFound: "doesn't have this model"
+        case .badRequest: "refused the request"
+        case .rateLimited: "hit its rate limit"
+        case .modelNotOnPlan: "isn't on this key's plan"
+        case .modelUnavailable(_, let reason): reason
+        case .server(let status) where status == 503 || status == 529: "was overloaded (\(status))"
+        case .server(let status): "had a server error (\(status))"
+        case .network: "couldn't be reached"
+        case .timedOut: "didn't answer in time"
+        case .cancelled: "was stopped"
+        case .invalidJSON: "didn't reply with JSON"
+        case .invalidOutput: "replied in a form that failed its checks"
+        case .budgetReached: "reached today's AI budget"
+        case .noProvider: "has no model set"
+        case .noKey: "has no key saved"
+        case .noScriptedReply: "had no scripted reply"
+        }
+    }
+
+    /// The reason for a logged error code (the log keeps codes, not text): the provider's own
+    /// words for an unavailable model aren't kept, so it reads as not available to this account.
+    public static func reason(code: String) -> String {
+        if code.hasPrefix("server_"), let status = Int(code.dropFirst(7)) {
+            return LLMError.server(status: status).reason
+        }
+        let known: [LLMError] = [
+            .keyRejected(provider: ""), .modelNotFound(""), .badRequest(""), .rateLimited(retryAfterSeconds: nil),
+            .modelNotOnPlan(""), .network(""), .timedOut, .cancelled, .invalidJSON(""), .invalidOutput(""),
+            .budgetReached, .noKey(provider: ""),
+        ]
+        if code == "model_unavailable" { return "isn't available to this account" }
+        return known.first { $0.code == code }?.reason ?? "failed (\(code))"
+    }
+
+    /// Ends the build however many models are left to try: you stopped it, or the budget ran out.
+    public var stopsEverything: Bool { self == .cancelled || self == .budgetReached }
 }
 
 /// One model call, as every adapter sees it.

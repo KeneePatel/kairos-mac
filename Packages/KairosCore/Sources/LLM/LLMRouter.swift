@@ -12,17 +12,41 @@ public struct ModelRef: Hashable, Sendable, Codable {
     }
 }
 
-/// Which job or build a call was for, so the log can link them.
+/// What happens to a task's model calls as it happens, so a build can show it live and keep its
+/// fallbacks and failures as notes. Reasons are a few plain words (`LLMError.reason`); `detail` is
+/// what a check found in a reply, kept in memory only, never logged.
+public enum CallEvent: Sendable, Equatable {
+    /// A model is asked; `fallback` when an earlier one in the task's chain failed.
+    case asking(task: TaskID, model: ModelRef, fallback: Bool)
+    /// It failed and is asked again shortly.
+    case retrying(task: TaskID, model: ModelRef, reason: String)
+    /// It gave up: the next model in the chain, if there is one, comes next.
+    case failed(task: TaskID, model: ModelRef, reason: String, detail: String?)
+    /// It answered, in this many seconds, or from the cache.
+    case answered(task: TaskID, model: ModelRef, seconds: Double, cached: Bool)
+}
+
+/// Which job or build a call was for, so the log can link them, and who hears its events.
 public struct CallContext: Sendable, Equatable {
     public var jobID: String?
     public var buildID: String?
     /// Ask the model again rather than reuse a cached answer (Re-evaluate). The new answer is cached.
     public var fresh: Bool
+    public var events: (@Sendable (CallEvent) -> Void)?
 
-    public init(jobID: String? = nil, buildID: String? = nil, fresh: Bool = false) {
+    public init(
+        jobID: String? = nil, buildID: String? = nil, fresh: Bool = false,
+        events: (@Sendable (CallEvent) -> Void)? = nil
+    ) {
         self.jobID = jobID
         self.buildID = buildID
         self.fresh = fresh
+        self.events = events
+    }
+
+    /// The same calls; who listens doesn't make two contexts differ.
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.jobID == rhs.jobID && lhs.buildID == rhs.buildID && lhs.fresh == rhs.fresh
     }
 }
 
@@ -103,6 +127,7 @@ public actor LLMRouter {
         for (position, ref) in chain.enumerated() {
             let key = ResultCache.Key(task: T.id, messages: messages, promptVersion: T.promptVersion, model: ref.model)
             if !context.fresh, let cached = await cachedOutput(task, input: input, key: key, ref: ref) {
+                context.events?(.answered(task: T.id, model: ref, seconds: 0, cached: true))
                 return cached
             }
             try await checkBudget()
@@ -111,15 +136,23 @@ public actor LLMRouter {
                 continue
             }
             let started = now()
+            context.events?(.asking(task: T.id, model: ref, fallback: position > 0))
             do {
-                let options = RunOptions(
+                // With another model to try, a slow or overloaded one isn't waited out.
+                var options = RunOptions(
                     model: ref.model, budget: defaults.budget, temperature: defaults.temperature,
                     timeoutSeconds: defaults.timeoutSeconds)
-                let result = try await client.run(task, input: input, options: options)
+                options.failFast = position < chain.count - 1
+                let events = context.events
+                let result = try await client.run(task, input: input, options: options) { error in
+                    events?(.retrying(task: T.id, model: ref, reason: error.reason))
+                }
                 let outcome = position == 0 ? result.outcome : .fellBack
                 await record(
                     T.self, ref: ref, result: result, outcome: outcome, error: nil, started: started, context: context)
                 if let cache { try? await cache.store(result.json, for: key, at: now()) }
+                context.events?(
+                    .answered(task: T.id, model: ref, seconds: now().timeIntervalSince(started), cached: false))
                 return LLMResult(
                     output: result.output, provider: result.provider, model: result.model,
                     inputTokens: result.inputTokens,
@@ -131,7 +164,13 @@ public actor LLMRouter {
                 await record(
                     T.self, ref: ref, result: nil, outcome: outcome, error: error, started: started, context: context)
                 // Stopping is the user's call; everything else may work on the next provider.
-                if error == .cancelled || error == .budgetReached { throw error }
+                if error.stopsEverything { throw error }
+                let detail: String? =
+                    switch error {
+                    case .invalidOutput(let problem), .invalidJSON(let problem), .badRequest(let problem): problem
+                    default: nil
+                    }
+                context.events?(.failed(task: T.id, model: ref, reason: error.reason, detail: detail))
                 lastError = error
             }
         }

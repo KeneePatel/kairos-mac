@@ -411,3 +411,36 @@ struct BuildRequirementsTests {
         #expect(!plain.asksForLanguages && plain.certificationAsks.isEmpty)
     }
 }
+
+@Suite("Build queue: what the AI did")
+struct BuildQueueActivityTests {
+    /// Every model call reaches the queue's events as it happens, and a letter no model could
+    /// write says why it was left out.
+    @Test func callsAreHeardAndAnUnwritableLetterSaysWhy() async throws {
+        let (db, job) = try await database()
+        try await analyse(job, in: db)
+        var scripts = replies
+        scripts[.coverLetter] = [.failure(.modelUnavailable(model: "flash", reason: "said: add usage credits"))]
+        let queue = BuildQueue(db: db, router: router(db, FakeProvider(scripts)), folder: folder(), render: render)
+        let id = try await queue.enqueue(job: job.id, coverLetter: true)
+        var heard: [CallEvent] = []
+        for await event in queue.events {
+            if case .call(id, let call) = event { heard.append(call) }
+            if case .finished(id, _, _) = event { break }
+            if case .failed(id, let message) = event {
+                Issue.record("failed: \(message)")
+                break
+            }
+        }
+        let fake = ModelRef(provider: "fake", model: "flash")
+        #expect(heard.contains(.asking(task: .writeExperience, model: fake, fallback: false)))
+        #expect(
+            heard.contains(.failed(task: .coverLetter, model: fake, reason: "said: add usage credits", detail: nil)))
+        let record = try #require(try await BuildRepository(db).build(id))
+        #expect(record.status == .done && record.coverLetter?.status == .failed)
+        #expect(
+            record.coverLetter?.error
+                == "The cover letter was left out because no model could write it: the last one said: add usage credits. "
+                + "Build again to retry.")
+    }
+}

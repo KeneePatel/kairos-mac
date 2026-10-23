@@ -188,6 +188,12 @@ public struct OpenAICompatibleProvider: LLMProvider {
     ) -> LLMError {
         switch status {
         case 400: return .badRequest(message.isEmpty ? "the provider refused the request" : String(message.prefix(300)))
+        case 402:
+            return .modelUnavailable(
+                model: model, reason: message.isEmpty ? "wants payment for this model" : providerWords(message))
+        // Ollama answers 403 for a model still rolling out; a 403 about anything else is the key.
+        case 403 where message.lowercased().contains("model"):
+            return .modelUnavailable(model: model, reason: providerWords(message))
         case 401, 403: return .keyRejected(provider: provider)
         case 404: return .modelNotFound(model)
         case 429:
@@ -196,6 +202,17 @@ public struct OpenAICompatibleProvider: LLMProvider {
             return .rateLimited(retryAfterSeconds: retryAfter(response, data: data))
         default: return .server(status: status)
         }
+    }
+
+    /// A provider's message as a reason: its first sentence, without the support reference Ollama
+    /// appends ("(ref: 7b3a…)"), at most 200 characters. "This model is not included in your free
+    /// usage" reads as "said: this model is not included in your free usage".
+    static func providerWords(_ message: String) -> String {
+        var text = message.replacing(/\s*\(ref: [^)]*\)/, with: "")
+        if let end = text.firstRange(of: /[.,:;]\s/)?.lowerBound { text = String(text[..<end]) }
+        text = text.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ".")))
+        guard let first = text.first else { return "refused this model" }
+        return "said: " + String(first).lowercased() + text.dropFirst().prefix(200)
     }
 
     /// `Retry-After` in seconds, else Gemini's `RetryInfo.retryDelay` ("51s").

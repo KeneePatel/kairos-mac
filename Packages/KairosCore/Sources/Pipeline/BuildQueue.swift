@@ -43,6 +43,8 @@ public actor BuildQueue {
     public enum Event: Sendable, Equatable {
         case queued(UUID)
         case step(UUID, BuildStep)
+        /// A model call starting, retrying, failing over or answering, as it happens.
+        case call(UUID, CallEvent)
         case finished(UUID, score: Double, pdf: URL)
         case failed(UUID, String)
     }
@@ -191,7 +193,13 @@ public actor BuildQueue {
             gapBulletsPerRole: stretch.limit,
             coverLetter: record.coverLetter != nil, summary: self.template.hasSummary)
         let loop = BuildLoop(
-            router: router, master: master, context: CallContext(jobID: job.id.rawValue, buildID: id.lowercased))
+            router: router, master: master,
+            context: CallContext(
+                jobID: job.id.rawValue, buildID: id.lowercased,
+                events: { [continuation] event in
+                    // A build stopped at its deadline reports nothing more.
+                    if !Task.isCancelled { continuation.yield(.call(id, event)) }
+                }))
         let render = self.render
         let continuation = self.continuation
         let template = self.template
@@ -229,14 +237,23 @@ public actor BuildQueue {
     }
 
     /// The letter's PDF, or why there isn't one. A letter that can't be made never fails the build.
-    private func coverLetter(_ letter: CoverLetter?, problem: String?, for id: UUID) async -> CoverLetterRecord {
+    private func coverLetter(_ letter: CoverLetter?, problem: CoverLetterProblem?, for id: UUID) async
+        -> CoverLetterRecord
+    {
         guard let letter else {
-            let found = problem.map { " What the checks found: \($0.prefix(300))" } ?? ""
-            return CoverLetterRecord(
-                status: .failed,
-                error: "The cover letter didn't pass its checks after a second try, so it was left out. "
-                    + "Build again to retry.\(found)"
-            )
+            let error: String =
+                switch problem {
+                case .unavailable(let reason)?:
+                    "The cover letter was left out because no model could write it: the last one \(reason). "
+                        + "Build again to retry."
+                case .checks(let found)?:
+                    "The cover letter didn't pass its checks after a second try, so it was left out. "
+                        + "Build again to retry. What the checks found: \(found.prefix(300))"
+                case nil:
+                    "The cover letter didn't pass its checks after a second try, so it was left out. "
+                        + "Build again to retry."
+                }
+            return CoverLetterRecord(status: .failed, error: error)
         }
         do {
             _ = try await save(
@@ -265,7 +282,9 @@ public actor BuildQueue {
             return "\(Budget.reachedMessage). Build again tomorrow, or raise the budget in Settings."
         case LLMError.noProvider, LLMError.noKey: return BuildError.noAI.message
         case LLMError.cancelled: return "Stopped."
-        case let error as LLMError: return "The AI provider couldn't finish this build (\(error.code)). Try again."
+        case let error as LLMError:
+            return "The build stopped because the AI model \(error.reason), and no other model was set to take over. "
+                + "Build again, or add a fallback model in Settings, AI providers."
         case RenderError.timedOut: return "Making the PDF took too long, so it was stopped. Build again to retry."
         case RenderError.compile(let reason): return "The PDF couldn't be made: \(reason)"
         case RenderError.launch(let reason), RenderError.workspace(let reason):

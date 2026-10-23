@@ -27,6 +27,17 @@
                 }
                 exit(0)
             }
+            if CommandLine.arguments.contains("--ai-report") {
+                let done = DispatchSemaphore(value: 0)
+                Task { @MainActor in
+                    await aiReport()
+                    done.signal()
+                }
+                while done.wait(timeout: .now()) == .timedOut {
+                    RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+                }
+                exit(0)
+            }
             if CommandLine.arguments.contains("--doctor") {
                 let done = DispatchSemaphore(value: 0)
                 Task.detached {
@@ -156,6 +167,21 @@
                     out +=
                         "    letter: \(build.coverLetter.map { "\($0.status.rawValue)\($0.error.map { " (\($0))" } ?? "")" } ?? "not asked")"
                         + " · artifacts: \(artifacts.joined(separator: ", ")) · error: \(build.error ?? "none")\n"
+                    // Each model call the build made, in order: when, how long, and how it ended.
+                    for call in try await db.query(
+                        """
+                        SELECT at, task_id, model, outcome, error_code, attempt, latency_ms FROM llm_call
+                        WHERE build_id = ? ORDER BY at
+                        """, [.text(build.id.lowercased)])
+                    {
+                        let at =
+                            call.int64("at").map { Int(Double($0) / 1_000 - build.createdAt.timeIntervalSince1970) }
+                            ?? 0
+                        out +=
+                            "    call +\(at) s · \(call.string("task_id") ?? "?") · \(call.string("model") ?? "?")"
+                            + " · \(call.string("outcome") ?? "?")\(call.string("error_code").map { " (\($0))" } ?? "")"
+                            + " · \(call.int("attempt") ?? 0) tries · \((call.int("latency_ms") ?? 0) / 1_000) s\n"
+                    }
                 }
             }
             if CommandLine.arguments.contains("--details") {
@@ -170,8 +196,8 @@
         /// of yours changes), printing the routes it uses and each step and render with timings.
         /// `--report` adds its report card and its calls and tokens per task; `--dump` the resume and
         /// letter as JSON and both PDFs as base64, for reviewing a build outside the app (the PDFs
-        /// carry your contact line). `--writer-model` puts the writing tasks on that Gemini model in
-        /// the copy, to compare models.
+        /// carry your contact line). `--writer-model=<model>` or `<provider>/<model>` puts the writing
+        /// tasks on that model in the copy, to compare models.
         @MainActor private static func runBuild(_ filter: String) async {
             let started = Date()
             func say(_ text: String) {
@@ -218,6 +244,25 @@
                     say("typst isn't in the app bundle")
                     return
                 }
+                let writing = [
+                    TaskID.writeExperience, .writeProjects, .writeSkills, .rewriteSection, .shortenBullets,
+                    .coverLetter,
+                ]
+                // `<model>` is a Gemini model; `<provider>/<model>` names one of your providers, such as
+                // `ollama-local/gpt-oss:120b-cloud` for a cloud model through a signed-in Ollama.
+                if let choice = CommandLine.arguments.first(where: { $0.hasPrefix("--writer-model=") })?.dropFirst(15) {
+                    let parts = choice.split(separator: "/", maxSplits: 1).map(String.init)
+                    let ref =
+                        parts.count == 2 && ai.settings.provider(parts[0]) != nil
+                        ? ModelRef(provider: parts[0], model: parts[1])
+                        : ModelRef(provider: "gemini", model: String(choice))
+                    for task in writing { await ai.setRoute(task, primary: ref, fallback: nil) }
+                }
+                // Which model each build task goes to (the router below is built from these). Never a key.
+                for task in writing {
+                    let route = (ai.settings.routes[task.rawValue] ?? []).map { "\($0.provider)/\($0.model)" }
+                    say("route \(task.rawValue): \(route.joined(separator: " > "))")
+                }
                 let renderer = ResumeRenderer(runner: TypstRunner(executable: typst))
                 let queue = BuildQueue(
                     db: db, router: ai.router(), folder: copy.appending(path: "Builds"), template: .standard
@@ -228,21 +273,6 @@
                     print("run-build: render \(kind) start")
                     defer { print("run-build: render \(kind) end after \(Date().timeIntervalSince(renderStarted)) s") }
                     return try await renderer.render(printable)
-                }
-                let writing = [
-                    TaskID.writeExperience, .writeProjects, .writeSkills, .rewriteSection, .shortenBullets,
-                    .coverLetter,
-                ]
-                if let model = CommandLine.arguments.first(where: { $0.hasPrefix("--writer-model=") })?.dropFirst(15) {
-                    for task in writing {
-                        await ai.setRoute(
-                            task, primary: ModelRef(provider: "gemini", model: String(model)), fallback: nil)
-                    }
-                }
-                // Which model each build task goes to, and what's been spent today. Never a key.
-                for task in writing {
-                    let route = (ai.settings.routes[task.rawValue] ?? []).map { "\($0.provider)/\($0.model)" }
-                    say("route \(task.rawValue): \(route.joined(separator: " > "))")
                 }
                 let today = try await CallLog(db).usage(since: Calendar.current.startOfDay(for: Date()))
                 say("calls today: \(today.calls) of \(ai.settings.budget.dailyCalls)")
@@ -257,6 +287,21 @@
                 for await event in queue.events {
                     switch event {
                     case .queued: continue
+                    case .call(_, let event):
+                        switch event {
+                        case .asking(let task, let model, let fallback):
+                            say("ask \(task.rawValue) · \(model.model)\(fallback ? " (fallback)" : "")")
+                        case .retrying(let task, let model, let reason):
+                            say("retry \(task.rawValue) · \(model.model) \(reason)")
+                        case .failed(let task, let model, let reason, let detail):
+                            say(
+                                "fail \(task.rawValue) · \(model.model) \(reason)\(detail.map { ": \($0.prefix(400))" } ?? "")"
+                            )
+                        case .answered(let task, let model, let seconds, let cached):
+                            say(
+                                "done \(task.rawValue) · \(model.model) \(cached ? "cached" : String(format: "%.1f s", seconds))"
+                            )
+                        }
                     case .step(_, let step):
                         if case .fitting = step { dropped += 1 }
                         say("step \(step)")
@@ -288,6 +333,32 @@
             }
         }
 
+        /// `--ai-report`: your AI providers (how many keys each has, found or not), every task's route
+        /// and the daily budget, from this Mac's database. Never a key.
+        @MainActor private static func aiReport() async {
+            do {
+                let db = try Database(path: try AccountStore.applicationSupport().databaseURL(for: .local).path)
+                let secrets = AppSecrets.store()
+                let ai = AISettingsModel(db: db, secrets: secrets)
+                await ai.load()
+                for provider in ai.settings.providers {
+                    let found = provider.keyNames.filter { ((try? secrets.read(SecretKey($0))) ?? nil) != nil }.count
+                    print(
+                        "ai-report: provider \(provider.id) (\(provider.preset.name)) · keys \(found) of "
+                            + "\(provider.keyNames.count) found · \(provider.requestsPerMinute.map { "\($0)/min" } ?? "preset rate")"
+                    )
+                }
+                for task in TaskID.catalog {
+                    let chain = (ai.settings.routes[task.rawValue] ?? []).map { "\($0.provider)/\($0.model)" }
+                    print(
+                        "ai-report: route \(task.rawValue): \(chain.isEmpty ? "none" : chain.joined(separator: " > "))")
+                }
+                print("ai-report: budget \(ai.settings.budget.dailyCalls) calls a day")
+            } catch {
+                print("ai-report: couldn't read settings (\(error))")
+            }
+        }
+
         /// The report card of a finished build: its resume measured again as the app renders it.
         @MainActor private static func report(_ id: UUID, db: Database, renderer: ResumeRenderer, dropped: Int)
             async throws
@@ -304,6 +375,15 @@
             let usage = try await CallLog(db).usage(build: id.lowercased).sorted { $0.key.rawValue < $1.key.rawValue }
             for (task, cost) in usage {
                 print("run-build: cost \(task.rawValue) \(cost.calls) calls, \(cost.tokens) tokens")
+            }
+            for call in try await db.query(
+                "SELECT task_id, model, outcome, error_code, attempt, latency_ms FROM llm_call WHERE build_id = ? ORDER BY at",
+                [.text(id.lowercased)])
+            {
+                print(
+                    "run-build: call \(call.string("task_id") ?? "?") · \(call.string("model") ?? "?") · "
+                        + "\(call.string("outcome") ?? "?")\(call.string("error_code").map { " (\($0))" } ?? "") · "
+                        + "\(call.int("attempt") ?? 0) tries · \(call.int("latency_ms") ?? 0) ms")
             }
         }
 

@@ -347,6 +347,23 @@ struct BuildLoopTests {
         #expect(!liteFake.requests.contains { $0.task == .shortenBullets })
     }
 
+    /// No model answering is no reason to fail the build: a writer uses your words, an optional
+    /// step is skipped, and a letter that can't be had says why.
+    @Test func aBuildGoesOnWhenNoModelAnswers() async throws {
+        // Not a temporary error, so nothing waits on a retry.
+        let down = [FakeProvider.Reply.failure(.modelUnavailable(model: "flash", reason: "said: no credits"))]
+        let (loop, _) = try loop([
+            .writeExperience: down, .writeProjects: [.reply(projects)], .writeSummary: down,
+            .writeSkills: [.reply(skills)], .rewriteSection: down, .coverLetter: down,
+        ])
+        var asking = request
+        asking.coverLetter = true
+        let outcome = try await loop.run(asking)
+        #expect(outcome.fellBack.contains(.experience) && outcome.fellBack.contains(.summary))
+        #expect(outcome.resume.experience[0].bullets.first?.text == Sample.pipeline.text)  // your words
+        #expect(outcome.coverLetter == nil && outcome.coverLetterProblem == .unavailable("said: no credits"))
+    }
+
     @Test func runningOutOfBudgetStopsTheBuild() async throws {
         let (loop, _) = try loop([
             .writeExperience: [.reply(goodExperience)], .writeProjects: [.reply(projects)],

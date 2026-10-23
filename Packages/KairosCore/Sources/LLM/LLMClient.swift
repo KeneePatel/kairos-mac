@@ -19,9 +19,7 @@ public struct ClientPolicy: Sendable, Equatable {
     }
 
     public init(preset: ProviderPreset) {
-        self.init(
-            requestsPerMinute: preset.requestsPerMinute,
-            defaultReasoningEffort: preset.isLocal ? ReasoningEffort.none : nil)
+        self.init(requestsPerMinute: preset.requestsPerMinute, defaultReasoningEffort: preset.reasoningDefault)
     }
 }
 
@@ -32,6 +30,9 @@ public struct RunOptions: Sendable {
     public var temperature: Double
     public var reasoningEffort: ReasoningEffort?
     public var timeoutSeconds: Int?
+    /// Another model waits in the task's chain: a timeout isn't retried, a temporary error is
+    /// retried once, and a rate limit on every key isn't waited out.
+    public var failFast = false
 
     public init(
         model: String, budget: TokenBudget, temperature: Double, reasoningEffort: ReasoningEffort? = nil,
@@ -85,7 +86,10 @@ public actor LLMClient {
             requestsPerMinute: policy.requestsPerMinute, maxConcurrent: policy.maxConcurrent, clock: clock)
     }
 
-    public func complete(_ request: ChatRequest) async throws(LLMError) -> Completion {
+    /// `retrying` hears each failure that will be tried again.
+    public func complete(
+        _ request: ChatRequest, failFast: Bool = false, retrying: @Sendable (LLMError) -> Void = { _ in }
+    ) async throws(LLMError) -> Completion {
         guard !keys.isEmpty else { throw .noProvider(request.task) }
         let request = withDefaults(request)
         var attempts = 0
@@ -101,9 +105,10 @@ public actor LLMClient {
                     .compactMap { rests.until(key: keyIDs[$0], model: request.model) }.min()
                 let wait = (back ?? clock.now) - clock.now
                 waits += 1
-                guard wait <= policy.maxWait, waits <= policy.attempts else {
+                guard !failFast, wait <= policy.maxWait, waits <= policy.attempts else {
                     throw .rateLimited(retryAfterSeconds: Self.wholeSeconds(wait))
                 }
+                retrying(.rateLimited(retryAfterSeconds: Self.wholeSeconds(wait)))
                 try await clock.sleep(for: max(wait, .zero))
                 continue
             }
@@ -128,7 +133,13 @@ public actor LLMClient {
                 offPlan.insert(index)
             case .failure(let error) where Self.isTemporary(error):
                 failures += 1
-                guard failures < policy.attempts else { throw error }
+                // A timeout already cost the whole wait: tried once more at most, and not at all
+                // when another model waits (2026-10-23: two 120 s waits sank a build).
+                let allowed =
+                    error == .timedOut
+                    ? min(failFast ? 1 : 2, policy.attempts) : (failFast ? min(2, policy.attempts) : policy.attempts)
+                guard failures < allowed else { throw error }
+                retrying(error)
                 try await clock.sleep(for: backoff(after: failures))
             case .failure(let error):
                 throw error
@@ -138,18 +149,19 @@ public actor LLMClient {
 
     /// Runs a typed task: one call, then the output checks, then at most one repair call that
     /// quotes what was wrong (SPEC §5.5, "Structured output").
-    public func run<T: LLMTask>(_ task: T, input: T.Input, options: RunOptions) async throws(LLMError) -> LLMResult<
-        T.Output
-    > {
+    public func run<T: LLMTask>(
+        _ task: T, input: T.Input, options: RunOptions, retrying: @Sendable (LLMError) -> Void = { _ in }
+    ) async throws(LLMError) -> LLMResult<T.Output> {
         let started = clock.now
         var messages = task.messages(for: input, budget: options.budget)
-        let first = try await complete(chat(T.self, messages, options))
+        let first = try await complete(chat(T.self, messages, options), failFast: options.failFast, retrying: retrying)
         var calls = [first]
         var outcome = LLMOutcome.ok
         var result = OutputPipeline.output(from: first.response, task: task, input: input)
         if case .failure(let problem) = result {
             messages += [.assistant(first.response.text), .user(OutputPipeline.repairNote(problem))]
-            let repair = try await complete(chat(T.self, messages, options))
+            let repair = try await complete(
+                chat(T.self, messages, options), failFast: options.failFast, retrying: retrying)
             calls.append(repair)
             outcome = .repaired
             result = OutputPipeline.output(from: repair.response, task: task, input: input)
@@ -178,7 +190,9 @@ public actor LLMClient {
     }
 
     private func withDefaults(_ request: ChatRequest) -> ChatRequest {
-        guard request.reasoningEffort == nil, let effort = policy.defaultReasoningEffort else { return request }
+        guard request.reasoningEffort == nil,
+            let effort = ReasoningEffort.fitting(policy.defaultReasoningEffort, model: request.model)
+        else { return request }
         return ChatRequest(
             task: request.task, model: request.model, messages: request.messages, schema: request.schema,
             temperature: request.temperature, maxOutputTokens: request.maxOutputTokens, reasoningEffort: effort,

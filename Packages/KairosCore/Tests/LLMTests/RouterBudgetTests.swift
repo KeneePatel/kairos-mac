@@ -289,3 +289,73 @@ struct ProviderSetupTests {
         #expect(error.code == code)
     }
 }
+
+/// Who hears a call: every event in order, from any thread.
+private final class Heard: Sendable {
+    private let events = Mutex<[CallEvent]>([])
+    var all: [CallEvent] { events.withLock { $0 } }
+    func add(_ event: CallEvent) { events.withLock { $0.append(event) } }
+}
+
+@Suite("LLM router: failover events")
+struct RouterFailoverTests {
+    /// Gemini overloaded twice (one quick retry, since another model waits), then the fallback
+    /// answers: the build hears each step, and a slow model isn't waited out.
+    @Test func anOverloadedModelHandsOverToTheNextAndSaysSo() async throws {
+        let db = try await database()
+        let busy = FakeProvider([.analyzeJob: [.failure(.server(status: 503)), .failure(.server(status: 503))]])
+        let spare = FakeProvider([.analyzeJob: [.reply(valid)]])
+        let heard = Heard()
+        let result = try await router(db, providers: ["gemini": busy, "ollama": spare], chain: [gemini, ollama])
+            .run(RequirementsTask(), input: posting, context: CallContext(buildID: "b1", events: heard.add))
+        #expect(result.outcome == .fellBack && busy.requests.count == 2)
+        guard case .answered(.analyzeJob, ollama, _, false)? = heard.all.last else {
+            Issue.record("\(heard.all)")
+            return
+        }
+        #expect(
+            Array(heard.all.dropLast()) == [
+                .asking(task: .analyzeJob, model: gemini, fallback: false),
+                .retrying(task: .analyzeJob, model: gemini, reason: "was overloaded (503)"),
+                .failed(task: .analyzeJob, model: gemini, reason: "was overloaded (503)", detail: nil),
+                .asking(task: .analyzeJob, model: ollama, fallback: true),
+            ])
+    }
+
+    /// The last model in a chain keeps its full retries, and a cached answer is heard as one.
+    @Test func theLastModelRetriesInFullAndACachedAnswerIsHeard() async throws {
+        let db = try await database()
+        let flaky = FakeProvider([
+            .analyzeJob: [.failure(.server(status: 503)), .failure(.server(status: 503)), .reply(valid)]
+        ])
+        let route = router(db, providers: ["gemini": flaky], chain: [gemini])
+        let first = Heard()
+        _ = try await route.run(RequirementsTask(), input: posting, context: CallContext(events: first.add))
+        #expect(flaky.requests.count == 3 && first.all.count { if case .retrying = $0 { true } else { false } } == 2)
+        let again = Heard()
+        _ = try await route.run(RequirementsTask(), input: posting, context: CallContext(events: again.add))
+        #expect(again.all == [.answered(task: .analyzeJob, model: gemini, seconds: 0, cached: true)])
+    }
+
+    /// A reply that fails its checks twice moves on too, and the check's finding goes with it.
+    @Test func aFailedCheckMovesOnWithWhatItFound() async throws {
+        let db = try await database()
+        let wrong = FakeProvider([.analyzeJob: [.reply("{}"), .reply("{}")]])
+        let spare = FakeProvider([.analyzeJob: [.reply(valid)]])
+        let heard = Heard()
+        _ = try await router(db, providers: ["gemini": wrong, "ollama": spare], chain: [gemini, ollama])
+            .run(RequirementsTask(), input: posting, context: CallContext(events: heard.add))
+        let failure = heard.all.first { if case .failed = $0 { true } else { false } }
+        guard case .failed(_, gemini, let reason, let detail?)? = failure else {
+            Issue.record("\(heard.all)")
+            return
+        }
+        #expect(reason == "replied in a form that failed its checks" && !detail.isEmpty)
+    }
+
+    /// Two contexts for the same calls are equal whoever listens.
+    @Test func whoListensDoesntChangeTheContext() {
+        #expect(CallContext(jobID: "j", events: { _ in }) == CallContext(jobID: "j"))
+        #expect(CallContext(jobID: "j") != CallContext(jobID: "k"))
+    }
+}

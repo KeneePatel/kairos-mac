@@ -407,13 +407,17 @@ Whatever the provider promises, every reply goes through the same checks:
 #### Reliability
 - **Timeouts:** 60 s for extraction, 120 s for writing. Cancelling a run cancels its URLSession tasks.
 - **Retries:**
-  - Network errors and 5xx: 3 attempts with exponential backoff and jitter.
+  - Network errors and 5xx: 3 attempts with exponential backoff and jitter. A timeout is tried once more at most. When another model waits in the task's chain, a timeout moves on at once, a 5xx or network error after one quick retry, and a rate limit on every key isn't waited out (2026-10-23: a Flash call that hung 243 s sank a build).
+  - Ollama's 402 ("add usage credits") and its 403 for a model still rolling out: never retried; the provider's own words are kept and the next model is asked.
   - 429: rotate to the next key in the pool and honor `Retry-After`. When every key is limited, wait (≤ 60 s) or move to the next provider in the task's fallback chain (default: Gemini → local Ollama, if it's running).
   - 400, 401, 403 and 404: never retried; shown as "key rejected" or "model not found".
   - 501 "structured output is unavailable": never retried; resent once without `response_format` (T20).
   - A 429 whose quota limit is 0 means the model isn't on the user's plan: skip to the next model rather than wait (T20 saw a 14-hour retry delay).
 - **Client-side rate limiter** per provider: requests per minute (default 10 for free tiers) and at most 2 concurrent calls, so runs don't trigger 429 storms.
 - **Idempotent steps:** results are cached by (task, input hash, prompt version, model) in `llm_cache`. A crashed or cancelled build resumes from its last completed step instead of paying again.
+- **No model is no failure** (2026-10-23): when every model in a chain fails, a writer uses the master resume's words, an optional step (rewrite, shortening, gap bullets) is skipped, and a letter is left out with the reason. Only stopping a build or reaching the budget ends it.
+- **Seen as it happens:** each call reports asking, retrying, failing over and answering; the Build screen lists every section's model and time live, a banner names any fallback or skipped step, and a failed build opens a dialog with what was tried, Build again and Open AI settings (a "Build resumes" run sums up once). A finished build's list is replayed from `llm_call`.
+- **Thinking:** Ollama models, local and cloud, don't think unless a task asks; gpt-oss, which can't stop, reasons at low (asked for none it spent whole replies reasoning, 2026-10-23).
 
 #### Budget
 - Per user: a daily call limit (default 300) and an optional token limit. When it's reached, LLM steps pause with "Daily AI budget reached" and the rest of the pipeline continues.

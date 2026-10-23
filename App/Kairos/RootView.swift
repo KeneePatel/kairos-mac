@@ -95,6 +95,25 @@ struct RootView: View {
                 PlaceholderView(section: section)
             }
         }
+        .alert(
+            model.buildNotice?.title ?? "", isPresented: noticeShown, presenting: model.buildNotice
+        ) { notice in
+            if let retry = notice.retry {
+                Button("Build again") { Task { _ = await model.rebuild(retry) } }
+            }
+            Button("Open AI settings") {
+                model.settingsTab = .ai
+                model.section = .settings
+            }
+            Button("OK", role: .cancel) {}
+        } message: { notice in
+            Text(notice.message)
+        }
+    }
+
+    /// A build that failed, or a batch with something to say, wherever you are.
+    private var noticeShown: Binding<Bool> {
+        Binding(get: { model.buildNotice != nil }, set: { if !$0 { model.buildNotice = nil } })
     }
 }
 

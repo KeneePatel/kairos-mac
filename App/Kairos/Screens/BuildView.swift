@@ -1,6 +1,7 @@
 import AppKit
 import MasterResume
 import PDFKit
+import Pipeline
 import Store
 import SwiftUI
 import Tailoring
@@ -26,6 +27,8 @@ struct BuildsView: View {
     @AppStorage("buildCoverLetter") private var coverLetter = false
     @State private var mode = BuildMode.strict
     @State private var problem: String?
+    /// A finished build's model calls, from the log.
+    @State private var stored: BuildActivity?
 
     init(job: JobID? = nil) {
         jobID = job
@@ -52,7 +55,7 @@ struct BuildsView: View {
                 BuildView(
                     build: build, job: job, pdf: shown, step: model.buildSteps[build.id],
                     master: model.resume?.resume, pdfMissing: pdfMissing, letter: letterPDF != nil,
-                    showing: $showing)
+                    activity: model.buildActivity[build.id] ?? stored, showing: $showing)
             } else if jobID != nil {
                 ContentUnavailableView {
                     Label("No resume for this job yet", systemImage: "doc.text")
@@ -76,6 +79,10 @@ struct BuildsView: View {
             letterPDF = nil
             showing = .resume
             pdfMissing = false
+            stored = nil
+            if let build, build.status == .done || build.status == .failed {
+                stored = await model.activity(for: build.id)
+            }
             if let build, build.status == .done {
                 pdf = await model.pdf(of: build).flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
                 pdfMissing = pdf == nil
@@ -262,12 +269,15 @@ struct BuildView: View {
     let pdfMissing: Bool
     /// The build has a cover letter to show.
     let letter: Bool
+    /// Its model calls: what each section is waiting on, and what was worked around.
+    let activity: BuildActivity?
     @Binding var showing: BuildDocument
     @State private var selected: Int?
 
     init(
         build: BuildRecord, job: Job?, pdf: URL?, step: BuildStep?, master: MasterResume?, pdfMissing: Bool = false,
-        letter: Bool = false, showing: Binding<BuildDocument> = .constant(.resume), selected: Int? = nil
+        letter: Bool = false, activity: BuildActivity? = nil, showing: Binding<BuildDocument> = .constant(.resume),
+        selected: Int? = nil
     ) {
         self.build = build
         self.job = job
@@ -276,15 +286,20 @@ struct BuildView: View {
         self.master = master
         self.pdfMissing = pdfMissing
         self.letter = letter
+        self.activity = activity
         _showing = showing
         _selected = State(initialValue: selected)
     }
 
     var body: some View {
         HStack(spacing: 0) {
-            BuildStepsColumn(build: build, step: step, pdf: pdf, job: job, master: master).frame(width: 280)
+            BuildStepsColumn(build: build, step: step, pdf: pdf, job: job, master: master, activity: activity)
+                .frame(width: 280)
             Divider()
             VStack(spacing: 0) {
+                if let notes = activity?.notes, !notes.isEmpty {
+                    NotesBanner(notes: notes)
+                }
                 if letter {
                     Picker("Document", selection: $showing) {
                         Text("Resume").tag(BuildDocument.resume)
@@ -347,6 +362,7 @@ private struct BuildStepsColumn: View {
     let pdf: URL?
     let job: Job?
     let master: MasterResume?
+    let activity: BuildActivity?
 
     private var content: TailoredResume? { build.content }
 
@@ -366,6 +382,7 @@ private struct BuildStepsColumn: View {
                             problem: index == letterIndex ? build.coverLetter?.error : build.error)
                     }
                 }
+                if let activity, !activity.runs.isEmpty { AICallsList(activity: activity) }
                 if let score = build.score { scoreCard(score) }
                 version
             }
@@ -529,5 +546,97 @@ private struct BuildStepsColumn: View {
             Image(systemName: changed ? "exclamationmark.circle" : "doc.text").foregroundStyle(
                 Color(changed ? .maybe : .inkSecondary))
         }
+    }
+}
+
+/// Each model call of a build: its section, the model, how long it has taken, and why it moved on
+/// when a model failed. Ticks while anything is still running.
+private struct AICallsList: View {
+    let activity: BuildActivity
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.space3) {
+            Text("AI calls").font(TypeStyle.headline).foregroundStyle(Color(.ink))
+            if activity.runs.contains(where: { $0.finished == nil }) {
+                TimelineView(.periodic(from: .now, by: 1)) { context in rows(at: context.date) }
+            } else {
+                rows(at: Date())
+            }
+        }
+    }
+
+    private func rows(at now: Date) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.space2) {
+            ForEach(activity.runs) { run in row(run, at: now) }
+        }
+    }
+
+    private func row(_ run: BuildActivity.Run, at now: Date) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
+            icon(run.state).frame(width: 16)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(BuildActivity.name(run.task)).font(TypeStyle.body).foregroundStyle(Color(.ink))
+                    Spacer()
+                    Text(time(run, at: now)).font(TypeStyle.callout).monospacedDigit()
+                        .foregroundStyle(Color(.inkSecondary))
+                }
+                Text(status(run)).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(Array(run.failures.enumerated()), id: \.offset) { _, failure in
+                    Text("\(failure.model.model) \(failure.reason)").font(TypeStyle.callout)
+                        .foregroundStyle(Color(.ink2)).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    /// Always an icon with the words beside it.
+    @ViewBuilder private func icon(_ state: BuildActivity.State) -> some View {
+        switch state {
+        case .asking: ProgressView().controlSize(.mini)
+        case .retrying: Image(systemName: "arrow.clockwise").foregroundStyle(Color(.maybe))
+        case .answered: Image(systemName: "checkmark.circle.fill").foregroundStyle(Color(.yes))
+        case .gaveUp: Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color(.error))
+        }
+    }
+
+    private func status(_ run: BuildActivity.Run) -> String {
+        switch run.state {
+        case .asking: "Asking \(run.model.model)"
+        case .retrying(let reason): "\(run.model.model) \(reason); trying again"
+        case .answered(let cached): cached ? "\(run.model.model), from earlier" : run.model.model
+        case .gaveUp: "No model could answer"
+        }
+    }
+
+    private func time(_ run: BuildActivity.Run, at now: Date) -> String {
+        if case .answered(true) = run.state { return "saved" }
+        return "\(Int(run.seconds(at: now).rounded())) s"
+    }
+}
+
+/// What a build worked around, above its PDF: another model took over, or a step was left out.
+private struct NotesBanner: View {
+    let notes: [BuildActivity.Note]
+
+    private var gaveUp: Bool { notes.contains { $0.kind == .gaveUp } }
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
+            Image(systemName: gaveUp ? "exclamationmark.triangle.fill" : "arrow.triangle.branch")
+                .foregroundStyle(Color(.maybe)).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Spacing.space1) {
+                Text(gaveUp ? "Some of this build was done without the AI" : "A fallback model helped")
+                    .font(TypeStyle.headline).foregroundStyle(Color(.ink))
+                ForEach(notes, id: \.self) { note in
+                    Text(note.text).font(TypeStyle.callout).foregroundStyle(Color(.ink2))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(Spacing.space3)
+        .background(Color(.maybeBg))
     }
 }

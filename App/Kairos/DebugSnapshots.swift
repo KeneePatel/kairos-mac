@@ -2,6 +2,7 @@
     import AppKit
     import LLM
     import MasterResume
+    import Pipeline
     import Render
     import Screening
     import Store
@@ -12,6 +13,31 @@
     /// and dark, to PNGs in the app's temporary folder, then quits before any window opens. It lets
     /// screens be checked from the terminal. The data is the design's sample persona (previews only).
     enum DebugSnapshots {
+        /// A build whose experience fell back to Flash-Lite, whose rewrite was skipped, and whose
+        /// letter is still being written.
+        static func sampleActivity() -> BuildActivity {
+            let flash = ModelRef(provider: "gemini", model: "gemini-flash-latest")
+            let lite = ModelRef(provider: "gemini", model: "gemini-flash-lite-latest")
+            let start = Date().addingTimeInterval(-40)
+            var activity = BuildActivity()
+            activity.apply(.asking(task: .writeExperience, model: flash, fallback: false), at: start)
+            activity.apply(.asking(task: .writeSkills, model: flash, fallback: false), at: start)
+            activity.apply(.answered(task: .writeSkills, model: flash, seconds: 6, cached: false), at: start + 6)
+            activity.apply(
+                .retrying(task: .writeExperience, model: flash, reason: "was overloaded (503)"), at: start + 8)
+            activity.apply(
+                .failed(task: .writeExperience, model: flash, reason: "was overloaded (503)", detail: nil),
+                at: start + 12)
+            activity.apply(.asking(task: .writeExperience, model: lite, fallback: true), at: start + 12)
+            activity.apply(.answered(task: .writeExperience, model: lite, seconds: 7, cached: false), at: start + 19)
+            activity.apply(.asking(task: .rewriteSection, model: lite, fallback: false), at: start + 20)
+            activity.apply(
+                .failed(task: .rewriteSection, model: lite, reason: "didn't answer in time", detail: nil),
+                at: start + 30)
+            activity.apply(.asking(task: .coverLetter, model: lite, fallback: false), at: start + 31)
+            return activity
+        }
+
         @MainActor static func runIfRequested() {
             guard CommandLine.arguments.contains("--render-snapshots") else { return }
             let folder = FileManager.default.temporaryDirectory.appending(path: "snapshots")
@@ -143,6 +169,14 @@
                     .environment(today.model)
                     .frame(width: 1_340, height: 860),
                     to: folder.appending(path: "build-\(name).png"), appearance: appearance)
+                render(
+                    BuildView(
+                        build: build, job: today.selected, pdf: pdf, step: nil, master: resume.resume, letter: true,
+                        activity: sampleActivity()
+                    )
+                    .environment(today.model)
+                    .frame(width: 1_340, height: 860),
+                    to: folder.appending(path: "build-activity-\(name).png"), appearance: appearance)
                 render(
                     BuildView(
                         build: stretched, job: today.selected, pdf: stretchedPDF, step: nil, master: resume.resume,

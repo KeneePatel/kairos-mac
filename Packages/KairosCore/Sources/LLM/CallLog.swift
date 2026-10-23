@@ -85,6 +85,28 @@ public struct CallLog: Sendable {
         return usage
     }
 
+    /// One build's calls, oldest first: what its "What happened" list is made from once it's over.
+    public func calls(build id: String) async throws -> [CallRecord] {
+        try await db.query(
+            """
+            SELECT at, task_id, provider, model, prompt_version, input_tokens, output_tokens, latency_ms, attempt,
+                outcome, error_code, job_id, build_id
+            FROM llm_call WHERE build_id = ? ORDER BY at, rowid
+            """, [.text(id)]
+        ).compactMap { row in
+            guard let at = row.int64("at"), let task = row.string("task_id").flatMap(TaskID.init(rawValue:)),
+                let outcome = row.string("outcome").flatMap(LLMOutcome.init(rawValue:))
+            else { return nil }
+            return CallRecord(
+                at: Date(timeIntervalSince1970: Double(at) / 1_000), task: task, provider: row.string("provider") ?? "",
+                model: row.string("model") ?? "", promptVersion: row.int("prompt_version") ?? 0,
+                inputTokens: row.int("input_tokens"), outputTokens: row.int("output_tokens"),
+                latency: .milliseconds(row.int64("latency_ms") ?? 0), attempts: row.int("attempt") ?? 1,
+                outcome: outcome,
+                errorCode: row.string("error_code"), jobID: row.string("job_id"), buildID: row.string("build_id"))
+        }
+    }
+
     /// What one build cost, per task: its report card's calls and tokens.
     public func usage(build id: String) async throws -> [TaskID: Usage] {
         let rows = try await db.query(

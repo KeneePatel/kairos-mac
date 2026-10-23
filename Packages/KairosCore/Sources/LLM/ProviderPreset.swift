@@ -56,6 +56,12 @@ public struct ProviderPreset: Sendable, Equatable, Identifiable {
     /// Cloud: 120 s. Local thinking models took 92–117 s in T20, so local gets 180 s.
     public let timeoutSeconds: Int
 
+    /// How hard models here think unless a task says: not at all on Ollama, on this Mac (decided
+    /// 2026-10-19) and in its cloud, where thinking spends the reply's tokens and your credits.
+    public var reasoningDefault: ReasoningEffort? {
+        isLocal || id == ProviderPreset.ollamaCloud.id ? ReasoningEffort.none : nil
+    }
+
     /// Verified in T20: strict schema mode works, half the tokens of JSON mode.
     public static let gemini = ProviderPreset(
         id: "gemini", name: "Google Gemini", baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
