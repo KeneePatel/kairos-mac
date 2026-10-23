@@ -161,6 +161,9 @@
                     AdzunaSheet().environment(today.model).background(Color(.surface)),
                     to: folder.appending(path: "adzuna-sheet-\(name).png"), appearance: appearance)
                 render(
+                    NavigationStack { FetchView() }.environment(fromAdzuna).frame(width: 1_440, height: 420),
+                    to: folder.appending(path: "fetch-adzuna-\(name).png"), appearance: appearance)
+                render(
                     NavigationStack { JobScreen(id: adzunaJob.id, preview: stored) }.environment(fromAdzuna)
                         .frame(width: 1_200, height: 700),
                     to: folder.appending(path: "job-adzuna-\(name).png"), appearance: appearance)

@@ -17,8 +17,10 @@ struct SourcesTable: View {
             ContentUnavailableView {
                 Label("No companies yet", systemImage: "antenna.radiowaves.left.and.right")
             } description: {
-                Text("Choose Add company and paste a careers page from Greenhouse, Lever or Ashby.")
-                    .foregroundStyle(Color(.inkSecondary))
+                Text(
+                    "Choose Add company and paste a careers page from Greenhouse, Lever, Ashby, SmartRecruiters, Workable, Recruitee, Personio, BambooHR or Teamtailor."
+                )
+                .foregroundStyle(Color(.inkSecondary))
             }
         } else {
             Table(model.sources, selection: $selection) {
@@ -41,7 +43,11 @@ struct SourcesTable: View {
                 }
                 .width(min: 110, ideal: 150)
                 TableColumn("Status") { source in
-                    SourceStatus(source: source, failure: model.failure(for: source))
+                    if source.kind == .adzuna, source.enabled, model.failure(for: source) == nil {
+                        AdzunaPlan(used: model.adzunaUsed)
+                    } else {
+                        SourceStatus(source: source, failure: model.failure(for: source))
+                    }
                 }
                 .width(min: 140, ideal: 220)
             }
@@ -62,6 +68,26 @@ struct SourcesTable: View {
         }
     }
 
+}
+
+/// What's left of Adzuna's free plan today, as Kairos spends it (job collection v2, J4): a bar
+/// and the words, with the month under it.
+private struct AdzunaPlan: View {
+    let used: (today: Int, month: Int)
+
+    var body: some View {
+        let budget = AdzunaSource.Budget.standard
+        let left = max(0, budget.day - used.today)
+        VStack(alignment: .leading, spacing: 3) {
+            Meter(left: Double(left) / Double(budget.day)).frame(width: 120)
+            Text(
+                "\(left) of \(budget.day) searches left today · \(used.month) of \(budget.month.formatted()) this month"
+            )
+            .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).monospacedDigit()
+        }
+        .accessibilityElement(children: .combine)
+        .help("Adzuna's free plan allows 250 searches a day and 2,500 a month; Kairos keeps under 200 and 2,400.")
+    }
 }
 
 /// A dot or a warning, always with words: never colour alone.
@@ -177,7 +203,10 @@ struct AddCompanySheet: View {
             case .notDetected(let reason)?:
                 Label(reason, systemImage: "info.circle").foregroundStyle(Color(.inkSecondary))
             case nil:
-                Text("Greenhouse, Lever and Ashby boards work today.").foregroundStyle(Color(.inkSecondary))
+                Text(
+                    "Greenhouse, Lever, Ashby, SmartRecruiters, Workable, Recruitee, Personio, BambooHR and Teamtailor boards work."
+                )
+                .foregroundStyle(Color(.inkSecondary))
             }
         }
         .font(TypeStyle.callout)
@@ -243,7 +272,7 @@ struct AdzunaSheet: View {
                 }
                 Label {
                     Text(
-                        "Your keys stay on this Mac. The free plan allows about 250 searches a day; a fetch uses at most \(AdzunaSource.maxCallsPerRun)."
+                        "Your keys stay on this Mac. The free plan allows 250 searches a day and 2,500 a month; Kairos pages through every new posting for your roles but stays under 200 a day and 2,400 a month, at most 80 a fetch."
                     )
                 } icon: {
                     Image(systemName: "lock")

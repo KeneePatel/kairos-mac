@@ -70,7 +70,11 @@ public enum SourceFactory {
             guard let credentials = search.adzuna else {
                 throw .invalidConfiguration("add your Adzuna app ID and key in Fetch, Adzuna")
             }
-            return (AdzunaSource(id: source.id, credentials: credentials, http: http), search.query)
+            // 2.5 s between requests: Adzuna allows 25 a minute.
+            return (
+                AdzunaSource(id: source.id, credentials: credentials, http: http, pace: .milliseconds(2_500)),
+                search.query
+            )
         case .linkedIn, .indeedCanada, .indeedUS, .glassdoor, .googleJobs, .wellfound, .jobBank:
             throw .invalidConfiguration("\(source.kind.rawValue) isn't available yet")
         }

@@ -34,6 +34,8 @@ public struct FetchRun: Sendable {
         public var unchanged = 0
         /// New postings left out because their titles aren't among your roles.
         public var otherRoles = 0
+        /// Searches not asked this time: their plan's share for now was spent.
+        public var searchesSkipped = 0
         /// Dropped because they were posted before your "posted within" limit.
         public var tooOld = 0
         public var added = 0
@@ -69,6 +71,7 @@ public struct FetchRun: Sendable {
         public var closed: Int?
         public var unchanged: Int?
         public var otherRoles: Int?
+        public var searchesSkipped: Int?
 
         public static func decode(_ json: String) -> Stats? {
             try? JSONDecoder().decode(Stats.self, from: Data(json.utf8))
@@ -128,7 +131,9 @@ public struct FetchRun: Sendable {
                     guard let source = pending.popFirst() else { return }
                     let state = memos[source.id] ?? SourceFetchState()
                     let memo = state.fingerprint == fingerprint ? FetchMemo(etag: state.etag) : nil
-                    group.addTask { (source, await fetch(source, since: memo)) }
+                    // Only days since a good fetch under the same settings, for a search.
+                    let since = state.fingerprint == fingerprint ? state.lastOKAt : nil
+                    group.addTask { (source, await fetch(source, since: memo, lastGood: since)) }
                 }
                 for _ in 0..<maxConcurrent { startNext() }
                 for await (source, fetched) in group {
@@ -169,7 +174,8 @@ public struct FetchRun: Sendable {
                 upgraded: progress.upgraded > 0 ? progress.upgraded : nil,
                 closed: progress.closed > 0 ? progress.closed : nil,
                 unchanged: progress.unchanged > 0 ? progress.unchanged : nil,
-                otherRoles: progress.otherRoles > 0 ? progress.otherRoles : nil)
+                otherRoles: progress.otherRoles > 0 ? progress.otherRoles : nil,
+                searchesSkipped: progress.searchesSkipped > 0 ? progress.searchesSkipped : nil)
             let json = (try? JSONEncoder().encode(stats)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
             try? await runs.finish(runID, stats: json, error: progress.phase == .cancelled ? "cancelled" : nil)
         }
@@ -183,14 +189,32 @@ public struct FetchRun: Sendable {
         "v2|posted:\(postedWithinDays.map(String.init) ?? "any")|roles:\(roles?.fingerprint ?? "any")"
     }
 
-    /// One source's answer, with whether it lists everything the source has open, and how long it took.
+    /// One source's answer, with whether it lists everything the source has open, and how long it
+    /// took; nil when it wasn't asked (its plan's share was spent).
     struct Fetched: Sendable {
-        let answer: Result<FetchAnswer, any Error>
+        let answer: Result<FetchAnswer, any Error>?
         let listsEverything: Bool
         let milliseconds: Int
     }
 
-    private func fetch(_ source: Source, since memo: FetchMemo?) async -> Fetched {
+    /// What a search may spend this run: Adzuna's share of its free plan, from the fetch log.
+    private func callBudget(for source: Source) async -> Int? {
+        guard source.kind == .adzuna else { return nil }
+        let at = now()
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
+        let log = FetchLog(db)
+        func used(since date: Date?) async -> Int {
+            guard let date else { return 0 }
+            return (try? await log.requests(of: source.id, since: date)) ?? 0
+        }
+        return AdzunaSource.Budget.standard.remaining(
+            today: await used(since: utc.dateInterval(of: .day, for: at)?.start),
+            week: await used(since: at.addingTimeInterval(-7 * 86_400)),
+            month: await used(since: utc.dateInterval(of: .month, for: at)?.start))
+    }
+
+    private func fetch(_ source: Source, since memo: FetchMemo?, lastGood: Date?) async -> Fetched {
         let started = Date()
         func took() -> Int { Int(Date().timeIntervalSince(started) * 1_000) }
         do {
@@ -200,6 +224,11 @@ public struct FetchRun: Sendable {
             let open = (try? await ListingRepository(db).openListings(of: source.id)) ?? []
             query.knownURLs = Set(open.map(\.canonicalURL))
             if query.roles == nil { query.roles = roles }
+            if let budget = await callBudget(for: source) {
+                guard budget > 0 else { return Fetched(answer: nil, listsEverything: false, milliseconds: took()) }
+                query.callBudget = budget
+                query.since = lastGood
+            }
             let answer = try await jobSource.fetch(query, since: memo)
             return Fetched(answer: .success(answer), listsEverything: jobSource.listsEverything, milliseconds: took())
         } catch {
@@ -218,7 +247,11 @@ public struct FetchRun: Sendable {
             runID: run, sourceID: source.id, at: at, request: source.kind.isSearch ? "search" : "board", outcome: .ok,
             milliseconds: fetched.milliseconds)
         switch fetched.answer {
-        case .failure(let error):
+        case nil:
+            progress.searchesSkipped += 1
+            entry.outcome = .skipped
+            entry.requests = 0
+        case .failure(let error)?:
             let message = Self.message(for: error)
             progress.failures.append(Failure(sourceID: source.id, message: message))
             // A failed run found nothing, so it counts toward "degraded" too.
@@ -226,7 +259,7 @@ public struct FetchRun: Sendable {
             state.failRuns += 1
             entry.outcome = .failed
             entry.error = message
-        case .success(.unchanged):
+        case .success(.unchanged)?:
             // Every job it had open is still there: seen now, and the board isn't empty.
             let closed = (try? await ListingLedger(db).recordUnchanged(source.id, at: at)) ?? 0
             progress.closed += closed
@@ -237,9 +270,10 @@ public struct FetchRun: Sendable {
             state.lastOKAt = at
             state.failRuns = 0
             entry.outcome = .unchanged
-        case .success(.postings(let postings, let memo)):
+        case .success(.postings(let postings, let memo))?:
             progress.found += postings.count
             entry.items = postings.count
+            entry.requests = memo?.requests ?? 1
             do {
                 let cutoff = postedWithinDays.map { at.addingTimeInterval(-Double($0) * 86_400) }
                 let outcome = try await ListingLedger(db).record(

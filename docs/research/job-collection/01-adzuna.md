@@ -42,8 +42,22 @@ its one cross-company search source (tier B, ADR-005).
    Toronto", "CN Tower"). `location.area[]` holds the hierarchy (country, province, city), and
    `latitude`/`longitude` are there too; Kairos should parse `area` rather than `display_name`.
 
-## Open questions (to check with the owner's key, a few calls)
+## Questions answered with the owner's key (2026-10-23, `Kairos --adzuna-probe`)
 
-- The real `count` for Canada developer searches over 7 days, to size pagination.
-- The maximum `results_per_page` (50 is the commonly cited cap; not confirmed in the docs).
-- Whether `category=it-jobs` exists for `ca` (`/jobs/ca/categories`).
+- `count` over 7 days in Canada: 388 "software developer", 539 "software engineer" (03).
+- `results_per_page` caps at 50.
+- `category=it-jobs` exists for `ca` (6,367 postings in 7 days); Kairos doesn't use it, since
+  title searches per role are more precise and developer jobs also sit in other categories.
+
+## Built (J4, 2026-10-23) and measured
+
+- `results_per_page` caps at 50 (100 returns 50). Paging is the path segment (`/search/2`).
+- With the owner's 21 role searches, an uncapped first fetch made 80 requests in about 5 minutes
+  (2.5 s apart) and found 1,473 new jobs; capped at 25 it found 720 in 37 s (20 back to back,
+  then spaced). An incremental fetch asks for the days since the last one.
+- A page counts as new only if it has jobs Kairos doesn't have **at your roles**: jobs at other
+  roles are never stored, so counting them kept paging going (48 requests for nothing, first try).
+- Adzuna's place list (`location.area`: country, province, city, neighbourhood) gives clean
+  places; its `display_name` can be a landmark.
+- The budget lives in the fetch log (`fetch_log.requests`): today (UTC), the last 7 days, the
+  calendar month. Adzuna's own counter isn't readable through the API.

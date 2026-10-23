@@ -27,6 +27,8 @@ public struct FetchLogEntry: Sendable, Equatable {
         /// The source said nothing changed since last time (HTTP 304).
         case unchanged
         case failed
+        /// Not asked: its plan's share for now was spent (a search's budget).
+        case skipped
     }
 
     public var runID: UUID?
@@ -41,11 +43,14 @@ public struct FetchLogEntry: Sendable, Equatable {
     public var changed = 0
     public var closed = 0
     public var milliseconds = 0
+    /// Requests it took: a search's pages each count.
+    public var requests = 1
 
     public init(
         runID: UUID?, sourceID: UUID, at: Date, request: String, outcome: Outcome, error: String? = nil, items: Int = 0,
-        added: Int = 0, changed: Int = 0, closed: Int = 0, milliseconds: Int = 0
+        added: Int = 0, changed: Int = 0, closed: Int = 0, milliseconds: Int = 0, requests: Int = 1
     ) {
+        self.requests = requests
         self.runID = runID
         self.sourceID = sourceID
         self.at = at
@@ -102,14 +107,24 @@ public struct FetchLog: Sendable {
     public func record(_ entry: FetchLogEntry) async throws {
         try await db.execute(
             """
-            INSERT INTO fetch_log (run_id, source_id, at, request, outcome, error, items, added, changed, closed, ms)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO fetch_log (run_id, source_id, at, request, outcome, error, items, added, changed, closed, ms,
+                requests)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 SQLValue(entry.runID?.lowercased), .text(entry.sourceID.lowercased), SQLValue(entry.at),
                 .text(entry.request), .text(entry.outcome.rawValue), SQLValue(entry.error), SQLValue(entry.items),
                 SQLValue(entry.added), SQLValue(entry.changed), SQLValue(entry.closed), SQLValue(entry.milliseconds),
+                SQLValue(entry.requests),
             ])
+    }
+
+    /// Requests made to `source` since `date`: what a plan's day, week or month has used.
+    public func requests(of source: UUID, since date: Date) async throws -> Int {
+        try await db.query(
+            "SELECT coalesce(sum(requests), 0) AS n FROM fetch_log WHERE source_id = ? AND at >= ?",
+            [.text(source.lowercased), SQLValue(date)]
+        ).first?.int("n") ?? 0
     }
 
     /// A source's requests since `date`, newest first.
@@ -124,7 +139,8 @@ public struct FetchLog: Sendable {
                 runID: row.string("run_id").flatMap(UUID.init(uuidString:)), sourceID: source,
                 at: Date(milliseconds: at), request: row.string("request") ?? "", outcome: outcome,
                 error: row.string("error"), items: row.int("items") ?? 0, added: row.int("added") ?? 0,
-                changed: row.int("changed") ?? 0, closed: row.int("closed") ?? 0, milliseconds: row.int("ms") ?? 0)
+                changed: row.int("changed") ?? 0, closed: row.int("closed") ?? 0, milliseconds: row.int("ms") ?? 0,
+                requests: row.int("requests") ?? 1)
         }
     }
 

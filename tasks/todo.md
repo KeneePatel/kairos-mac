@@ -963,7 +963,14 @@ Plan: `docs/design/job-collection.md`. Research: `docs/research/job-collection/`
     - **Detector:** all nine boards from a pasted address (`jobs.smartrecruiters.com/Acme`, `apply.workable.com/acme`, `acme.recruitee.com`, `acme.jobs.personio.de`, `acme.bamboohr.com`, `acme.teamtailor.com`); a vendor's own site isn't a company; a Workday address says Workday's terms don't allow automated access and that its jobs often reach Kairos through Adzuna.
     - **Live check** on a copy of your database with six real boards added (Ubisoft on SmartRecruiters, Maropost on BambooHR, and one each on Workable, Recruitee, Personio, Teamtailor): no failures; Ubisoft gave 5 Canadian postings at your roles with full text; the second fetch found 21 boards unchanged, Personio and Teamtailor among them. `Kairos --fetch-dry --add=<careers URL>` tries a board on the copy only.
     - **Not done:** Teamtailor companies on their own domain; Breezy and Rippling (no text in their lists).
-- [ ] **J4 · Adzuna v2:** query plan, pagination, incremental days, area parsing, budget and its bar
+- [x] **J4 · Adzuna v2** (M)
+  - **Done 2026-10-23:**
+    - **Paging:** each of your roles' searches, newest first, page after page until a page has nothing new at your roles (known jobs and jobs at other roles both count as old), the results end, or the run's share is spent. A request failing after the first keeps the pages before it.
+    - **Days:** only the days since the last good fetch under the same settings are asked (`max_days_old`, plus one for overlap), within your "Posted" limit.
+    - **Budget** (your choice): up to 200 a day (UTC), 950 a week (Adzuna allows 1,000) and 2,400 a month, at most 80 a fetch, read from the fetch log, which now counts every request (`013_fetch_requests.sql`). With nothing left, Adzuna isn't asked, and the summary says its share is used up. 20 requests go back to back, then one every 2.5 s (Adzuna allows 25 a minute).
+    - **Places:** city and province from Adzuna's place list, not the landmark it shows ("Regent Park, City of Toronto" is now "Toronto, Ontario"). Stored Adzuna jobs read with the new places once, as edits, and are screened again.
+    - **App:** Find jobs shows Adzuna's plan in its Status column, a bar with "N of 200 searches left today · N of 2,400 this month", using a shared `Meter` (the AI key bars use it too).
+    - **Live check** on a copy of your database, capped at 25 Adzuna requests (`Kairos --fetch-dry --adzuna-budget=25`): first fetch 720 new in 37 s; the second skipped Adzuna, its share spent, in 2.1 s. An uncapped run the same day found 1,473 new with 80 requests in 5 minutes, which is why the burst and the cap came in.
 - [ ] **J5 · Board catalog:** `scripts/discover-boards`, the bundled catalog, Companies list, auto-watch, cadence, gone boards
 - [ ] **J6 · Snippet upgrade:** company finder, listing matching, upgrade and re-screen
 - [ ] **J7 · Optional sources:** Himalayas (and Remotive); JSearch or SerpApi with your key

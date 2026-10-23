@@ -134,6 +134,7 @@ final class AppModel {
             jobs = try await JobRepository(db).jobs()
             applications = try await ApplicationRepository(db).applications()
             lastFetch = try await RunRepository(db).runs(kind: "fetch", limit: 1).first
+            await refreshAdzunaUsage()
             lastScreening = try await RunRepository(db).runs(kind: "screen", limit: 1).first
             screenings = try await ScreeningRepository(db).latestByJob()
             builds = try await BuildRepository(db).recent()
@@ -215,6 +216,22 @@ final class AppModel {
 
     /// The Adzuna search, if you've added it.
     var adzunaSource: Source? { sources.first { $0.kind == .adzuna } }
+
+    /// Adzuna requests used today (UTC) and this month, against its plan (job collection v2, J4).
+    private(set) var adzunaUsed = (today: 0, month: 0)
+
+    private func refreshAdzunaUsage() async {
+        guard let db, let adzuna = adzunaSource else { return }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
+        let log = FetchLog(db)
+        let now = Date()
+        func used(_ component: Calendar.Component) async -> Int {
+            guard let start = utc.dateInterval(of: component, for: now)?.start else { return 0 }
+            return (try? await log.requests(of: adzuna.id, since: start)) ?? 0
+        }
+        adzunaUsed = (await used(.day), await used(.month))
+    }
 
     /// Saves your Adzuna app ID and key, and adds the Adzuna search if it isn't there yet. Returns
     /// why it couldn't, or nil once saved.
@@ -954,6 +971,7 @@ final class AppModel {
         if let changed = stats.changed { parts.append("\(changed) edited") }
         if let closed = stats.closed { parts.append("\(closed) no longer posted") }
         if let other = stats.otherRoles { parts.append("\(other) at other roles left out") }
+        if stats.searchesSkipped != nil { parts.append("Adzuna's share for today is used up") }
         if let unchanged = stats.unchanged {
             parts.append("\(unchanged) board\(unchanged == 1 ? "" : "s") unchanged")
         }

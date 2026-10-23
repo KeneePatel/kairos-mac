@@ -26,9 +26,12 @@ extension JobSource {
 /// What a source said last time, so the next fetch can ask "only if it changed".
 public struct FetchMemo: Sendable, Equatable, Codable {
     public var etag: String?
+    /// Requests the answer took, when more than one (a search's pages), for budgets.
+    public var requests: Int?
 
-    public init(etag: String?) {
+    public init(etag: String?, requests: Int? = nil) {
         self.etag = etag
+        self.requests = requests
     }
 }
 
@@ -55,11 +58,18 @@ public struct SourceQuery: Sendable, Equatable {
     /// Canonical URLs of the jobs this source listed before and Kairos still has open: such a
     /// board doesn't ask for their text again, it says they're still there.
     public var knownURLs: Set<String>
+    /// The last good fetch of this source: a search asks only for the days since.
+    public var since: Date?
+    /// Requests this source may make this run (a search's share of its plan); nil is its default.
+    public var callBudget: Int?
 
     public init(
         companyName: String? = nil, titles: [String] = [], countries: [Country] = [.canada, .unitedStates],
-        maxAgeDays: Int? = nil, roles: RoleMatcher? = nil, knownURLs: Set<String> = []
+        maxAgeDays: Int? = nil, roles: RoleMatcher? = nil, knownURLs: Set<String> = [], since: Date? = nil,
+        callBudget: Int? = nil
     ) {
+        self.since = since
+        self.callBudget = callBudget
         self.companyName = companyName
         self.titles = titles
         self.countries = countries

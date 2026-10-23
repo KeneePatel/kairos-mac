@@ -109,6 +109,37 @@ struct FetchRunLifecycleTests {
         #expect(queries.allSatisfy { $0.roles == roles })
     }
 
+    /// Adzuna gets what's left of its plan from the fetch log, and the time of its last good
+    /// fetch; with nothing left it isn't asked, which isn't a failure.
+    @Test func adzunaSpendsWhatsLeftOfItsPlan() async throws {
+        let db = try Database(path: ":memory:")
+        try await Migrator.migrate(db, with: Migrator.bundled())
+        let source = try await SourceRepository(db).add(kind: .adzuna)
+        let search = Asked(id: source.id)
+        func fetch(at date: Date) async -> FetchRun.Progress {
+            let run = FetchRun(db: db, now: { date }, makeSource: { _ in (search, SourceQuery(titles: ["x"])) })
+            var last = FetchRun.Progress()
+            for await progress in run.start() { last = progress }
+            return last
+        }
+        _ = await fetch(at: day0)
+        try await FetchLog(db).record(
+            FetchLogEntry(runID: nil, sourceID: source.id, at: day0, request: "search", outcome: .ok, requests: 150))
+        let later = day0.addingTimeInterval(3_600)
+        _ = await fetch(at: later)
+        let queries = search.queries.withLock { $0 }
+        #expect(queries.first?.callBudget == 80 && queries.first?.since == nil)
+        // 151 used today (one from the first fetch): 49 left.
+        #expect(queries.last?.callBudget == 49 && queries.last?.since == day0)
+
+        try await FetchLog(db).record(
+            FetchLogEntry(runID: nil, sourceID: source.id, at: later, request: "search", outcome: .ok, requests: 60))
+        let skipped = await fetch(at: later.addingTimeInterval(60))
+        #expect(skipped.searchesSkipped == 1 && skipped.failures.isEmpty)
+        #expect(search.queries.withLock { $0.count } == 2)
+        #expect(try await FetchLog(db).entries(of: source.id, since: later).first?.outcome == .skipped)
+    }
+
     /// An ETag taken under another "Posted" limit isn't used: the board is read in full.
     @Test func aNewPostedLimitReadsBoardsInFull() async throws {
         let db = try Database(path: ":memory:")

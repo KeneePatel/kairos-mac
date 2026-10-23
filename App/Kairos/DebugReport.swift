@@ -419,6 +419,19 @@
                     let added = try await SourceRepository(db).add(kind: kind, config: config)
                     say("added \(kind.rawValue) \(slug) as \(added.id)")
                 }
+                // `--adzuna-budget=<n>`: Adzuna may spend only n requests on the copy. The copy's log
+                // isn't your real one, so its searches would otherwise come out of your day unseen.
+                if let budget = CommandLine.arguments.first(where: { $0.hasPrefix("--adzuna-budget=") })
+                    .flatMap({ Int($0.dropFirst(16)) }),
+                    let adzuna = try await SourceRepository(db).sources().first(where: { $0.kind == .adzuna })
+                {
+                    try await FetchLog(db).record(
+                        FetchLogEntry(
+                            runID: nil, sourceID: adzuna.id, at: Date(), request: "dry-run allowance",
+                            outcome: .skipped,
+                            requests: AdzunaSource.Budget.standard.day - budget))
+                    say("Adzuna may spend \(budget) requests")
+                }
                 for row in try await db.query(
                     "SELECT description_kind, COUNT(*) AS n FROM listing WHERE deleted = 0 GROUP BY description_kind")
                 {
@@ -503,10 +516,10 @@
                     say("  failed \(row.string("source_id") ?? "?"): \(row.string("error") ?? "")")
                 }
                 for row in try await db.query(
-                    "SELECT outcome, COUNT(*) AS n, SUM(ms) AS ms FROM fetch_log GROUP BY outcome")
+                    "SELECT outcome, COUNT(*) AS n, SUM(ms) AS ms, SUM(requests) AS r FROM fetch_log GROUP BY outcome")
                 {
                     say(
-                        "log \(row.string("outcome") ?? "?"): \(row.int("n") ?? 0) requests, \(row.int("ms") ?? 0) ms in all"
+                        "log \(row.string("outcome") ?? "?"): \(row.int("n") ?? 0) entries, \(row.int("r") ?? 0) requests, \(row.int("ms") ?? 0) ms"
                     )
                 }
                 try? fm.removeItem(at: copy)

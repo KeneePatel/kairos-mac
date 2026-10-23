@@ -297,17 +297,7 @@ private struct UsageBarRow: View {
             Text(bar.label).font(.system(.caption, design: .monospaced)).foregroundStyle(Color(.ink2))
                 .lineLimit(1).truncationMode(.middle)
                 .frame(width: 170, alignment: .leading)
-            if let left = bar.left {
-                Capsule().fill(Color(.separator))
-                    .overlay(alignment: .leading) {
-                        GeometryReader { proxy in
-                            Capsule().fill(left < 0.15 ? Color(.maybe) : Color(.accent))
-                                .frame(width: proxy.size.width * min(1, max(0, left)))
-                        }
-                    }
-                    .frame(width: 140, height: 6)
-                    .accessibilityHidden(true)
-            }
+            if let left = bar.left { Meter(left: left).frame(width: 140) }
             if bar.usedUp {
                 Image(systemName: "hourglass").foregroundStyle(Color(.maybe)).accessibilityHidden(true)
             }
