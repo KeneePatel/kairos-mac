@@ -93,7 +93,8 @@ public struct ScreeningRun: Sendable {
         let runs = RunRepository(db)
         let runID = try? await runs.begin(kind: "screen")
         let context = (try? await ScreeningContext.load(from: db)) ?? ScreeningContext()
-        let jobs = ((try? await JobRepository(db).jobs(matching: JobFilter(states: [.new]))) ?? [])
+        // A job no longer posted anywhere isn't worth an AI call (job collection v2).
+        let jobs = ((try? await JobRepository(db).jobs(matching: JobFilter(states: [.new], openOnly: true))) ?? [])
             .filter { $0.verdict == nil }
             .sorted { ($0.firstSeenAt, $0.title, $0.id.rawValue) < ($1.firstSeenAt, $1.title, $1.id.rawValue) }
         progress.total = jobs.count

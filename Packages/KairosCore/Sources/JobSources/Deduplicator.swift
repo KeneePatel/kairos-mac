@@ -19,7 +19,7 @@ public enum DedupKey {
     }
 
     /// The company part, which is how candidates are grouped before any comparing.
-    static func company(of key: String) -> Substring {
+    public static func company(of key: String) -> Substring {
         key.prefix { $0 != "|" }
     }
 
@@ -62,6 +62,11 @@ public enum Deduplicator {
             byCompany[company, default: []].append(Known(sourceID: job.sourceID, dedupKey: job.dedupKey))
         }
         return kept
+    }
+
+    /// Whether two dedup keys name the same job: similar enough, company, title and city together.
+    public static func isSameJob(_ a: String, _ b: String) -> Bool {
+        similarity(a, b) >= threshold
     }
 
     /// 1 minus the Levenshtein distance over the longer length: 1 for equal strings, 0 for nothing shared.

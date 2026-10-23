@@ -932,6 +932,31 @@ Refined with you on 2026-10-21:
 
 ---
 
+## Job collection v2 (approved 2026-10-23)
+
+Plan: `docs/design/job-collection.md`. Research: `docs/research/job-collection/`. Your decisions: watch every catalog company with jobs in your countries; four role families (software development; DevOps, cloud and SRE; data, ML and AI; QA and test automation); free sources plus Google Jobs through JSearch or SerpApi with your key; Adzuna up to 200 searches a day and 2,400 a month.
+
+- [x] **J1 · Tracking foundation** (L)
+  - **Acceptance:** every place a job is posted is kept; jobs are seen again, edited, closed and reopened; only a complete board answer closes; unchanged boards answer to their ETag; every request is logged.
+  - **Verify:** `core-test` (StoreTests, PipelineTests, JobSourcesTests); `Kairos --fetch-dry` on a copy of your database
+  - **Done 2026-10-23:**
+    - **`011_listings.sql`:** `listing` (one source's copy of a job), `job_event` (found, posted elsewhere, changed, upgraded, closed, reopened), `job` gains last seen, closed, description kind and its shown listing; local `source_fetch_state` (ETag and the settings it was taken under) and `fetch_log` (every request, 30 days). Every existing job became its own first listing; Adzuna's are snippets.
+    - **`ListingLedger`:** one source's answer in one transaction. A copy on another source is attached to its job instead of dropped; a full posting replaces a snippet and the job is screened again; an edit updates the job and screens it again unless you acted on it or set its verdict; two complete answers in a row without a listing close it, and a job closes when all its listings have; a board's "unchanged" repeats its last answer, so a missing job misses again; Adzuna listings close after 30 days unseen and 45 since posted. Clearing and retention take listings and history with their jobs.
+    - **Sources:** Greenhouse, Lever and Ashby ask with their last ETag and answer "unchanged" on a 304. Lever's `on-site` now reads as on-site, and EU companies (`jobs.eu.lever.co`) are asked on Lever's EU host.
+    - **App:** Review's Yes, Maybe and No leave out jobs no longer posted; All shows them dimmed, "No longer posted". The job screen shows a Closed mark, "Where it's posted" (each source, linked, full or snippet, first and last seen) and the job's history. The fetch summary adds edited, no longer posted, snippets filled in and unchanged boards.
+    - **Live check on a copy of your database:** migration 10 → 11 kept all 395 jobs (276 full, 119 snippets). First fetch 11.8 s: 3,634 postings, 164 new, 12 edited (GitLab, Stripe, Affirm, 1Password), none failed. Second fetch 8 s: 19 of 20 sources unchanged, 4 jobs no longer posted closed.
+    - **Debug:** `Kairos --fetch-dry` (two fetches on a migrated copy, no AI calls) and `Kairos --adzuna-probe`.
+    - **Undrawn, decided here:** "Where it's posted" is a grouped box like the requirements, one row per source with an Open link; Adzuna's row is its linked credit. The Closed mark is secondary ink with an archive-box icon and words.
+- [ ] **J2 · More public boards:** SmartRecruiters, Workable, Recruitee, Personio, BambooHR, Teamtailor; the detector for all of them; Workday addresses explained, not fetched
+- [ ] **J3 · Role families:** variants and exclusions for searches, the title filter and the fetch gate; Settings, Search
+- [ ] **J4 · Adzuna v2:** query plan, pagination, incremental days, area parsing, budget and its bar
+- [ ] **J5 · Board catalog:** `scripts/discover-boards`, the bundled catalog, Companies list, auto-watch, cadence, gone boards
+- [ ] **J6 · Snippet upgrade:** company finder, listing matching, upgrade and re-screen
+- [ ] **J7 · Optional sources:** Himalayas (and Remotive); JSearch or SerpApi with your key
+- [ ] **J8 · Coverage and docs:** `Kairos --coverage-report`, SPEC §5.2/5.4/6.2, ADR-015
+
+---
+
 ## Phase 3: R3 Accounts and sync (refined at Checkpoint F)
 
 - [ ] **T47 · Backend migrations on staging** (M) · your step: create the staging project in Canada Central and link the CLI

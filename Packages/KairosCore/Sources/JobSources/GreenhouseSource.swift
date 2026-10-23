@@ -12,15 +12,29 @@ public struct GreenhouseSource: JobSource {
         self.http = http
     }
 
+    public var listsEverything: Bool { true }
+
     public func fetch(_ query: SourceQuery) async throws -> [Posting] {
+        guard case .postings(let postings, _) = try await fetch(query, since: nil) else { return [] }
+        return postings
+    }
+
+    /// The board answers 304 to an ETag it last sent when no job changed (2026-10-23: 0 bytes
+    /// instead of 2 MB for Stripe).
+    public func fetch(_ query: SourceQuery, since memo: FetchMemo?) async throws -> FetchAnswer {
         // The token goes into the URL path, so only allow what board tokens use.
         guard BoardSlug.isValid(boardToken),
             let url = URL(string: "https://boards-api.greenhouse.io/v1/boards/\(boardToken)/jobs?content=true")
         else {
             throw SourceError.invalidConfiguration("Greenhouse board token: \(boardToken)")
         }
-        let page = try await http.getJSON(url, as: GreenhousePage.self)
-        return page.jobs.map { job in
+        let (answer, etag) = try await http.getJSON(url, as: GreenhousePage.self, ifNoneMatch: memo?.etag)
+        guard let page = answer else { return .unchanged }
+        return .postings(postings(page, query), memo: FetchMemo(etag: etag))
+    }
+
+    private func postings(_ page: GreenhousePage, _ query: SourceQuery) -> [Posting] {
+        page.jobs.map { job in
             Posting(
                 sourceID: id,
                 url: job.absoluteUrl,

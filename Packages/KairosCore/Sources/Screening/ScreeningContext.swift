@@ -63,8 +63,11 @@ public struct ScreeningContext: Sendable {
         return context
     }
 
-    /// Whether `job`'s description is only a search's snippet.
-    public func isSnippet(_ job: Job) -> Bool { snippetSources.contains(job.sourceID) }
+    /// Whether `job`'s description is only a search's snippet. A job whose snippet a full posting
+    /// replaced shows that posting, from its board.
+    public func isSnippet(_ job: Job) -> Bool {
+        job.descriptionKind == .snippet || snippetSources.contains(job.sourceID)
+    }
 
     public func prefilter(now: Date) -> Prefilter {
         Prefilter(preferences: preferences, profile: profile, languages: languages, applied: applied, now: now)

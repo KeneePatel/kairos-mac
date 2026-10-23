@@ -6,10 +6,13 @@ public struct BoardConfig: Codable, Sendable, Equatable {
     public var slug: String
     /// The display name you gave the company, if any.
     public var company: String?
+    /// "eu" for a company on Lever's EU instance.
+    public var region: String?
 
-    public init(slug: String, company: String? = nil) {
+    public init(slug: String, company: String? = nil, region: String? = nil) {
         self.slug = slug
         self.company = company
+        self.region = region
     }
 
     public var json: String {
@@ -48,7 +51,8 @@ public enum SourceFactory {
             let query = SourceQuery(companyName: config.company)
             switch source.kind {
             case .greenhouse: return (GreenhouseSource(id: source.id, boardToken: config.slug, http: http), query)
-            case .lever: return (LeverSource(id: source.id, slug: config.slug, http: http), query)
+            case .lever:
+                return (LeverSource(id: source.id, slug: config.slug, region: config.region, http: http), query)
             default: return (AshbySource(id: source.id, organization: config.slug, http: http), query)
             }
         case .adzuna:

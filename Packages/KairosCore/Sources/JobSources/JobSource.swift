@@ -8,6 +8,34 @@ public typealias SourceID = UUID
 public protocol JobSource: Sendable {
     var id: SourceID { get }
     func fetch(_ query: SourceQuery) async throws -> [Posting]
+    /// Every job the source has open (a company board), not a search's matches: a job it leaves
+    /// out may have closed.
+    var listsEverything: Bool { get }
+    /// Like `fetch(_:)`, but asks "only if it changed since `memo`" where the source can.
+    func fetch(_ query: SourceQuery, since memo: FetchMemo?) async throws -> FetchAnswer
+}
+
+extension JobSource {
+    public var listsEverything: Bool { false }
+
+    public func fetch(_ query: SourceQuery, since memo: FetchMemo?) async throws -> FetchAnswer {
+        .postings(try await fetch(query), memo: nil)
+    }
+}
+
+/// What a source said last time, so the next fetch can ask "only if it changed".
+public struct FetchMemo: Sendable, Equatable, Codable {
+    public var etag: String?
+
+    public init(etag: String?) {
+        self.etag = etag
+    }
+}
+
+/// A source's answer: its postings, or that nothing changed since the memo.
+public enum FetchAnswer: Sendable, Equatable {
+    case postings([Posting], memo: FetchMemo?)
+    case unchanged
 }
 
 /// What a fetch asks for. ATS boards list one company's jobs, so they only need its display name;

@@ -5,15 +5,18 @@ public struct JobFilter: Sendable, Equatable {
     public var states: Set<JobState>?
     public var verdicts: Set<Verdict>?
     public var countries: Set<Country>?
+    /// Leaves out jobs no longer posted anywhere.
+    public var openOnly: Bool
     public var limit: Int?
 
     public init(
         states: Set<JobState>? = nil, verdicts: Set<Verdict>? = nil, countries: Set<Country>? = nil,
-        limit: Int? = nil
+        openOnly: Bool = false, limit: Int? = nil
     ) {
         self.states = states
         self.verdicts = verdicts
         self.countries = countries
+        self.openOnly = openOnly
         self.limit = limit
     }
 }
@@ -63,6 +66,7 @@ public struct JobRepository: Sendable {
         constrain("state", to: filter.states.map { $0.map(\.rawValue) })
         constrain("verdict", to: filter.verdicts.map { $0.map(\.rawValue) })
         constrain("country", to: filter.countries.map { $0.map(\.rawValue) })
+        if filter.openOnly { sql += " AND closed_at IS NULL" }
         sql += " ORDER BY rank IS NULL, rank DESC, first_seen_at DESC, id"
         if let limit = filter.limit {
             sql += " LIMIT ?"
@@ -153,7 +157,7 @@ public struct JobRepository: Sendable {
         try await db.write { connection, stamp in
             let hlc = SQLValue.text(stamp.hlc.description)
             let going = "SELECT id FROM job WHERE deleted = 0 AND NOT \(Self.engaged)"
-            for table in ["job_analysis", "screening"] {
+            for table in ["job_analysis", "screening", "listing", "job_event"] {
                 try connection.execute(
                     "UPDATE \(table) SET deleted = 1, updated_hlc = ? WHERE deleted = 0 AND job_id IN (\(going))", [hlc]
                 )
@@ -161,7 +165,10 @@ public struct JobRepository: Sendable {
             try connection.execute(
                 "UPDATE job SET deleted = 1, cleared = 1, description = NULL, updated_hlc = ? WHERE id IN (\(going))",
                 [hlc])
-            return connection.changes
+            let cleared = connection.changes
+            // Boards that answer "unchanged" would never send the cleared jobs again.
+            try connection.execute("DELETE FROM source_fetch_state")
+            return cleared
         }
     }
 
@@ -172,6 +179,9 @@ public struct JobRepository: Sendable {
         try await db.write { connection, stamp in
             try connection.execute(
                 "UPDATE job SET deleted = 1, description = NULL, updated_hlc = ? WHERE id = ?",
+                [.text(stamp.hlc.description), .text(id.rawValue)])
+            try connection.execute(
+                "UPDATE listing SET deleted = 1, description = NULL, updated_hlc = ? WHERE job_id = ?",
                 [.text(stamp.hlc.description), .text(id.rawValue)])
             return stamp.hlc
         }
@@ -244,12 +254,29 @@ public struct JobRepository: Sendable {
         }
     }
 
+    // MARK: - Inside a transaction
+
+    /// Inserts or replaces `job` (a tombstone comes back), stamped with `hlc`: for writers that
+    /// change several tables in one transaction, such as a fetch's ledger.
+    public static func upsert(_ job: Job, hlc: HLCTimestamp, in connection: Connection) throws {
+        try connection.execute(upsertSQL, try values(job) + [.text(hlc.description)])
+    }
+
+    /// The job with `id`, tombstones included, and whether it's a cleared one.
+    public static func job(_ id: JobID, in connection: Connection) throws -> (job: Job, deleted: Bool, cleared: Bool)? {
+        guard let row = try connection.query("SELECT * FROM job WHERE id = ?", [.text(id.rawValue)]).first else {
+            return nil
+        }
+        return (try job(row), row.bool("deleted") ?? false, row.bool("cleared") ?? false)
+    }
+
     // MARK: - Row mapping
 
     private static let columns = [
         "id", "source_id", "url", "canonical_url", "dedup_key", "company", "title", "location", "city", "region",
         "country", "remote_scope", "currency", "salary", "posted_at", "description", "state", "verdict",
-        "verdict_source", "rank", "first_seen_at", "updated_hlc",
+        "verdict_source", "rank", "first_seen_at", "last_seen_at", "closed_at", "description_kind",
+        "primary_listing_id", "updated_hlc",
     ]
 
     private static let upsertSQL: String = {
@@ -269,7 +296,8 @@ public struct JobRepository: Sendable {
             SQLValue(job.region), SQLValue(job.country), SQLValue(job.remoteScope), SQLValue(job.currency),
             try SQLValue(json: job.salary), SQLValue(job.postedAt), SQLValue(job.descriptionMarkdown),
             SQLValue(job.state), SQLValue(job.verdict), SQLValue(job.verdictSource), SQLValue(job.rank),
-            SQLValue(job.firstSeenAt),
+            SQLValue(job.firstSeenAt), SQLValue(job.lastSeenAt), SQLValue(job.closedAt), SQLValue(job.descriptionKind),
+            SQLValue(job.primaryListingID?.rawValue),
         ]
     }
 
@@ -286,7 +314,10 @@ public struct JobRepository: Sendable {
             descriptionMarkdown: row.string("description"), state: try r.value("state", as: JobState.self),
             verdict: try r.optionalValue("verdict", as: Verdict.self),
             verdictSource: try r.optionalValue("verdict_source", as: VerdictSource.self), rank: row.double("rank"),
-            firstSeenAt: try r.date("first_seen_at"))
+            firstSeenAt: try r.date("first_seen_at"), lastSeenAt: r.optionalDate("last_seen_at"),
+            closedAt: r.optionalDate("closed_at"),
+            descriptionKind: try r.value("description_kind", as: DescriptionKind.self),
+            primaryListingID: row.string("primary_listing_id").map(JobID.init(rawValue:)))
         // The stored id must still be the hash of the stored URL; anything else is a damaged row.
         guard job.id.rawValue == row.string("id") else {
             throw .corruptRow(table: "job", id: job.id.rawValue, column: "id")

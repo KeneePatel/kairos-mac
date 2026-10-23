@@ -44,7 +44,10 @@ public struct Retention: Sendable {
             for start in stride(from: 0, to: leaving.count, by: 500) {
                 let batch = leaving[start..<min(start + 500, leaving.count)].map { SQLValue.text($0) }
                 let marks = Array(repeating: "?", count: batch.count).joined(separator: ", ")
-                for (table, key) in [("job", "id"), ("job_analysis", "job_id"), ("screening", "job_id")] {
+                for (table, key) in [
+                    ("job", "id"), ("job_analysis", "job_id"), ("screening", "job_id"), ("listing", "job_id"),
+                    ("job_event", "job_id"),
+                ] {
                     try connection.execute(
                         "UPDATE \(table) SET deleted = 1, updated_hlc = ? WHERE deleted = 0 AND \(key) IN (\(marks))",
                         [hlc] + batch)

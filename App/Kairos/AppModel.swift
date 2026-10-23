@@ -172,7 +172,8 @@ final class AppModel {
         }
         let company = name.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
-            let config = BoardConfig(slug: slug, company: company.isEmpty ? nil : company)
+            let config = BoardConfig(
+                slug: slug, company: company.isEmpty ? nil : company, region: ATSDetector.leverRegion(careersURL))
             _ = try await SourceRepository(db).add(kind: kind, config: config.json)
             await reload()
             return nil
@@ -234,7 +235,9 @@ final class AppModel {
     }
 
     /// Whether `job` came from a search's snippet (Adzuna), so its description is partial.
-    func isSnippet(_ job: Job) -> Bool { source(job.sourceID)?.kind == .adzuna }
+    /// Kairos holds only a search's snippet of it: Adzuna's, until the full posting turns up on
+    /// the company's board.
+    func isSnippet(_ job: Job) -> Bool { job.descriptionKind == .snippet || source(job.sourceID)?.kind == .adzuna }
 
     func source(_ id: UUID) -> Source? {
         sources.first { $0.id == id }
@@ -289,7 +292,7 @@ final class AppModel {
                 switch event {
                 case .fetching(let update):
                     self?.progress = update
-                    if update.added > 0 { await self?.reload() }
+                    if update.added + update.changed + update.closed > 0 { await self?.reload() }
                 case .screening(let update):
                     self?.screening = update
                     // Verdicts arrive one by one; refresh the list now and then, not on every one.
@@ -354,12 +357,13 @@ final class AppModel {
     }
 
     /// Review holds the jobs that passed your filters (2026-10-22). Yes, Maybe and No are a to-do
-    /// list: they leave out jobs you've applied to or marked "Not for me". All adds those (shown
-    /// dimmed) and jobs waiting for the AI. Jobs retention has archived leave Review.
+    /// list: they leave out jobs you've applied to or marked "Not for me", and jobs no longer
+    /// posted anywhere (job collection v2). All adds those (shown dimmed) and jobs waiting for the
+    /// AI. Jobs retention has archived leave Review.
     func reviewJobs(_ filter: ReviewFilter) -> [Job] {
         let byRank: (Job, Job) -> Bool = { ($0.rank ?? -1, $1.title) > ($1.rank ?? -1, $0.title) }
         let passed = jobs.filter { $0.verdictSource != .prefilter && $0.state != .archived }
-        let open = passed.filter { $0.state == .new || $0.state == .shortlisted }
+        let open = passed.filter { ($0.state == .new || $0.state == .shortlisted) && $0.isOpen }
         switch filter {
         case .yes: return open.filter { $0.verdict == .yes }.sorted(by: byRank)
         case .maybe: return open.filter { $0.verdict == .maybe }.sorted(by: byRank)
@@ -480,6 +484,13 @@ final class AppModel {
     }
 
     /// The analysis behind a job's verdict, whichever prompt made it.
+    /// Every place the job is posted, the one it shows first, and what happened to it.
+    func postings(of job: Job) async -> (listings: [Listing], history: [JobEvent]) {
+        guard let db else { return ([], []) }
+        let listings = (try? await ListingRepository(db).listings(of: job.id)) ?? []
+        return (listings, (try? await ListingRepository(db).events(of: job.id)) ?? [])
+    }
+
     func storedAnalysis(for job: Job) async -> StoredAnalysis? {
         guard let db, let stored = try? await AnalysisRepository(db).latest(for: job.id) else { return nil }
         // As the verdict reads it: a language you list counts as shown.
@@ -935,6 +946,13 @@ final class AppModel {
         ]
         if stats.failed > 0 { parts.append("\(stats.failed) board\(stats.failed == 1 ? "" : "s") failed") }
         if let tooOld = stats.tooOld { parts.append("\(tooOld) older ones skipped") }
+        // Job collection v2: what changed on postings already known.
+        if let upgraded = stats.upgraded { parts.append("\(upgraded) snippet\(upgraded == 1 ? "" : "s") filled in") }
+        if let changed = stats.changed { parts.append("\(changed) edited") }
+        if let closed = stats.closed { parts.append("\(closed) no longer posted") }
+        if let unchanged = stats.unchanged {
+            parts.append("\(unchanged) board\(unchanged == 1 ? "" : "s") unchanged")
+        }
         // Retention (T46): old jobs you never engaged with leave after a fetch.
         let retired = (stats.archived ?? 0) + (stats.removed ?? 0)
         if retired > 0 { parts.append("\(retired) old job\(retired == 1 ? "" : "s") tidied away") }

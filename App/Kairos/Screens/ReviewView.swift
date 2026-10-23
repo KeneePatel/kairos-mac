@@ -296,12 +296,13 @@ struct ReviewView: View {
     private func roleLine(_ job: Job) -> String {
         if job.state == .applied { return "\(job.company) · Applied" }
         if job.state == .skipped { return "\(job.company) · Not for me" }
+        if !job.isOpen { return "\(job.company) · No longer posted" }
         guard job.verdict != .yes, let reason = model.screening(for: job)?.reasons.first else { return job.company }
         return "\(job.company) · \(reason)"
     }
 
     /// "No" rows and jobs you've acted on are dimmed with ink-dimmed, not opacity (design rule 1).
-    private func dimmed(_ job: Job) -> Bool { job.verdict == .no || model.isActedOn(job) }
+    private func dimmed(_ job: Job) -> Bool { job.verdict == .no || model.isActedOn(job) || !job.isOpen }
     private func primary(_ job: Job) -> Color { dimmed(job) ? Color(.inkDimmed) : Color(.ink) }
     private func secondary(_ job: Job) -> Color { dimmed(job) ? Color(.inkDimmed) : Color(.inkSecondary) }
 }

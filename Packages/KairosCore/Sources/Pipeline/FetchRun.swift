@@ -3,11 +3,12 @@ import JobSources
 import LLM
 import Store
 
-/// One "Fetch now": every enabled source is fetched (a few at a time), each posting normalized,
-/// postings outside Canada and the US and duplicates dropped, and the rest stored (SPEC §5.2, steps
-/// 1–3). Postings older than your "posted within" limit are never stored. Then old jobs you never
-/// engaged with leave (`Retention`, T46). Progress arrives as an `AsyncStream`; stopping the
-/// stream cancels the run.
+/// One "Fetch now": every enabled source is fetched (a few at a time), and each answer goes to
+/// the `ListingLedger` (SPEC §5.2, steps 1–3; job collection v2): new jobs stored, copies on other
+/// sources attached to their job, edits and closings recorded. Postings outside Canada and the US
+/// are dropped, and new ones older than your "posted within" limit never stored. A board that
+/// hasn't changed answers "unchanged" to its last ETag. Then old jobs you never engaged with leave
+/// (`Retention`, T46). Progress arrives as an `AsyncStream`; stopping the stream cancels the run.
 public struct FetchRun: Sendable {
     public struct Progress: Sendable, Equatable {
         public enum Phase: Sendable, Equatable { case running, finished, cancelled }
@@ -18,8 +19,19 @@ public struct FetchRun: Sendable {
         public var found = 0
         /// Dropped because every place they name is outside Canada and the US.
         public var outside = 0
-        /// Dropped because they were stored before or are another board's copy.
+        /// Not new jobs: stored before, or another board's copy (now attached to its job).
         public var duplicates = 0
+        /// Copies of stored jobs found on another source, now listed with them.
+        public var attached = 0
+        /// Postings whose title, place or text changed.
+        public var changed = 0
+        /// Snippets a full posting replaced.
+        public var upgraded = 0
+        /// Jobs no longer posted anywhere, and jobs back again.
+        public var closed = 0
+        public var reopened = 0
+        /// Boards that said nothing changed since last time.
+        public var unchanged = 0
         /// Dropped because they were posted before your "posted within" limit.
         public var tooOld = 0
         public var added = 0
@@ -48,6 +60,12 @@ public struct FetchRun: Sendable {
         public var removed: Int?
         /// Postings skipped as older than your "posted within" limit; nil when none.
         public var tooOld: Int?
+        /// Edited postings, snippets replaced, jobs closed and unchanged boards; nil when none, as
+        /// in runs from before job collection v2.
+        public var changed: Int?
+        public var upgraded: Int?
+        public var closed: Int?
+        public var unchanged: Int?
 
         public static func decode(_ json: String) -> Stats? {
             try? JSONDecoder().decode(Stats.self, from: Data(json.utf8))
@@ -94,22 +112,35 @@ public struct FetchRun: Sendable {
         // posting rather than a search's snippet, since the first copy stored wins.
         let boards = sources.filter { !$0.kind.isSearch }
         let searches = sources.filter(\.kind.isSearch)
+        let log = FetchLog(db)
+        var memos: [UUID: SourceFetchState] = [:]
+        for source in sources { memos[source.id] = (try? await log.state(of: source.id)) ?? SourceFetchState() }
         for batch in [boards, searches] where !batch.isEmpty && !Task.isCancelled {
-            await withTaskGroup(of: (Source, Result<[Posting], any Error>).self) { group in
+            await withTaskGroup(of: (Source, Fetched).self) { group in
                 var pending = batch[...]
                 func startNext() {
                     guard let source = pending.popFirst() else { return }
-                    group.addTask { (source, await fetch(source)) }
+                    let state = memos[source.id] ?? SourceFetchState()
+                    let memo = state.fingerprint == fingerprint ? FetchMemo(etag: state.etag) : nil
+                    group.addTask { (source, await fetch(source, since: memo)) }
                 }
                 for _ in 0..<maxConcurrent { startNext() }
-                for await (source, result) in group {
+                for await (source, fetched) in group {
                     guard !Task.isCancelled else { break }
-                    await record(result, from: source, into: &progress)
+                    await record(
+                        fetched, from: source, state: memos[source.id] ?? SourceFetchState(), run: runID,
+                        into: &progress)
                     progress.sourcesDone += 1
                     continuation.yield(progress)
                     startNext()
                 }
             }
+        }
+        // A search can't show a job is gone, so its listings close when they've long gone unseen.
+        if !Task.isCancelled,
+            let stale = try? await ListingLedger(db).closeStaleSearchListings(of: searches.map(\.id), at: now())
+        {
+            progress.closed += stale
         }
 
         if !Task.isCancelled, let retired = try? await Retention(db).apply(now: now()) {
@@ -119,6 +150,7 @@ public struct FetchRun: Sendable {
         let logStart = now().addingTimeInterval(-Double(CallLog.retentionDays) * 86_400)
         _ = try? await CallLog(db).deleteOlder(than: logStart)
         _ = try? await KeyCallLog(db).deleteOlder(than: logStart)
+        _ = try? await log.deleteOlder(than: now().addingTimeInterval(-Double(FetchLog.retentionDays) * 86_400))
         progress.phase = Task.isCancelled ? .cancelled : .finished
         if let runID {
             let stats = Stats(
@@ -126,7 +158,11 @@ public struct FetchRun: Sendable {
                 outside: progress.outside, duplicates: progress.duplicates, added: progress.added,
                 archived: progress.retired.archived > 0 ? progress.retired.archived : nil,
                 removed: progress.retired.removed > 0 ? progress.retired.removed : nil,
-                tooOld: progress.tooOld > 0 ? progress.tooOld : nil)
+                tooOld: progress.tooOld > 0 ? progress.tooOld : nil,
+                changed: progress.changed > 0 ? progress.changed : nil,
+                upgraded: progress.upgraded > 0 ? progress.upgraded : nil,
+                closed: progress.closed > 0 ? progress.closed : nil,
+                unchanged: progress.unchanged > 0 ? progress.unchanged : nil)
             let json = (try? JSONEncoder().encode(stats)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
             try? await runs.finish(runID, stats: json, error: progress.phase == .cancelled ? "cancelled" : nil)
         }
@@ -134,69 +170,94 @@ public struct FetchRun: Sendable {
         continuation.finish()
     }
 
-    private func fetch(_ source: Source) async -> Result<[Posting], any Error> {
+    /// The settings an ETag's answer was taken under: a board's "unchanged" only counts while the
+    /// "Posted" limit (which decides which new postings are kept) is the same.
+    var fingerprint: String { "v2|posted:\(postedWithinDays.map(String.init) ?? "any")" }
+
+    /// One source's answer, with whether it lists everything the source has open, and how long it took.
+    struct Fetched: Sendable {
+        let answer: Result<FetchAnswer, any Error>
+        let listsEverything: Bool
+        let milliseconds: Int
+    }
+
+    private func fetch(_ source: Source, since memo: FetchMemo?) async -> Fetched {
+        let started = Date()
+        func took() -> Int { Int(Date().timeIntervalSince(started) * 1_000) }
         do {
             let (jobSource, query) = try makeSource(source)
-            return .success(try await jobSource.fetch(query))
+            let answer = try await jobSource.fetch(query, since: memo)
+            return Fetched(answer: .success(answer), listsEverything: jobSource.listsEverything, milliseconds: took())
         } catch {
-            return .failure(error)
+            return Fetched(answer: .failure(error), listsEverything: false, milliseconds: took())
         }
     }
 
-    private func record(_ result: Result<[Posting], any Error>, from source: Source, into progress: inout Progress)
-        async
-    {
+    private func record(
+        _ fetched: Fetched, from source: Source, state: SourceFetchState, run: UUID?, into progress: inout Progress
+    ) async {
         let sources = SourceRepository(db)
-        switch result {
+        let log = FetchLog(db)
+        let at = now()
+        var state = state
+        var entry = FetchLogEntry(
+            runID: run, sourceID: source.id, at: at, request: source.kind.isSearch ? "search" : "board", outcome: .ok,
+            milliseconds: fetched.milliseconds)
+        switch fetched.answer {
         case .failure(let error):
-            progress.failures.append(Failure(sourceID: source.id, message: Self.message(for: error)))
+            let message = Self.message(for: error)
+            progress.failures.append(Failure(sourceID: source.id, message: message))
             // A failed run found nothing, so it counts toward "degraded" too.
-            _ = try? await sources.recordRun(of: source.id, found: 0, at: now())
-        case .success(let postings):
+            _ = try? await sources.recordRun(of: source.id, found: 0, at: at)
+            state.failRuns += 1
+            entry.outcome = .failed
+            entry.error = message
+        case .success(.unchanged):
+            // Every job it had open is still there: seen now, and the board isn't empty.
+            let closed = (try? await ListingLedger(db).recordUnchanged(source.id, at: at)) ?? 0
+            progress.closed += closed
+            entry.closed = closed
+            let open = (try? await ListingRepository(db).openListings(of: source.id).count) ?? 0
+            _ = try? await sources.recordRun(of: source.id, found: max(open, 1), at: at)
+            progress.unchanged += 1
+            state.lastOKAt = at
+            state.failRuns = 0
+            entry.outcome = .unchanged
+        case .success(.postings(let postings, let memo)):
             progress.found += postings.count
+            entry.items = postings.count
             do {
-                let recent = recentOnly(postings)
-                progress.tooOld += postings.count - recent.count
-                let (added, outside, duplicates) = try await store(recent)
-                progress.added += added
-                progress.outside += outside
-                progress.duplicates += duplicates
+                let cutoff = postedWithinDays.map { at.addingTimeInterval(-Double($0) * 86_400) }
+                let outcome = try await ListingLedger(db).record(
+                    postings, from: source.id, kind: source.kind, complete: fetched.listsEverything, at: at,
+                    postedAfter: cutoff)
+                progress.added += outcome.added
+                progress.outside += outcome.outside
+                progress.duplicates += outcome.duplicates
+                progress.tooOld += outcome.tooOld
+                progress.attached += outcome.attached
+                progress.changed += outcome.changed
+                progress.upgraded += outcome.upgraded
+                progress.closed += outcome.closed
+                progress.reopened += outcome.reopened
+                entry.added = outcome.added
+                entry.changed = outcome.changed
+                entry.closed = outcome.closed
+                state.etag = memo?.etag
+                state.fingerprint = fingerprint
+                state.lastOKAt = at
+                state.failRuns = 0
             } catch {
                 progress.failures.append(Failure(sourceID: source.id, message: "Couldn't save the jobs: \(error)"))
+                entry.outcome = .failed
+                entry.error = "\(error)"
+                // Nothing was saved, so its next answer mustn't be "unchanged".
+                state.etag = nil
             }
-            _ = try? await sources.recordRun(of: source.id, found: postings.count, at: now())
+            _ = try? await sources.recordRun(of: source.id, found: postings.count, at: at)
         }
-    }
-
-    /// The postings within your "posted within" limit. One without a date is kept: its age can't be
-    /// told, and screening still reads it.
-    private func recentOnly(_ postings: [Posting]) -> [Posting] {
-        guard let days = postedWithinDays else { return postings }
-        let cutoff = now().addingTimeInterval(-Double(days) * 86_400)
-        return postings.filter { posting in posting.postedAt.map { $0 >= cutoff } ?? true }
-    }
-
-    /// Normalizes, de-duplicates against what's stored (including jobs saved earlier in this run),
-    /// and stores. Returns the counts of jobs added and postings dropped.
-    private func store(_ postings: [Posting]) async throws -> (added: Int, outside: Int, duplicates: Int) {
-        let seenAt = now()
-        var jobs: [Job] = []
-        var outside = 0
-        for posting in postings {
-            switch Normalizer.normalize(posting, firstSeenAt: seenAt) {
-            case .job(let job): jobs.append(job)
-            case .outsideCanadaAndUS: outside += 1
-            }
-        }
-        let repository = JobRepository(db)
-        let known = try await repository.knownIDs(among: jobs.map(\.id))
-        let companies = Set(jobs.map { String($0.dedupKey.prefix { $0 != "|" }) })
-        let existing = try await repository.dedupEntries(companies: companies).map {
-            Deduplicator.Known(sourceID: $0.sourceID, dedupKey: $0.dedupKey)
-        }
-        let fresh = Deduplicator.newJobs(jobs, knownIDs: known, existing: existing)
-        if !fresh.isEmpty { try await repository.upsert(fresh) }
-        return (fresh.count, outside, jobs.count - fresh.count)
+        try? await log.save(state, of: source.id)
+        try? await log.record(entry)
     }
 
     static func message(for error: any Error) -> String {

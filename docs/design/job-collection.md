@@ -1,6 +1,16 @@
 # Job collection v2: design and plan
 
-Status: **proposed 2026-10-23, waiting for the owner's approval.** Research behind every
+Status: **approved 2026-10-23** with the owner's four decisions:
+
+1. **Companies**: watch every catalog company with jobs in your countries (plus pasted ones and
+   ones found through Adzuna), each mutable.
+2. **Roles**: software development; DevOps, cloud and SRE; data, ML and AI engineering; QA and
+   test automation.
+3. **Sources**: the free ones (public boards, Adzuna, Himalayas) **and** Google Jobs through
+   JSearch or SerpApi with the owner's own key.
+4. **Adzuna**: use most of the free plan (up to 200 searches a day, 2,400 a month).
+
+ Research behind every
 choice: `docs/research/job-collection/` (00 current system, 01 Adzuna, 02 public ATS APIs,
 03 search APIs, 04 Canadian sources, 05 company discovery, 06 tracking).
 

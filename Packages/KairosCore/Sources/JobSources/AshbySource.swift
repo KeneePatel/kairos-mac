@@ -12,15 +12,27 @@ public struct AshbySource: JobSource {
         self.http = http
     }
 
+    public var listsEverything: Bool { true }
+
     public func fetch(_ query: SourceQuery) async throws -> [Posting] {
+        guard case .postings(let postings, _) = try await fetch(query, since: nil) else { return [] }
+        return postings
+    }
+
+    public func fetch(_ query: SourceQuery, since memo: FetchMemo?) async throws -> FetchAnswer {
         guard BoardSlug.isValid(organization),
             let url = URL(string: "https://api.ashbyhq.com/posting-api/job-board/\(organization)")
         else {
             throw SourceError.invalidConfiguration("Ashby organization: \(organization)")
         }
-        let board = try await http.getJSON(url, as: AshbyBoard.self)
+        let (answer, etag) = try await http.getJSON(url, as: AshbyBoard.self, ifNoneMatch: memo?.etag)
+        guard let board = answer else { return .unchanged }
+        return .postings(postings(board, query), memo: FetchMemo(etag: etag))
+    }
+
+    private func postings(_ board: AshbyBoard, _ query: SourceQuery) -> [Posting] {
         // Unlisted jobs are reachable by link only; the company doesn't advertise them.
-        return board.jobs.filter { $0.isListed ?? true }.map { job in
+        board.jobs.filter { $0.isListed ?? true }.map { job in
             Posting(
                 sourceID: id,
                 url: job.jobUrl,

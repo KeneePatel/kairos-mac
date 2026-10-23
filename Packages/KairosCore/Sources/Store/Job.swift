@@ -46,6 +46,12 @@ public enum RemoteScope: String, Sendable, CaseIterable, Codable {
     case remoteAnywhere = "remote_anywhere"
 }
 
+/// How much of a posting Kairos holds: the whole text, a search's snippet (Adzuna sends 500
+/// characters), or none (a stub or tombstone).
+public enum DescriptionKind: String, Sendable, CaseIterable, Codable {
+    case full, snippet, none
+}
+
 /// A posted pay range, in the job's `currency`.
 public struct Salary: Codable, Sendable, Equatable {
     public enum Period: String, Codable, Sendable, CaseIterable { case year, month, week, day, hour }
@@ -86,6 +92,13 @@ public struct Job: Sendable, Equatable, Identifiable {
     /// Higher ranks list first.
     public var rank: Double?
     public var firstSeenAt: Date
+    /// When any of its listings was last seen; nil before job collection v2 tracked it.
+    public var lastSeenAt: Date?
+    /// When its last open listing closed; nil while it's posted somewhere.
+    public var closedAt: Date?
+    public var descriptionKind: DescriptionKind
+    /// The listing whose text and link the job shows: a company's board over a search's copy.
+    public var primaryListingID: JobID?
     /// Set by the repository on every write.
     public internal(set) var updatedHLC: HLCTimestamp?
 
@@ -94,7 +107,8 @@ public struct Job: Sendable, Equatable, Identifiable {
         location: String = "", city: String? = nil, region: String? = nil, country: Country? = nil,
         remoteScope: RemoteScope = .unknown, currency: String? = nil, salary: Salary? = nil, postedAt: Date? = nil,
         descriptionMarkdown: String? = nil, state: JobState = .new, verdict: Verdict? = nil,
-        verdictSource: VerdictSource? = nil, rank: Double? = nil, firstSeenAt: Date
+        verdictSource: VerdictSource? = nil, rank: Double? = nil, firstSeenAt: Date, lastSeenAt: Date? = nil,
+        closedAt: Date? = nil, descriptionKind: DescriptionKind = .full, primaryListingID: JobID? = nil
     ) {
         self.id = JobID(canonicalURL: canonicalURL)
         self.canonicalURL = canonicalURL
@@ -117,5 +131,12 @@ public struct Job: Sendable, Equatable, Identifiable {
         self.verdictSource = verdictSource
         self.rank = rank
         self.firstSeenAt = firstSeenAt
+        self.lastSeenAt = lastSeenAt
+        self.closedAt = closedAt
+        self.descriptionKind = descriptionKind
+        self.primaryListingID = primaryListingID
     }
+
+    /// Still posted somewhere.
+    public var isOpen: Bool { closedAt == nil }
 }

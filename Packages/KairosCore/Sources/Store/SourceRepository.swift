@@ -14,6 +14,9 @@ public enum SourceKind: String, Sendable, CaseIterable {
     /// Searches across companies (Adzuna, the page runners) rather than one company's own board.
     /// Boards run first in a fetch, so their full postings win over a search's copy.
     public var isSearch: Bool { self != .greenhouse && self != .lever && self != .ashby }
+
+    /// Its descriptions are snippets, not the whole posting (Adzuna's API sends 500 characters).
+    public var sendsSnippets: Bool { self == .adzuna }
 }
 
 public enum SourceHealth: String, Sendable, CaseIterable {

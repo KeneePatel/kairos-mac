@@ -4,7 +4,8 @@ import SwiftUI
 
 /// One job, full width (polish P3, replacing the side inspector): the posting's facts, the verdict
 /// and the rule behind it, what the AI read, every requirement as it was matched with the evidence
-/// from your master resume quoted, then the posting in full. Re-evaluate asks the AI again. Once
+/// from your master resume quoted, where it's posted and what happened to it (job collection v2),
+/// then the posting in full. Re-evaluate asks the AI again. Once
 /// the job has a build, Resume opens its resume page: the resume, the cover letter, and only this
 /// job's history.
 struct JobScreen: View {
@@ -15,10 +16,14 @@ struct JobScreen: View {
     @State private var problem: String?
     @AppStorage("buildCoverLetter") private var coverLetter = false
     @State private var showingResume = false
+    @State private var listings: [Listing] = []
+    @State private var history: [JobEvent] = []
 
-    init(id: JobID, preview: StoredAnalysis? = nil) {
+    init(id: JobID, preview: StoredAnalysis? = nil, listings: [Listing] = [], history: [JobEvent] = []) {
         self.id = id
         _stored = State(initialValue: preview)
+        _listings = State(initialValue: listings)
+        _history = State(initialValue: history)
     }
 
     private var job: Job? { model.job(id) }
@@ -39,6 +44,12 @@ struct JobScreen: View {
         // Reloads when the job's verdict is recorded again (a re-evaluation or a re-screen).
         .task(id: "\(id.rawValue)-\(job.flatMap { model.screening(for: $0)?.at.timeIntervalSince1970 } ?? 0)") {
             if let job { stored = await model.storedAnalysis(for: job) ?? stored }
+        }
+        // Reloads when a fetch sees the job again, or it closes.
+        .task(id: "\(id.rawValue)-\(job?.lastSeenAt?.timeIntervalSince1970 ?? 0)-\(job?.isOpen ?? true)") {
+            guard let job else { return }
+            let found = await model.postings(of: job)
+            if !found.listings.isEmpty { (listings, history) = found }
         }
         .alert("Couldn't do that", isPresented: Binding(get: { problem != nil }, set: { if !$0 { problem = nil } })) {
             Button("OK", role: .cancel) {}
@@ -138,6 +149,7 @@ struct JobScreen: View {
                         }
                     }
                 }
+                if !listings.isEmpty { wherePosted(job) }
                 if let description = job.descriptionMarkdown, !description.isEmpty {
                     VStack(alignment: .leading, spacing: Spacing.space3) {
                         Text("The posting").font(TypeStyle.title3).foregroundStyle(Color(.ink))
@@ -166,6 +178,14 @@ struct JobScreen: View {
                 }
             }
             Text(job.title).font(TypeStyle.title2).foregroundStyle(Color(.ink))
+            if let closed = job.closedAt {
+                // Not a verdict, but still never colour alone: an icon and the words.
+                Label(
+                    "No longer posted: gone from every source since \(closed.formatted(date: .abbreviated, time: .omitted))",
+                    systemImage: "archivebox"
+                )
+                .font(TypeStyle.callout.weight(.medium)).foregroundStyle(Color(.inkSecondary))
+            }
             HStack(spacing: Spacing.space3) {
                 Text(
                     [
@@ -179,6 +199,96 @@ struct JobScreen: View {
                         .font(TypeStyle.callout)
                 }
             }
+        }
+    }
+
+    /// Every source that lists the job, the one it shows first, with when it was first and last
+    /// seen there, then what happened to it.
+    private func wherePosted(_ job: Job) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.space2) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Where it's posted").font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                Spacer()
+                Text(seenLine(job)).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+            }
+            VStack(spacing: 0) {
+                ForEach(Array(listings.enumerated()), id: \.element.id) { index, listing in
+                    if index > 0 { Divider().overlay(Color(.separatorRow)) }
+                    listingRow(listing, shown: listing.id == (job.primaryListingID ?? job.id))
+                }
+            }
+            .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+            if !history.isEmpty {
+                Text(history.map(describe).joined(separator: " · ")).font(TypeStyle.callout)
+                    .foregroundStyle(Color(.inkSecondary)).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func listingRow(_ listing: Listing, shown: Bool) -> some View {
+        let source = model.source(listing.sourceID)
+        return HStack(spacing: Spacing.space3) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: Spacing.space1) {
+                    if source?.kind == .adzuna {
+                        AdzunaCredit()
+                    } else {
+                        Text(source.map(Self.boardName) ?? "A removed source")
+                            .font(TypeStyle.callout.weight(.semibold)).foregroundStyle(Color(.ink))
+                    }
+                    if shown {
+                        Text("· shown here").font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                    }
+                }
+                Text(listingLine(listing)).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+            }
+            Spacer()
+            if let url = URL(string: listing.url) {
+                Link(destination: url) { Label("Open", systemImage: "arrow.up.right.square") }
+                    .font(TypeStyle.callout)
+            }
+        }
+        .padding(.horizontal, Spacing.space3)
+        .padding(.vertical, Spacing.space2)
+    }
+
+    /// "Stripe on Greenhouse", or "A Greenhouse board" when you didn't name the company.
+    static func boardName(_ source: Source) -> String {
+        source.displayName == source.kind.displayName
+            ? "A \(source.kind.displayName) board" : "\(source.displayName) on \(source.kind.displayName)"
+    }
+
+    /// "Full posting · open, seen today", "Snippet · closed Oct 30".
+    private func listingLine(_ listing: Listing) -> String {
+        let text =
+            switch listing.descriptionKind {
+            case .full: "Full posting"
+            case .snippet: "Snippet"
+            case .none: "No description"
+            }
+        let state =
+            listing.closedAt.map { "closed \($0.formatted(date: .abbreviated, time: .omitted))" }
+            ?? "open, seen \(listing.lastSeenAt.formatted(.relative(presentation: .named)))"
+        return "\(text) · \(state)"
+    }
+
+    private func seenLine(_ job: Job) -> String {
+        let first = "First seen \(job.firstSeenAt.formatted(date: .abbreviated, time: .omitted))"
+        guard let last = job.lastSeenAt else { return first }
+        return first + " · last seen \(last.formatted(.relative(presentation: .named)))"
+    }
+
+    /// "Found on Greenhouse Oct 20", "Also on Adzuna Oct 21", "Closed Oct 30".
+    private func describe(_ event: JobEvent) -> String {
+        let source = event.sourceID.flatMap { model.source($0) }.map { " on \($0.kind.displayName)" } ?? ""
+        let date = event.at.formatted(.dateTime.month(.abbreviated).day())
+        switch event.kind {
+        case .found: return "Found\(source) \(date)"
+        case .postedElsewhere: return "Also\(source) \(date)"
+        case .changed: return "Edited\(source) \(date)"
+        case .upgraded: return "Full posting\(source) \(date)"
+        case .closed: return "Closed \(date)"
+        case .reopened: return "Back again \(date)"
         }
     }
 

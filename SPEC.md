@@ -217,7 +217,7 @@ flowchart LR
 ### 5.2 Pipeline
 1. **Fetch** from enabled sources in a `TaskGroup` (≤ 4 HTTP sources at a time; company boards before search sources), with per-host delays and timeouts. Postings older than your "Posted" limit (Fetch screen) are never stored; undated ones are kept.
 2. **Normalize:** canonical URL, Markdown description, and `job.id` = hash of the canonical URL (stable across devices). Parse `country` (CA or US), province or state, city, remote scope and currency.
-3. **De-duplicate:** known ids, then cross-board near-duplicates (company + title + city similarity ≥ 0.9).
+3. **De-duplicate and track** (job collection v2, 2026-10-23; `docs/design/job-collection.md`): every source's copy of a job is a *listing*. A posting seen before is seen again (an edit updates the job and screens it again); a new posting whose company, title and city match a stored job from another source (similarity ≥ 0.9) is attached to it, and a full posting replaces a snippet. Only a complete answer (a company board) can close: a listing missing from two in a row closes, a job closes when all its listings have, and closed jobs leave Review's to-do lists. A board answers "unchanged" (HTTP 304) to its last ETag, which counts as repeating its last answer. Search listings close 30 days unseen and 45 after posting. Each job keeps a short history.
 4. **Prefilter** (deterministic; the first failing rule wins and is recorded):
    - title include and exclude patterns
    - seniority policy
@@ -572,7 +572,7 @@ One per user. It's the complete record of everything they've done, longer than a
 | `skill` | yes | Skills to draw from | name, category, level (proven, can_discuss), sort |
 | `source` | yes | Configured sources | kind, config JSON, enabled, last_run_at, health, empty_runs (runs in a row with no results) |
 | `search` | yes | Saved searches | terms JSON, location, countries JSON (ordered), remote, max_age_hours |
-| `job` | yes* | Postings | source_id, url, canonical_url, dedup_key, company, title, location, city, country, region, remote_scope, currency, posted_at, salary JSON, description, state, verdict, verdict_source, rank, first_seen_at, cleared ("Delete all jobs": a tombstone the next fetch may bring back) |
+| `job` | yes* | Postings | source_id, url, canonical_url, dedup_key, company, title, location, city, country, region, remote_scope, currency, posted_at, salary JSON, description, state, verdict, verdict_source, rank, first_seen_at, last_seen_at, closed_at, description_kind, primary_listing_id (the listing it shows: a company board over a search), cleared ("Delete all jobs": a tombstone the next fetch may bring back) |
 | `job_analysis` | yes | Requirements | job_id, requirements JSON, flags JSON (sponsorship, clearance, language, remote scope), domains JSON, model, prompt_version |
 | `screening` | yes | Verdict trail | job_id, stage, verdict, rule_id, coverage JSON, reasons |
 | `build` | yes | One tailoring run | job_id, mode (strict, stretch, lite), master_version, status, template_id, content JSON (bullets carry `source_ids` and `verified`), match_score, breakdown JSON, iterations, cover_letter JSON, error, timestamps |
@@ -586,6 +586,10 @@ One per user. It's the complete record of everything they've done, longer than a
 | `run` | yes | Run history | kind, timestamps, stats JSON, error |
 | `private_setting` | **no** | Sensitive profile | work_auth JSON, clearance |
 | `llm_call` | **no** | One row per LLM call (§5.5), kept 30 days | at, task_id, provider, model, prompt_version, input_tokens, output_tokens, latency_ms, attempt, outcome, error_code, job_id, build_id |
+| `listing` | yes (without `description`) | One source's copy of a job | job_id, source_id, url, canonical_url, title, company, location, posted_at, description, description_kind (full, snippet, none), content_hash, first_seen_at, last_seen_at, missing_runs, closed_at |
+| `job_event` | yes | What happened to a job | job_id, at, kind (found, posted_elsewhere, changed, upgraded, closed, reopened), source_id, detail |
+| `source_fetch_state` | **no** | Each source's last ETag on this Mac | source_id, etag, fingerprint, last_ok_at, fail_runs |
+| `fetch_log` | **no** | Every request a fetch made, kept 30 days | run_id, source_id, at, request, outcome (ok, unchanged, failed), error, items, added, changed, closed, ms |
 | `llm_key_call` | **no** | One row per provider call by key, for the usage bars (§5.5), kept 30 days | at, provider, key_name (never the key), model, outcome (answered, failed, used_up), input_tokens, output_tokens, daily_limit, back_at |
 | `llm_cache` | **no** | Reusable task results | task_id, input_hash, prompt_version, model, output JSON, created_at |
 | `sync_outbox` | no | Pending pushes | table_name, row_id, hlc |

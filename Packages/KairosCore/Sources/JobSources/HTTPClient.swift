@@ -23,6 +23,26 @@ extension HTTPClient {
         }
     }
 
+    /// GETs `url` unless it hasn't changed since `etag` (HTTP 304, an empty answer): then nil. The
+    /// ETag that came back is for the next ask.
+    public func getJSON<T: Decodable>(_ url: URL, as type: T.Type, ifNoneMatch etag: String?)
+        async throws(SourceError) -> (value: T?, etag: String?)
+    {
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let etag { request.setValue(etag, forHTTPHeaderField: "If-None-Match") }
+        let (data, response) = try await data(for: request)
+        if response.statusCode == 304 { return (nil, etag) }
+        try Self.check(response)
+        do {
+            return (try JSONDecoder.sources.decode(T.self, from: data), response.value(forHTTPHeaderField: "ETag"))
+        } catch let error as DecodingError {
+            throw .decoding(Self.describe(error))
+        } catch {
+            throw .decoding(error.localizedDescription)
+        }
+    }
+
     static func check(_ response: HTTPURLResponse) throws(SourceError) {
         let endpoint = SourceError.endpoint(of: response.url)
         switch response.statusCode {

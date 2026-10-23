@@ -1,5 +1,6 @@
 #if DEBUG
     import Foundation
+    import JobSources
     import LLM
     import MasterResume
     import Screening
@@ -25,6 +26,15 @@
                 while done.wait(timeout: .now()) == .timedOut {
                     RunLoop.main.run(until: Date().addingTimeInterval(0.05))
                 }
+                exit(0)
+            }
+            if CommandLine.arguments.contains("--fetch-dry") {
+                let done = DispatchSemaphore(value: 0)
+                Task.detached {
+                    await fetchDry()
+                    done.signal()
+                }
+                done.wait()
                 exit(0)
             }
             if CommandLine.arguments.contains("--adzuna-probe") {
@@ -376,6 +386,106 @@
                 print("ai-report: budget \(ai.settings.budget.dailyCalls) calls a day")
             } catch {
                 print("ai-report: couldn't read settings (\(error))")
+            }
+        }
+
+        /// `--fetch-dry`: two real fetches, one after the other, on a migrated copy of your database
+        /// (job collection v2): what the migration made, what each fetch added, attached, upgraded,
+        /// changed and closed, and which boards answered "unchanged". No screening, so no AI calls;
+        /// Adzuna gets its usual searches. Your own database isn't touched.
+        private static func fetchDry() async {
+            func say(_ text: String) { print("fetch-dry: \(text)") }
+            do {
+                let fm = FileManager.default
+                let original = try AccountStore.applicationSupport().databaseURL(for: .local)
+                let copy = fm.temporaryDirectory.appending(path: "kairos-fetch-dry-\(UUID().uuidString)")
+                try fm.createDirectory(at: copy, withIntermediateDirectories: true)
+                for suffix in ["", "-wal", "-shm"] where fm.fileExists(atPath: original.path + suffix) {
+                    try fm.copyItem(
+                        atPath: original.path + suffix, toPath: copy.appending(path: "kairos.sqlite").path + suffix)
+                }
+                let db = try Database(path: copy.appending(path: "kairos.sqlite").path)
+                let before = try await db.userVersion()
+                try await Migrator.migrate(db, with: Migrator.bundled())
+                say("migrated \(before) → \(try await db.userVersion())")
+                for row in try await db.query(
+                    "SELECT description_kind, COUNT(*) AS n FROM listing WHERE deleted = 0 GROUP BY description_kind")
+                {
+                    say("listings \(row.string("description_kind") ?? "?"): \(row.int("n") ?? 0)")
+                }
+                let preferences =
+                    (try? await SettingsRepository(db).value(SearchPreferences.storageKey, as: SearchPreferences.self))
+                    ?? SearchPreferences()
+                let secrets = AppSecrets.store()
+                let adzuna: AdzunaSource.Credentials? =
+                    if let id = (try? secrets.read(SecretKey("adzuna.app_id"))) ?? nil,
+                        let key = (try? secrets.read(SecretKey("adzuna.app_key"))) ?? nil
+                    {
+                        AdzunaSource.Credentials(appID: id, appKey: key)
+                    } else { nil }
+                let search = SearchContext(
+                    query: SourceQuery(
+                        titles: preferences.titleInclude, countries: preferences.countries,
+                        maxAgeDays: preferences.maxAgeDays),
+                    adzuna: adzuna)
+                let http = URLSessionHTTPClient()
+                for pass in 1...2 {
+                    let started = Date()
+                    let run = FetchRun(
+                        db: db, postedWithinDays: preferences.maxAgeDays,
+                        makeSource: { try SourceFactory.make($0, http: http, search: search) })
+                    var last = FetchRun.Progress()
+                    for await progress in run.start() { last = progress }
+                    say(
+                        "fetch \(pass) in \(String(format: "%.1f", Date().timeIntervalSince(started))) s: \(last.sourcesDone) sources, "
+                            + "\(last.found) found, \(last.added) new, \(last.attached) attached, \(last.upgraded) upgraded, "
+                            + "\(last.changed) changed, \(last.closed) closed, \(last.reopened) reopened, "
+                            + "\(last.unchanged) unchanged, \(last.outside) outside, \(last.tooOld) too old, "
+                            + "\(last.failures.count) failed")
+                    for failure in last.failures { say("  failed: \(failure.message)") }
+                }
+                for row in try await db.query(
+                    "SELECT kind, COUNT(*) AS n FROM job_event WHERE deleted = 0 GROUP BY kind ORDER BY kind")
+                {
+                    say("events \(row.string("kind") ?? "?"): \(row.int("n") ?? 0)")
+                }
+                for row in try await db.query(
+                    """
+                    SELECT job.title, job.company, COUNT(*) AS n FROM listing JOIN job ON job.id = listing.job_id
+                    WHERE listing.deleted = 0 GROUP BY listing.job_id HAVING n > 1 LIMIT 10
+                    """)
+                {
+                    say(
+                        "  on \(row.int("n") ?? 0) sources: \(row.string("title") ?? "") · \(row.string("company") ?? "")"
+                    )
+                }
+                for row in try await db.query(
+                    """
+                    SELECT source.kind, job_event.kind AS event, COUNT(*) AS n FROM job_event
+                    JOIN source ON source.id = job_event.source_id
+                    WHERE job_event.kind IN ('changed', 'closed', 'upgraded') GROUP BY source.kind, job_event.kind
+                    """)
+                {
+                    say("  \(row.string("event") ?? "?") on \(row.string("kind") ?? "?"): \(row.int("n") ?? 0)")
+                }
+                for row in try await db.query(
+                    """
+                    SELECT job.title, job.company FROM job_event JOIN job ON job.id = job_event.job_id
+                    WHERE job_event.kind = 'changed' LIMIT 5
+                    """)
+                {
+                    say("  edited: \(row.string("title") ?? "") · \(row.string("company") ?? "")")
+                }
+                for row in try await db.query(
+                    "SELECT outcome, COUNT(*) AS n, SUM(ms) AS ms FROM fetch_log GROUP BY outcome")
+                {
+                    say(
+                        "log \(row.string("outcome") ?? "?"): \(row.int("n") ?? 0) requests, \(row.int("ms") ?? 0) ms in all"
+                    )
+                }
+                try? fm.removeItem(at: copy)
+            } catch {
+                say("failed: \(error)")
             }
         }
 

@@ -11,6 +11,11 @@ public enum ATSDetection: Equatable, Sendable {
 /// Turns a careers URL into a source kind and board slug (SPEC §5.4: pasting a careers URL detects
 /// the ATS). Accepts board pages, single postings, embeds and API URLs, with or without a scheme.
 public enum ATSDetector {
+    /// "eu" when a Lever address is on Lever's EU instance, which has its own API host.
+    public static func leverRegion(_ text: String) -> String? {
+        text.lowercased().contains("eu.lever.co") ? "eu" : nil
+    }
+
     public static func detect(_ text: String) -> ATSDetection {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         let withScheme = trimmed.contains("://") ? trimmed : "https://" + trimmed
@@ -31,11 +36,11 @@ public enum ATSDetector {
             // boards-api.greenhouse.io/v1/boards/acme/jobs
             case "boards-api.greenhouse.io":
                 (.greenhouse, path.count >= 3 && path[0] == "v1" && path[1] == "boards" ? path[2] : nil)
-            // jobs.lever.co/acme, /acme/<posting id>
-            case "jobs.lever.co":
+            // jobs.lever.co/acme, /acme/<posting id>; jobs.eu.lever.co for Lever's EU instance
+            case "jobs.lever.co", "jobs.eu.lever.co":
                 (.lever, path.first)
             // api.lever.co/v0/postings/acme
-            case "api.lever.co":
+            case "api.lever.co", "api.eu.lever.co":
                 (.lever, path.count >= 3 && path[0] == "v0" && path[1] == "postings" ? path[2] : nil)
             // jobs.ashbyhq.com/acme, /acme/<job id>, /acme/embed
             case "jobs.ashbyhq.com":
