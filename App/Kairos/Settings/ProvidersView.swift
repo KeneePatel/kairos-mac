@@ -44,6 +44,11 @@ struct ProvidersView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .sheet(isPresented: $addingCustom) { CustomProviderSheet() }
+        // Fresh bars each time: today's calls from the log, balances at most once a minute.
+        .task {
+            await model.refreshUsage()
+            await model.refreshBalances()
+        }
     }
 }
 
@@ -190,6 +195,17 @@ private struct ProviderCard: View {
                             .buttonStyle(.borderless)
                             .foregroundStyle(Color(.accentText))
                         }
+                        let bars = model.allowances[name] ?? []
+                        if !bars.isEmpty || model.allowanceErrors[name] != nil {
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(bars) { UsageBarRow(bar: $0) }
+                                if let problem = model.allowanceErrors[name] {
+                                    Label(problem, systemImage: "exclamationmark.triangle")
+                                        .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                                }
+                            }
+                            .padding(.leading, 70 + Spacing.space3)
+                        }
                         if let line = model.restLine(for: name, of: provider.id) {
                             Label {
                                 Text("Used up: \(line)").foregroundStyle(Color(.inkSecondary))
@@ -205,6 +221,12 @@ private struct ProviderCard: View {
                 .padding(.vertical, 6)
                 .frame(minHeight: 36)
             }
+            if let note = usageNote {
+                Text(note).font(TypeStyle.caption).foregroundStyle(Color(.inkSecondary))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Spacing.space3).padding(.bottom, Spacing.space2)
+            }
             if provider.keyNames.isEmpty {
                 Text(
                     preset.id == "gemini"
@@ -217,6 +239,18 @@ private struct ProviderCard: View {
             }
         }
         .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+    }
+
+    /// Where the bars' numbers come from, once there are bars.
+    private var usageNote: String? {
+        guard provider.keyNames.contains(where: { !(model.allowances[$0] ?? []).isEmpty }) else { return nil }
+        if preset.balanceURL != nil {
+            return "From \(preset.name), for each key's account. Every model spends the plan's credits, free ones too."
+        }
+        guard !preset.dailyRequests.isEmpty else { return "Counted by Kairos from its own calls." }
+        return "Counted by Kairos from its own calls since the day began (midnight Pacific): calls from other apps "
+            + "don't show. Keys from one Google Cloud project share one limit. \"About\" limits are the usual free "
+            + "ones until \(preset.name) names the real one."
     }
 
     /// What "Test" found for this key, as an icon and a word with the colour.
@@ -250,6 +284,48 @@ private struct ProviderCard: View {
         } else if case .failed(let message) = model.models[provider.id] {
             Text(message).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
         }
+    }
+}
+
+/// How much of one limit a key has left: the menu bar design's progress bar, the words, and when it
+/// fills again. Empty also reads "Used up" with an hourglass, so it never rests on colour alone.
+private struct UsageBarRow: View {
+    let bar: UsageBar
+
+    var body: some View {
+        HStack(spacing: Spacing.space2) {
+            Text(bar.label).font(.system(.caption, design: .monospaced)).foregroundStyle(Color(.ink2))
+                .lineLimit(1).truncationMode(.middle)
+                .frame(width: 170, alignment: .leading)
+            if let left = bar.left {
+                Capsule().fill(Color(.separator))
+                    .overlay(alignment: .leading) {
+                        GeometryReader { proxy in
+                            Capsule().fill(left < 0.15 ? Color(.maybe) : Color(.accent))
+                                .frame(width: proxy.size.width * min(1, max(0, left)))
+                        }
+                    }
+                    .frame(width: 140, height: 6)
+                    .accessibilityHidden(true)
+            }
+            if bar.usedUp {
+                Image(systemName: "hourglass").foregroundStyle(Color(.maybe)).accessibilityHidden(true)
+            }
+            Text(words).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).monospacedDigit()
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "188 of about 500 left today · resets at 3:00 AM", "Used up · back at 3:00 AM",
+    /// "$2.48 of $2.50 left · resets Nov 23".
+    private var words: String {
+        guard let resets = bar.resets else { return bar.detail }
+        let soon = resets.timeIntervalSinceNow < 86_400
+        let when =
+            soon
+            ? "at " + resets.formatted(date: .omitted, time: .shortened)
+            : resets.formatted(.dateTime.month(.abbreviated).day())
+        return bar.detail + (bar.usedUp ? " · back " : " · resets ") + when
     }
 }
 
@@ -428,7 +504,8 @@ private struct ModelGuideList: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
                 Text(id).font(.system(.callout, design: .monospaced)).foregroundStyle(Color(.ink))
-                Text(guide.costLine).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                Text(guide.freePlanLine.map { "\(guide.costLine) · \($0)" } ?? guide.costLine)
+                    .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
             }
             Text(guide.note).font(TypeStyle.callout).foregroundStyle(Color(.ink2))
                 .fixedSize(horizontal: false, vertical: true)

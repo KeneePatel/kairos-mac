@@ -75,7 +75,7 @@ public struct ProviderSetup: Sendable, Equatable {
     /// A client over every key found, which together form the rotation pool.
     public func client(
         secrets: any SecretStore, capabilities: ModelCapabilities = ModelCapabilities(), rests: KeyRests = KeyRests(),
-        transport: any LLMTransport = URLSessionTransport(), clock: any LLMClock = SystemClock()
+        meter: KeyMeter? = nil, transport: any LLMTransport = URLSessionTransport(), clock: any LLMClock = SystemClock()
     ) throws(LLMError) -> LLMClient {
         // Each key goes by its Keychain account, so a rest follows the key whatever its position.
         let keys: [(id: String, key: String?)]
@@ -94,7 +94,8 @@ public struct ProviderSetup: Sendable, Equatable {
         var policy = ClientPolicy(preset: preset)
         if let requestsPerMinute { policy.requestsPerMinute = requestsPerMinute }
         if let concurrent { policy.maxConcurrent = concurrent }
-        return LLMClient(keys: providers, keyIDs: keys.map(\.id), rests: rests, policy: policy, clock: clock)
+        return LLMClient(
+            keys: providers, keyIDs: keys.map(\.id), rests: rests, meter: meter, policy: policy, clock: clock)
     }
 }
 

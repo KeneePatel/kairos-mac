@@ -138,6 +138,10 @@ public enum LLMError: Error, Equatable, Sendable {
     /// 400. Never retried.
     case badRequest(String)
     case rateLimited(retryAfterSeconds: Int?)
+    /// A 429 for the day: this key used up its requests to this model until the quota resets, and
+    /// the provider may name the limit (Gemini's per-day quota). The client rests the key and tries
+    /// the next, so it never leaves the client: past it, it reads as `rateLimited`.
+    case quotaUsedUp(model: String, limit: Int?, retryAfterSeconds: Int?)
     /// A 429 whose quota limit is 0: the model isn't on this key's plan, so waiting won't help (T20).
     case modelNotOnPlan(String)
     /// The provider won't serve this model to this account now, in its own words: Ollama's 402
@@ -180,6 +184,7 @@ extension LLMError {
         case .modelNotFound: "model_not_found"
         case .badRequest: "bad_request"
         case .rateLimited: "rate_limited"
+        case .quotaUsedUp: "quota_used_up"
         case .modelNotOnPlan: "model_not_on_plan"
         case .modelUnavailable: "model_unavailable"
         case .server(let status): "server_\(status)"
@@ -205,6 +210,7 @@ extension LLMError {
         case .modelNotFound: "doesn't have this model"
         case .badRequest: "refused the request"
         case .rateLimited: "hit its rate limit"
+        case .quotaUsedUp: "used up today's requests"
         case .modelNotOnPlan: "isn't on this key's plan"
         case .modelUnavailable(_, let reason): reason
         case .server(let status) where status == 503 || status == 529: "was overloaded (\(status))"

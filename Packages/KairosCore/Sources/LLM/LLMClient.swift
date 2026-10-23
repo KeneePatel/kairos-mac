@@ -62,6 +62,8 @@ public actor LLMClient {
     /// What each key is called in `rests`: its Keychain account when built from Settings.
     private let keyIDs: [String]
     private let rests: KeyRests
+    /// Hears every call through every key, for the usage bars.
+    private let meter: KeyMeter?
     private let policy: ClientPolicy
     private let clock: any LLMClock
     private let limiter: RateLimiter
@@ -72,13 +74,14 @@ public actor LLMClient {
     /// `keys` holds one provider per key, all for the same service. Clients that share `rests` (and
     /// a clock) skip the keys any of them found used up.
     public init(
-        keys: [any LLMProvider], keyIDs: [String]? = nil, rests: KeyRests = KeyRests(), policy: ClientPolicy,
-        clock: any LLMClock = SystemClock(),
+        keys: [any LLMProvider], keyIDs: [String]? = nil, rests: KeyRests = KeyRests(), meter: KeyMeter? = nil,
+        policy: ClientPolicy, clock: any LLMClock = SystemClock(),
         jitter: @escaping @Sendable () -> Double = { Double.random(in: 0.5...1.5) }
     ) {
         self.keys = keys
         self.keyIDs = keyIDs.flatMap { $0.count == keys.count ? $0 : nil } ?? keys.indices.map { "key-\($0)" }
         self.rests = rests
+        self.meter = meter
         self.policy = policy
         self.clock = clock
         self.jitter = jitter
@@ -121,12 +124,15 @@ public actor LLMClient {
                 outcome = .failure(error)
             }
             await limiter.release()
+            if let meter, let call = KeyCall(key: keyIDs[index], model: request.model, result: outcome) {
+                await meter(call)
+            }
 
             switch outcome {
             case .success(let response):
                 current = index
                 return Completion(response: response, attempts: attempts, provider: keys[index].name)
-            case .failure(.rateLimited(let delay)):
+            case .failure(.rateLimited(let delay)), .failure(.quotaUsedUp(_, _, let delay)):
                 rests.rest(key: keyIDs[index], model: request.model, until: clock.now + .seconds(delay ?? 60))
             case .failure(.modelNotOnPlan):
                 // Another key may be on a plan that has this model.

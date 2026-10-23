@@ -132,7 +132,8 @@ public struct LLMSettings: Codable, Sendable, Equatable {
         for provider in providers {
             if let client = try? provider.setup.client(
                 secrets: secrets, capabilities: capabilities[provider.id] ?? ModelCapabilities(),
-                rests: rests[provider.id] ?? KeyRests(), transport: transport)
+                rests: rests[provider.id] ?? KeyRests(), meter: KeyCallLog(db).meter(provider: provider.id),
+                transport: transport)
             {
                 clients[provider.id] = client
             }

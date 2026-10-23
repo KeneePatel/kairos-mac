@@ -36,6 +36,13 @@ final class AISettingsModel {
     @ObservationIgnored private var revealed: [String: String] = [:]
     /// Key name → what the last "Test" found.
     private(set) var keyChecks: [String: KeyCheck] = [:]
+    /// Key name → how much it has left: Gemini's from Kairos's own count of the key's calls today,
+    /// Ollama Cloud's from its balance (decided 2026-10-23).
+    private(set) var allowances: [String: [UsageBar]] = [:]
+    /// Key name → why its balance couldn't be read.
+    private(set) var allowanceErrors: [String: String] = [:]
+    /// Key name → when its balance was last asked for: at most once a minute, as Ollama asks.
+    @ObservationIgnored private var balancesAsked: [String: Date] = [:]
     private(set) var error: String?
 
     @ObservationIgnored private let db: Database
@@ -45,6 +52,8 @@ final class AISettingsModel {
     @ObservationIgnored private var capabilities: [String: ModelCapabilities] = [:]
     @ObservationIgnored private var rests: [String: KeyRests] = [:]
     @ObservationIgnored private let log = Logger(subsystem: "com.keneepatel.kairos", category: "ai-settings")
+    /// Previews keep their sample numbers: refreshing would read an empty database.
+    @ObservationIgnored private var isPreview = false
 
     init(db: Database, secrets: any SecretStore) {
         self.db = db
@@ -56,7 +65,7 @@ final class AISettingsModel {
         init(
             preview settings: LLMSettings, models: [String: Models], usage: [String: Usage], masked: [String: String],
             keyChecks: [String: KeyCheck] = [:], rests: [String: KeyRests] = [:], spent: [String: Double] = [:],
-            health: [ModelRef: ModelHealth] = [:], db: Database
+            health: [ModelRef: ModelHealth] = [:], allowances: [String: [UsageBar]] = [:], db: Database
         ) {
             self.db = db
             secrets = InMemorySecretStore()
@@ -68,6 +77,8 @@ final class AISettingsModel {
             self.rests = rests
             spentThisMonth = spent
             self.health = health
+            self.allowances = allowances
+            isPreview = true
         }
     #endif
 
@@ -81,6 +92,7 @@ final class AISettingsModel {
     }
 
     func refreshUsage() async {
+        guard !isPreview else { return }
         let midnight = Calendar.current.startOfDay(for: Date())
         usage = (try? await CallLog(db).usageByProvider(since: midnight)) ?? [:]
         health = (try? await CallLog(db).health(since: midnight)) ?? [:]
@@ -90,6 +102,55 @@ final class AISettingsModel {
             spentThisMonth[provider.id] = tokens.reduce(0) { total, item in
                 total + (ModelGuide.entry(for: item.key)?.cost(input: item.value.input, output: item.value.output) ?? 0)
             }
+        }
+        for provider in settings.providers where provider.preset.balanceURL == nil {
+            await refreshAllowances(of: provider, force: false)
+        }
+    }
+
+    /// Asks each provider that reports a balance, at most once a minute per key: when AI providers
+    /// is shown, never at launch.
+    func refreshBalances() async {
+        guard !isPreview else { return }
+        for provider in settings.providers where provider.preset.balanceURL != nil {
+            await refreshAllowances(of: provider, force: false)
+        }
+    }
+
+    /// Each key's bars. A provider that reports a balance is asked once per key, at most once a
+    /// minute unless `force`; the others are counted from this Mac's log of the key's calls.
+    func refreshAllowances(of provider: LLMSettings.Provider, force: Bool) async {
+        let now = Date()
+        guard provider.preset.balanceURL != nil else {
+            let use =
+                (try? await KeyCallLog(db).use(
+                    provider: provider.id, since: provider.preset.quotaDay(containing: now).start)) ?? [:]
+            for name in provider.keyNames {
+                allowances[name] = provider.preset.dailyBars(
+                    models: models(on: provider.id), use: use[name] ?? [:], now: now)
+            }
+            return
+        }
+        for name in provider.keyNames {
+            if !force, let asked = balancesAsked[name], now.timeIntervalSince(asked) < 60 { continue }
+            guard let key = (try? secrets.read(SecretKey(name))) ?? nil else { continue }
+            balancesAsked[name] = now
+            do {
+                allowances[name] = try await OpenAICompatibleProvider(preset: provider.preset, key: key).balance().bars
+                allowanceErrors[name] = nil
+            } catch {
+                allowanceErrors[name] = Self.describeBalance(error, provider: provider.preset)
+            }
+        }
+    }
+
+    /// The provider's models your jobs use, in job order, then any other task's.
+    private func models(on providerID: String) -> [String] {
+        let chains =
+            AIJob.allCases.map { settings.chain(for: $0) }
+            + settings.routes.keys.sorted().compactMap { settings.routes[$0] }
+        return chains.joined().filter { $0.provider == providerID }.map(\.model).reduce(into: []) { models, model in
+            if !models.contains(model) { models.append(model) }
         }
     }
 
@@ -114,7 +175,11 @@ final class AISettingsModel {
     /// about 7 hours". Nil while it's fine. Kept for this session only: after a relaunch, one quick
     /// refusal finds out again.
     func restLine(for keyName: String, of providerID: String) -> String? {
-        guard let resting = rests[providerID]?.resting(key: keyName, at: SystemClock().now), !resting.isEmpty
+        // A model whose bar already says it's used up isn't repeated here.
+        let shown = Set((allowances[keyName] ?? []).filter(\.usedUp).map(\.label))
+        guard
+            let resting = rests[providerID]?.resting(key: keyName, at: SystemClock().now)
+                .filter({ !shown.contains($0.model) }), !resting.isEmpty
         else { return nil }
         return resting.map { rest in
             let back = rest.remaining.formatted(
@@ -161,6 +226,8 @@ final class AISettingsModel {
         try? secrets.delete(SecretKey(name))
         settings.providers[index].keyNames.removeAll { $0 == name }
         keyChecks[name] = nil
+        allowances[name] = nil
+        allowanceErrors[name] = nil
         await save()
     }
 
@@ -261,6 +328,7 @@ final class AISettingsModel {
             }
         }
         models[providerID] = result
+        await refreshAllowances(of: provider, force: true)
     }
 
     // MARK: - Routing and budget
@@ -359,6 +427,16 @@ final class AISettingsModel {
             result[name] = summary.hint ?? revealed[name] ?? Self.savedWithoutHint
         }
         masked = result
+    }
+
+    /// Why a key's balance couldn't be read, for the line under it.
+    static func describeBalance(_ error: LLMError, provider: ProviderPreset) -> String {
+        switch error {
+        case .keyRejected: "\(provider.name) rejected this key, so its balance is unknown."
+        case .rateLimited: "\(provider.name) asked for fewer balance checks. Try again in a minute."
+        case .network, .timedOut: "Couldn't reach \(provider.name) for this key's balance."
+        default: "\(provider.name) didn't report this key's balance (\(error.code))."
+        }
     }
 
     static func describe(_ error: LLMError, provider: ProviderPreset) -> String {

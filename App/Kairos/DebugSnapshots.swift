@@ -475,6 +475,30 @@
             let rests = KeyRests()
             rests.rest(
                 key: "llm.gemini.primary", model: "gemini-flash-latest", until: SystemClock().now + .seconds(26_000))
+            // Bars from the same code the app runs: the primary refused for Flash, Google named the
+            // backup's limit, and the Ollama account spent a little of its month.
+            let now = Date()
+            let gemini = ProviderPreset.gemini
+            let models = ["gemini-flash-lite-latest", "gemini-flash-latest"]
+            let allowances: [String: [UsageBar]] = [
+                "llm.gemini.primary": gemini.dailyBars(
+                    models: models,
+                    use: [
+                        "gemini-flash-lite-latest": KeyModelUse(calls: 312),
+                        "gemini-flash-latest": KeyModelUse(
+                            calls: 20, limit: 20, refused: true, back: now.addingTimeInterval(26_000)),
+                    ], now: now),
+                "llm.gemini.backup": gemini.dailyBars(
+                    models: models,
+                    use: [
+                        "gemini-flash-lite-latest": KeyModelUse(calls: 40),
+                        "gemini-flash-latest": KeyModelUse(calls: 6),
+                    ],
+                    now: now),
+                "llm.ollama-cloud.primary": CreditBalance(
+                    included: 2.41, allowance: 2.50, periodEnd: now.addingTimeInterval(6 * 86_400), purchased: 0
+                ).bars,
+            ]
             return AISettingsModel(
                 preview: settings,
                 models: [
@@ -505,7 +529,7 @@
                         calls: 52, failed: 1, averageSeconds: 6),
                     ModelRef(provider: "ollama-cloud", model: "gemma4:31b"): .init(
                         calls: 24, failed: 0, averageSeconds: 9),
-                ], db: db
+                ], allowances: allowances, db: db
             )
         }
 

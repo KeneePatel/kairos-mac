@@ -93,6 +93,23 @@ public struct OpenAICompatibleProvider: LLMProvider {
         throw error
     }
 
+    /// What this key's account has left, where the provider reports it (`balanceURL`).
+    public func balance() async throws(LLMError) -> CreditBalance {
+        guard let address = preset.balanceURL, let url = URL(string: address), url.scheme == "https" else {
+            throw .badRequest("\(preset.name) doesn't report a balance")
+        }
+        var request = URLRequest(url: url, timeoutInterval: 20)
+        request.httpMethod = "GET"
+        if let key { request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization") }
+        let (data, response) = try await transport.send(request)
+        guard response.statusCode == 200 else {
+            throw Self.error(
+                status: response.statusCode, message: Self.errorMessage(in: data) ?? "", response: response, data: data,
+                model: "", provider: preset.name)
+        }
+        return try CreditBalance.parse(data)
+    }
+
     // MARK: - Requests
 
     /// The task's limit for cloud providers; local ones keep their own, longer one (T20).
@@ -214,6 +231,9 @@ public struct OpenAICompatibleProvider: LLMProvider {
         case 429:
             // "limit: 0" means the plan has no quota for this model; waiting won't help (T20).
             if message.contains("limit: 0") { return .modelNotOnPlan(model) }
+            if let daily = dailyQuota(in: data, message: message) {
+                return .quotaUsedUp(model: model, limit: daily, retryAfterSeconds: retryAfter(response, data: data))
+            }
             return .rateLimited(retryAfterSeconds: retryAfter(response, data: data))
         default: return .server(status: status)
         }
@@ -228,6 +248,32 @@ public struct OpenAICompatibleProvider: LLMProvider {
         text = text.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ".")))
         guard let first = text.first else { return "refused this model" }
         return "said: " + String(first).lowercased() + text.dropFirst().prefix(200)
+    }
+
+    /// Whether a 429 is for the day, from Gemini's `QuotaFailure`: a violation of a requests-per-day
+    /// quota (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`). Its limit is the violation's
+    /// `quotaValue` when sent, else the message's matching "Quota exceeded for metric: …, limit: N"
+    /// line, which lists the violations in the same order. Nil for a per-minute 429; nil inside
+    /// when the limit isn't named.
+    static func dailyQuota(in data: Data, message: String) -> Int?? {
+        guard var value = try? JSONValue(parsing: String(decoding: data, as: UTF8.self)) else { return nil }
+        if case .array(let items) = value, let first = items.first { value = first }
+        guard case .object(let fields) = value, case .object(let error)? = fields["error"],
+            case .array(let details)? = error["details"]
+        else { return nil }
+        let violations = details.flatMap { detail -> [[String: JSONValue]] in
+            guard case .object(let failure) = detail, case .array(let list)? = failure["violations"] else { return [] }
+            return list.compactMap { if case .object(let violation) = $0 { violation } else { nil } }
+        }
+        guard
+            let index = violations.firstIndex(where: { violation in
+                guard case .string(let id)? = violation["quotaId"] else { return false }
+                return id.contains("RequestsPerDay")
+            })
+        else { return nil }
+        if case .string(let value)? = violations[index]["quotaValue"], let limit = Int(value) { return limit }
+        let limits = message.matches(of: /Quota exceeded for metric: [^,\n]+, limit: (\d+)/).compactMap { Int($0.1) }
+        return .some(limits.count == violations.count ? limits[index] : nil)
     }
 
     /// `Retry-After` in seconds, else Gemini's `RetryInfo.retryDelay` ("51s").

@@ -1,5 +1,6 @@
 import Foundation
 import JobSources
+import LLM
 import Store
 
 /// One "Fetch now": every enabled source is fetched (a few at a time), each posting normalized,
@@ -114,6 +115,10 @@ public struct FetchRun: Sendable {
         if !Task.isCancelled, let retired = try? await Retention(db).apply(now: now()) {
             progress.retired = retired
         }
+        // The AI call logs keep 30 days (SPEC §6.2), the per-key one with them.
+        let logStart = now().addingTimeInterval(-Double(CallLog.retentionDays) * 86_400)
+        _ = try? await CallLog(db).deleteOlder(than: logStart)
+        _ = try? await KeyCallLog(db).deleteOlder(than: logStart)
         progress.phase = Task.isCancelled ? .cancelled : .finished
         if let runID {
             let stats = Stats(

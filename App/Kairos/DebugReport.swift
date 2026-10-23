@@ -27,6 +27,17 @@
                 }
                 exit(0)
             }
+            if CommandLine.arguments.contains("--key-usage") {
+                let done = DispatchSemaphore(value: 0)
+                Task { @MainActor in
+                    await keyUsage()
+                    done.signal()
+                }
+                while done.wait(timeout: .now()) == .timedOut {
+                    RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+                }
+                exit(0)
+            }
             if CommandLine.arguments.contains("--ai-report") {
                 let done = DispatchSemaphore(value: 0)
                 Task { @MainActor in
@@ -356,6 +367,46 @@
                 print("ai-report: budget \(ai.settings.budget.dailyCalls) calls a day")
             } catch {
                 print("ai-report: couldn't read settings (\(error))")
+            }
+        }
+
+        /// `--key-usage [--raw]`: each key's usage bars as AI providers draws them, by its masked hint,
+        /// from this Mac's database and each provider's balance. `--raw` adds each balance reply as
+        /// sent. Never a key.
+        @MainActor private static func keyUsage() async {
+            do {
+                let db = try Database(path: try AccountStore.applicationSupport().databaseURL(for: .local).path)
+                let secrets = AppSecrets.store()
+                let ai = AISettingsModel(db: db, secrets: secrets)
+                await ai.load()
+                await ai.refreshBalances()
+                for provider in ai.settings.providers {
+                    for name in provider.keyNames {
+                        let hint = ai.masked[name] ?? "not on this Mac"
+                        print("key-usage: \(provider.id) \(hint)")
+                        for bar in ai.allowances[name] ?? [] {
+                            let left = bar.left.map { " \(Int(($0 * 100).rounded()))%" } ?? ""
+                            let resets =
+                                bar.resets.map { " · resets \($0.formatted(date: .abbreviated, time: .shortened))" }
+                                ?? ""
+                            print(
+                                "key-usage:   \(bar.label)\(left) · \(bar.detail)\(resets)\(bar.usedUp ? " · used up" : "")"
+                            )
+                        }
+                        if let problem = ai.allowanceErrors[name] { print("key-usage:   \(problem)") }
+                        guard CommandLine.arguments.contains("--raw"), let address = provider.preset.balanceURL,
+                            let url = URL(string: address), let key = (try? secrets.read(SecretKey(name))) ?? nil
+                        else { continue }
+                        var request = URLRequest(url: url)
+                        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+                        if let (data, response) = try? await URLSession.shared.data(for: request) {
+                            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                            print("key-usage:   raw \(status) \(String(decoding: data, as: UTF8.self))")
+                        }
+                    }
+                }
+            } catch {
+                print("key-usage: couldn't read settings (\(error))")
             }
         }
 

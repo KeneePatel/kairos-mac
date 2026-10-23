@@ -61,11 +61,25 @@ public struct ProviderPreset: Sendable, Equatable, Identifiable {
     /// Calls a plan runs at once, by plan name, when the provider sells plans (Ollama Cloud, its
     /// pricing page, 2026-10-23). Requests past it queue at the provider, then get refused.
     public var plans: [Plan] = []
+    /// The usual free requests a day per model family, where the provider caps a key by the day and
+    /// says nothing until it refuses: Kairos counts its own calls against it, and a refusal that names
+    /// the real limit replaces it (2026-10-23).
+    public var dailyRequests: [DailyRequests] = []
+    /// The time zone those days run in, as an identifier.
+    public var quotaDayZone: String? = nil
+    /// Where a key's credits left can be read (Ollama Cloud's `GET /api/balance`).
+    public var balanceURL: String? = nil
 
     public struct Plan: Sendable, Equatable, Identifiable {
         public let id: String
         public let name: String
         public let concurrent: Int
+    }
+
+    /// Models whose id contains `family` get `requests` a day; the first match wins.
+    public struct DailyRequests: Sendable, Equatable {
+        public let family: String
+        public let requests: Int
     }
 
     /// How hard models here think unless a task says: not at all on Ollama, on this Mac (decided
@@ -74,13 +88,21 @@ public struct ProviderPreset: Sendable, Equatable, Identifiable {
         isLocal || id == ProviderPreset.ollamaCloud.id ? ReasoningEffort.none : nil
     }
 
-    /// Verified in T20: strict schema mode works, half the tokens of JSON mode.
+    /// Verified in T20: strict schema mode works, half the tokens of JSON mode. Free keys get a few
+    /// requests a day per model, per Google Cloud project, reset at midnight Pacific
+    /// (ai.google.dev/gemini-api/docs/rate-limits). Flash: 20, as its refusals said on 2026-10-19.
+    /// Flash-Lite: about 500, from October 2026 reports and a key refused after about 400 calls on
+    /// 2026-10-20; checked against Google's own number the first time it refuses a key.
     public static let gemini = ProviderPreset(
         id: "gemini", name: "Google Gemini", baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
         needsKey: true, isLocal: false, structuredOutput: .schema, acceptsReasoningEffort: true,
         maxTokensField: "max_tokens",
         defaultModels: [.flash: "gemini-flash-latest", .flashLite: "gemini-flash-lite-latest"], requestsPerMinute: 10,
-        timeoutSeconds: 120)
+        timeoutSeconds: 120,
+        dailyRequests: [
+            DailyRequests(family: "flash-lite", requests: 500), DailyRequests(family: "flash", requests: 20),
+        ],
+        quotaDayZone: "America/Los_Angeles")
 
     /// JSON mode until a model refuses it (T20: `qwen3.5:4B` answers 501 and drops to prompt-only).
     public static let ollamaLocal = ProviderPreset(
@@ -99,7 +121,8 @@ public struct ProviderPreset: Sendable, Equatable, Identifiable {
         plans: [
             Plan(id: "free", name: "Free", concurrent: 1), Plan(id: "pro", name: "Pro", concurrent: 3),
             Plan(id: "max", name: "Max", concurrent: 10),
-        ])
+        ],
+        balanceURL: "https://ollama.com/api/balance")
 
     // Not measured yet: they start at schema mode and drop like any other on refusal.
 

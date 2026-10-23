@@ -41,6 +41,18 @@ public struct ModelGuide: Sendable, Equatable {
         return "about \(cents)¢ a resume, needs credits"
     }
 
+    /// What Ollama's Free plan includes each month, per account. Every model's calls spend it, the
+    /// free ones too (each of four keys' balances, 2026-10-23).
+    public static let freePlanCredits = 2.50
+
+    /// "about 480 resumes a month on the Free plan's $2.50": how far the plan's credits go on a
+    /// model it has, rounded down to tens. Nil for the others.
+    public var freePlanLine: String? {
+        guard free, costPerBuild > 0 else { return nil }
+        let resumes = Int(Self.freePlanCredits / costPerBuild) / 10 * 10
+        return "about \(resumes) resumes a month on the Free plan's $2.50"
+    }
+
     /// The guide's entry for a model id as a provider lists it ("gemma4:31b", "deepseek-v4.1-flash:1017").
     public static func entry(for model: String) -> ModelGuide? {
         let name = model.lowercased().replacing("-cloud", with: "").replacing(":cloud", with: "")
