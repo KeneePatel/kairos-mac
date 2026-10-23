@@ -28,7 +28,7 @@ public struct RewriteSectionTask: LLMTask {
     public init() {}
 
     public func messages(for input: RewriteSectionInput, budget: TokenBudget) -> [ChatMessage] {
-        let base = SectionWriter.messages(Self.id, tag: input.tag, input: input.writer)
+        let base = SectionWriter.messages(Self.id, version: Self.promptVersion, tag: input.tag, input: input.writer)
         let current = zip(input.writer.entryOrder, input.writer.entries).compactMap { short, selected -> String? in
             guard let entry = input.current.first(where: { $0.entryID == selected.entry.id }) else { return nil }
             let bullets = entry.bullets.map { bullet in

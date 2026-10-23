@@ -76,6 +76,7 @@ struct FakeProviderTests {
             TaskID.catalog.map(\.rawValue) == [
                 "importResume", "importGitHubRepo", "triage", "analyzeJob", "select", "writeSummary", "writeSkills",
                 "writeExperience", "writeProjects", "rewriteSection", "gapBullets", "coverLetter", "suggestEvidence",
+                "shortenBullets",
             ])
     }
 }

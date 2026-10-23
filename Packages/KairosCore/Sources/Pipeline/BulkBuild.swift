@@ -34,7 +34,8 @@ public struct BulkBuild: Sendable, Equatable {
     /// About how many AI calls one build makes (BuildLoop): a writer for experience, projects and
     /// skills, and the summary when the template has one; outside Lite, up to the rewrite passes
     /// over experience and projects; Stretch's gap bullets; the cover letter. A reply that fails
-    /// its checks costs one more call to repair, which isn't counted.
+    /// its checks costs one more call to repair, and bullets that waste a line one more to
+    /// shorten; neither is counted.
     public static func calls(mode: BuildMode, coverLetter: Bool, summary: Bool) -> ClosedRange<Int> {
         let writers = (mode == .lite ? 1 : 3) + (summary ? 1 : 0)
         let least = writers + (coverLetter ? 1 : 0)

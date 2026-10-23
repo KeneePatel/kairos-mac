@@ -11,8 +11,9 @@ public struct ResumeLayout: Decodable, Sendable, Equatable {
         public var item: Int
         public var bullet: Int
         public var lines: Int
-        /// Its width set on one line.
+        /// Its width set on one line, and its characters.
         public var width: Double
+        public var characters: Int?
     }
 
     public struct End: Decodable, Sendable, Equatable {
@@ -43,7 +44,11 @@ public struct ResumeLayout: Decodable, Sendable, Equatable {
             return (0..<count).map { item in
                 mine.filter { $0.item == item }.sorted { $0.bullet < $1.bullet }.map { bullet in
                     let rest = bullet.width - Double(bullet.lines - 1) * column
-                    return PageLayout.Bullet(lines: bullet.lines, lastLineFill: min(1, max(0, rest / column)))
+                    let perLine = bullet.characters.flatMap {
+                        bullet.width > 0 ? Double($0) * column / bullet.width : nil
+                    }
+                    return PageLayout.Bullet(
+                        lines: bullet.lines, lastLineFill: min(1, max(0, rest / column)), lineCharacters: perLine)
                 }
             }
         }

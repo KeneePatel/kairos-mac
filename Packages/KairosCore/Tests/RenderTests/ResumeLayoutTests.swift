@@ -29,6 +29,9 @@ struct ResumeLayoutTests {
         #expect(wrapped.lines == 2 && wrapped.isShortWrap, "\(wrapped)")
         #expect(layout.experience[0][1].lines == 1 && !layout.experience[0][1].isShortWrap)
         #expect(layout.experience[0][1].lastLineFill > 0.5 && layout.experience[0][1].lastLineFill <= 1)
+        // About 100 characters a line at Harvard's 11 pt, measured from each bullet's own text.
+        let perLine = try #require(wrapped.lineCharacters)
+        #expect((90...115).contains(perLine), "\(perLine)")
         // A letter page at ¾ in margins holds about 59 lines of 11 pt; this short resume leaves most free.
         #expect((55...62).contains(layout.linesPerPage), "\(layout.linesPerPage)")
         #expect(layout.freeLines > 10 && layout.freeLines < layout.linesPerPage)

@@ -50,17 +50,21 @@ public struct TaskDefaults: Sendable, Equatable {
         .select: TaskDefaults(budget: TokenBudget(input: 4_000, output: 500), temperature: 0, modelClass: .flashLite),
         .writeSummary: writer, .writeSkills: writer, .writeExperience: writer, .writeProjects: writer,
         .rewriteSection: TaskDefaults(
-            budget: TokenBudget(input: 3_000, output: 1_500), temperature: 0.4, modelClass: .flash, timeoutSeconds: 120),
+            budget: TokenBudget(input: 6_000, output: 3_000), temperature: 0.4, modelClass: .flash, timeoutSeconds: 120),
         .gapBullets: TaskDefaults(
             budget: TokenBudget(input: 3_000, output: 800), temperature: 0.5, modelClass: .flash, timeoutSeconds: 120),
         .coverLetter: TaskDefaults(
             budget: TokenBudget(input: 4_000, output: 1_000), temperature: 0.6, modelClass: .flash, timeoutSeconds: 120),
+        .shortenBullets: TaskDefaults(
+            budget: TokenBudget(input: 3_000, output: 2_000), temperature: 0.2, modelClass: .flashLite),
         .suggestEvidence: TaskDefaults(
             budget: TokenBudget(input: 4_000, output: 800), temperature: 0.3, modelClass: .flashLite),
     ]
 
+    /// Room for up to six bullets a role and four projects, more than a page holds: the page fitter
+    /// keeps what earns its lines.
     private static let writer = TaskDefaults(
-        budget: TokenBudget(input: 4_000, output: 1_500), temperature: 0.4, modelClass: .flash, timeoutSeconds: 120)
+        budget: TokenBudget(input: 6_000, output: 3_000), temperature: 0.4, modelClass: .flash, timeoutSeconds: 120)
 
     /// For a task outside the catalog (tests, future tasks).
     public static let fallback = TaskDefaults(

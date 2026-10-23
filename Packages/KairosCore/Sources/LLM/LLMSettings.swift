@@ -94,8 +94,9 @@ public struct LLMSettings: Codable, Sendable, Equatable {
     }
 
     /// A later task and the one that sends the same data: suggestions send your screening profile,
-    /// as reading postings does, so they go wherever you send that.
-    static let routeSources: [TaskID: TaskID] = [.suggestEvidence: .analyzeJob]
+    /// as reading postings does, so they go wherever you send that; shortening sends written
+    /// bullets, as writing experience does.
+    static let routeSources: [TaskID: TaskID] = [.suggestEvidence: .analyzeJob, .shortenBullets: .writeExperience]
 
     public func provider(_ id: String) -> Provider? {
         providers.first { $0.id == id }

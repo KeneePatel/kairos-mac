@@ -141,12 +141,13 @@ struct PromptPrivacyTests {
         ]
 
         // A Stretch build with a letter, every reply unusable, so each writer also falls back and
-        // the rewrite pass runs: every build task sends at least once.
+        // the rewrite pass runs, on a page where every bullet wastes a line, so they're all sent to
+        // be shortened: every build task sends at least once.
         let fake = FakeProvider(
             Dictionary(
                 uniqueKeysWithValues: [
                     TaskID.writeExperience, .writeProjects, .writeSummary, .writeSkills, .rewriteSection, .gapBullets,
-                    .coverLetter,
+                    .coverLetter, .shortenBullets,
                 ].map { ($0, Array(repeating: FakeProvider.Reply.reply("{}"), count: 12)) }))
         let client = LLMClient(keys: [fake], policy: ClientPolicy(requestsPerMinute: 6_000), jitter: { 1 })
         let routes = Dictionary(
@@ -157,7 +158,15 @@ struct PromptPrivacyTests {
         _ = try await BuildLoop(router: router, master: Avery.resume).run(
             BuildRequest(
                 jobTitle: Avery.job.title, company: Avery.job.company, requirements: Avery.requirements,
-                locale: .canada, mode: .stretch, coverLetter: true))
+                locale: .canada, mode: .stretch, coverLetter: true),
+            measure: { resume in
+                func wasted(_ entries: [TailoredResume.Entry]) -> [[PageLayout.Bullet]] {
+                    entries.map { $0.bullets.map { _ in PageLayout.Bullet(lines: 2, lastLineFill: 0.1) } }
+                }
+                return PageLayout(
+                    pages: 1, linesPerPage: 58, freeLines: 3, experience: wasted(resume.experience),
+                    projects: wasted(resume.projects))
+            })
         for request in fake.requests { prompts[request.task, default: []].append(request.messages) }
         return prompts
     }

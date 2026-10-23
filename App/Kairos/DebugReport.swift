@@ -164,12 +164,14 @@
             return out
         }
 
-        /// `--run-build=<words> [--stretch] [--report] [--dump]`: one build with a cover letter, strict
-        /// unless `--stretch`, for the first job whose "title · company" has those words, run exactly
-        /// as the app runs it but on a copy of your database (so nothing of yours changes), printing
-        /// the routes it uses and each step and render with timings. `--report` adds its report card
-        /// and its calls and tokens per task; `--dump` the resume and letter as JSON and both PDFs as
-        /// base64, for reviewing a build outside the app (the PDFs carry your contact line).
+        /// `--run-build=<words> [--stretch] [--report] [--dump] [--writer-model=<model>]`: one build
+        /// with a cover letter, strict unless `--stretch`, for the first job whose "title · company"
+        /// has those words, run exactly as the app runs it but on a copy of your database (so nothing
+        /// of yours changes), printing the routes it uses and each step and render with timings.
+        /// `--report` adds its report card and its calls and tokens per task; `--dump` the resume and
+        /// letter as JSON and both PDFs as base64, for reviewing a build outside the app (the PDFs
+        /// carry your contact line). `--writer-model` puts the writing tasks on that Gemini model in
+        /// the copy, to compare models.
         @MainActor private static func runBuild(_ filter: String) async {
             let started = Date()
             func say(_ text: String) {
@@ -227,8 +229,18 @@
                     defer { print("run-build: render \(kind) end after \(Date().timeIntervalSince(renderStarted)) s") }
                     return try await renderer.render(printable)
                 }
+                let writing = [
+                    TaskID.writeExperience, .writeProjects, .writeSkills, .rewriteSection, .shortenBullets,
+                    .coverLetter,
+                ]
+                if let model = CommandLine.arguments.first(where: { $0.hasPrefix("--writer-model=") })?.dropFirst(15) {
+                    for task in writing {
+                        await ai.setRoute(
+                            task, primary: ModelRef(provider: "gemini", model: String(model)), fallback: nil)
+                    }
+                }
                 // Which model each build task goes to, and what's been spent today. Never a key.
-                for task in [TaskID.writeExperience, .writeProjects, .writeSkills, .rewriteSection, .coverLetter] {
+                for task in writing {
                     let route = (ai.settings.routes[task.rawValue] ?? []).map { "\($0.provider)/\($0.model)" }
                     say("route \(task.rawValue): \(route.joined(separator: " > "))")
                 }

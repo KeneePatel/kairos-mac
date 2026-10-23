@@ -41,6 +41,10 @@ struct LLMSettingsTests {
         settings.addMissingRoutes()
         #expect(settings.routes["suggestEvidence"] == [local])  // Flash-Lite's kind, as analyzeJob
         #expect(settings.routes["coverLetter"] == settings.routes["writeExperience"])
+        settings.routes["writeExperience"] = [local]
+        settings.routes["shortenBullets"] = nil
+        settings.addMissingRoutes()
+        #expect(settings.routes["shortenBullets"] == [local])  // it sends written bullets, as writing does
         #expect(settings.routes["triage"] == nil)
         // A route you emptied stays empty.
         settings.routes["select"] = []

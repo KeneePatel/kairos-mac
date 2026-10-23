@@ -7,11 +7,20 @@ public struct JobRequirements: Sendable, Equatable {
     public var musts: [String]
     public var nices: [String]
     public var domains: [String]
+    /// The posting asks about spoken languages, so the resume shows yours.
+    public var asksForLanguages: Bool
+    /// What the posting says about certifications, if anything: the resume shows yours that match.
+    public var certificationAsks: [String]
 
-    public init(musts: [String], nices: [String] = [], domains: [String] = []) {
+    public init(
+        musts: [String], nices: [String] = [], domains: [String] = [], asksForLanguages: Bool = false,
+        certificationAsks: [String] = []
+    ) {
         self.musts = musts
         self.nices = nices
         self.domains = domains
+        self.asksForLanguages = asksForLanguages
+        self.certificationAsks = certificationAsks
     }
 }
 
@@ -40,12 +49,13 @@ public struct Selection: Sendable, Equatable {
 /// `Synonyms.json`, then plain keywords at half weight), with a small bonus for numbers and a
 /// recency factor between roles. Code decides; the `select` task only breaks ties (T35).
 public struct Selector: Sendable {
-    /// Bullets kept per role, most recent role first; the last count repeats.
+    /// Bullets kept per role, most recent role first; the last count repeats. Generous by default:
+    /// the writers get more than fits, and the page fitter keeps what earns its lines.
     public let maxBulletsPerRole: [Int]
     public let maxProjects: Int
     public let now: Date
 
-    public init(maxBulletsPerRole: [Int] = [5, 4, 3, 2], maxProjects: Int = 2, now: Date = Date()) {
+    public init(maxBulletsPerRole: [Int] = [6], maxProjects: Int = 4, now: Date = Date()) {
         self.maxBulletsPerRole = maxBulletsPerRole.isEmpty ? [3] : maxBulletsPerRole
         self.maxProjects = maxProjects
         self.now = now

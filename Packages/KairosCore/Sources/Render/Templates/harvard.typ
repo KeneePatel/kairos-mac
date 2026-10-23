@@ -34,7 +34,10 @@
     for (item, entry) in section.at("items", default: ()).enumerate() {
       for (index, bullet) in entry.at("bullets", default: ()).enumerate() {
         let lines = int(calc.round((measure(block(width: column, bullet)).height - one) / step)) + 1
-        bullets.push((section: section.kind, item: item, bullet: index, lines: lines, width: measure(bullet).width / 1pt))
+        bullets.push((
+          section: section.kind, item: item, bullet: index, lines: lines, width: measure(bullet).width / 1pt,
+          characters: bullet.clusters().len(),
+        ))
       }
     }
   }

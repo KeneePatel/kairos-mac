@@ -376,6 +376,38 @@ struct BuildQueueTests {
         let left = try #require(try await BuildRepository(other).build(second))
         #expect(left.status == .done && left.coverLetter?.status == .failed)
         #expect(left.coverLetter?.error?.hasPrefix("The cover letter didn't pass its checks") == true)
+        #expect(left.coverLetter?.error?.contains("What the checks found:") == true)  // and why
+        #expect(left.coverLetter?.error?.contains("Rust") == true)
         #expect(try await BuildRepository(other).artifacts(for: second).map(\.kind) == ["resume"])
+    }
+}
+
+@Suite("Build requirements")
+struct BuildRequirementsTests {
+    /// Only skills and experience reach the writers and the score: the 1Password postings' "Humility"
+    /// and "Teamwork" must-haves are screening's, as are location and enrolment. A spoken-language
+    /// requirement shows your languages, and a certification ask is passed on as written.
+    @Test func aBuildAnswersOnlyWhatABulletCanShow() {
+        let analysis = JobAnalysis(
+            requirements: [
+                .init(text: "Working knowledge of React", kind: .must, category: .skill, match: .yes),
+                .init(text: "Humility: you ask questions", kind: .must, category: .soft, match: .notJudged),
+                .init(text: "Remote within Canada or the US", kind: .must, category: .location, match: .notJudged),
+                .init(text: "Enrolled in a co-op program", kind: .must, category: .enrolment, match: .notJudged),
+                .init(text: "2+ years with TypeScript", kind: .nice, category: .experience, match: .partial),
+                .init(text: "Bilingual in English and French", kind: .nice, category: .language, match: .no),
+                .init(text: "AWS certification an asset", kind: .nice, category: .education, match: .no),
+            ], yearsRequired: nil, seniority: .intern, domains: ["security"],
+            flags: .init(
+                sponsorship: .notMentioned, clearance: .notMentioned, french: .notMentioned, remoteScope: .remote))
+        let requirements = BuildQueue.requirements(analysis)
+        #expect(requirements.musts == ["Working knowledge of React"])
+        #expect(requirements.nices == ["2+ years with TypeScript"] && requirements.domains == ["security"])
+        #expect(requirements.asksForLanguages && requirements.certificationAsks == ["AWS certification an asset"])
+        let plain = BuildQueue.requirements(
+            JobAnalysis(
+                requirements: [.init(text: "Go", kind: .must, category: .skill, match: .yes)], yearsRequired: nil,
+                seniority: .mid, domains: [], flags: analysis.flags))
+        #expect(!plain.asksForLanguages && plain.certificationAsks.isEmpty)
     }
 }

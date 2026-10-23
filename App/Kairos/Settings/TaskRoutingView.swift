@@ -18,6 +18,7 @@ extension TaskID {
         case .gapBullets: "Stretch mode bullets"
         case .coverLetter: "Write cover letters"
         case .suggestEvidence: "Suggest how to show a skill"
+        case .shortenBullets: "Shorten bullets to fit lines"
         default: rawValue
         }
     }

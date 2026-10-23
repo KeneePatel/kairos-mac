@@ -56,6 +56,28 @@ struct WriteSectionTasksTests {
         #expect(PromptLibrary.instructions(for: .writeExperience, version: 1)?.contains("source_ids") == true)
     }
 
+    /// v2 (resume v2 plan, phase 1): the experience and projects writers write every bullet given,
+    /// keep the specifics, and fill whole lines, which `<layout>` measures for them.
+    @Test func theSectionWritersFillWholeLinesAndKeepTheirFacts() throws {
+        #expect(WriteExperienceTask.promptVersion == 2 && WriteProjectsTask.promptVersion == 2)
+        for task in [TaskID.writeExperience, .writeProjects] {
+            let prompt = try #require(PromptLibrary.instructions(for: task, version: 2), "\(task)")
+            #expect(prompt.contains("leave none out") && prompt.contains("Keep the specifics"), "\(task)")
+            #expect(prompt.contains("<layout>") && prompt.contains("Never invent"), "\(task)")
+        }
+        var wide = experience()
+        wide = WriteSectionInput(
+            brief: WriterBrief(
+                jobTitle: brief.jobTitle, requirements: requirements, locale: .canada, lineCharacters: 110),
+            entries: wide.entries, skills: wide.skills, verifier: verifier)
+        let system = WriteExperienceTask().messages(for: wide, budget: options(.writeExperience).budget).first?.content
+        let user = WriteExperienceTask().messages(for: wide, budget: options(.writeExperience).budget).last?.content
+        #expect(system?.contains("leave none out") == true)
+        #expect(user?.contains("A line holds about 110 characters") == true)
+        #expect(user?.contains("one of 187 to 220 takes two") == true)
+        #expect(experience().brief.layoutBlock.contains("about 100 characters"))  // the default
+    }
+
     /// SPEC §5.5: writers get only the selected entries, and never contact details or Can-discuss skills.
     @Test func theExperienceWriterSeesOnlyTheSelectedBullets() throws {
         let messages = WriteExperienceTask().messages(for: experience(), budget: options(.writeExperience).budget)

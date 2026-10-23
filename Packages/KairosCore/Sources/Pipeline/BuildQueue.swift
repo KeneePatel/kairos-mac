@@ -180,13 +180,15 @@ public actor BuildQueue {
             ?? StretchSettings()
         // Stretch is opt-in: a stretch build waiting from before you turned it off doesn't run.
         if record.mode == .stretch, !stretch.enabled { throw BuildError.stretchOff }
+        let pages =
+            try await SettingsRepository(db).value(PageSettings.storageKey, as: PageSettings.self) ?? PageSettings()
 
         let request = BuildRequest(
             jobTitle: job.title, company: job.company,
-            requirements: JobRequirements(
-                musts: analysis.requirements.filter { $0.kind == .must }.map(\.text),
-                nices: analysis.requirements.filter { $0.kind == .nice }.map(\.text), domains: analysis.domains),
-            locale: SpellingLocale(country: job.country), mode: record.mode, gapBulletsPerRole: stretch.limit,
+            requirements: Self.requirements(analysis),
+            locale: SpellingLocale(country: job.country), mode: record.mode,
+            twoPagesWhenNeeded: pages.twoPagesWhenNeeded, lineCharacters: template.lineCharacters,
+            gapBulletsPerRole: stretch.limit,
             coverLetter: record.coverLetter != nil, summary: self.template.hasSummary)
         let loop = BuildLoop(
             router: router, master: master, context: CallContext(jobID: job.id.rawValue, buildID: id.lowercased))
@@ -204,7 +206,7 @@ public actor BuildQueue {
             .resume(ResumeDocument(outcome.resume, for: template)), kind: "resume", name: id.lowercased, for: id)
         var letter: CoverLetterRecord?
         if request.coverLetter {
-            letter = await coverLetter(outcome.coverLetter, for: id)
+            letter = await coverLetter(outcome.coverLetter, problem: outcome.coverLetterProblem, for: id)
         }
         try Task.checkCancellation()  // stopped at its deadline: it stays failed
         try await builds.finish(
@@ -212,13 +214,28 @@ public actor BuildQueue {
         return (outcome, url)
     }
 
+    /// What a resume answers in the posting: skills and experience, the things a bullet can show.
+    /// Soft traits ("Humility"), location, authorization, availability and enrolment are
+    /// screening's to judge, and a degree or a spoken language shows in Education and the
+    /// languages row, so none of them is a must-have the writers chase or the score counts.
+    static func requirements(_ analysis: JobAnalysis) -> JobRequirements {
+        let shown = analysis.requirements.filter { $0.category.map { [.skill, .experience].contains($0) } ?? true }
+        return JobRequirements(
+            musts: shown.filter { $0.kind == .must }.map(\.text), nices: shown.filter { $0.kind == .nice }.map(\.text),
+            domains: analysis.domains, asksForLanguages: analysis.requirements.contains { $0.category == .language },
+            certificationAsks: analysis.requirements.map(\.text).filter {
+                $0.localizedCaseInsensitiveContains("certif")
+            })
+    }
+
     /// The letter's PDF, or why there isn't one. A letter that can't be made never fails the build.
-    private func coverLetter(_ letter: CoverLetter?, for id: UUID) async -> CoverLetterRecord {
+    private func coverLetter(_ letter: CoverLetter?, problem: String?, for id: UUID) async -> CoverLetterRecord {
         guard let letter else {
+            let found = problem.map { " What the checks found: \($0.prefix(300))" } ?? ""
             return CoverLetterRecord(
                 status: .failed,
                 error: "The cover letter didn't pass its checks after a second try, so it was left out. "
-                    + "Build again to retry."
+                    + "Build again to retry.\(found)"
             )
         }
         do {

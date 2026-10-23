@@ -48,6 +48,7 @@ final class AppModel {
     private(set) var workProfile = WorkProfile()
     /// Off until you turn it on (SPEC §5.3).
     private(set) var stretch = StretchSettings()
+    private(set) var pages = PageSettings()
     /// Every job's builds, newest first, and where each running one is.
     private(set) var builds: [BuildRecord] = []
     /// Each job's newest build, by job id, however many builds there are: which jobs have a resume.
@@ -138,6 +139,8 @@ final class AppModel {
             stretch =
                 try await SettingsRepository(db).value(StretchSettings.storageKey, as: StretchSettings.self)
                 ?? StretchSettings()
+            pages =
+                try await SettingsRepository(db).value(PageSettings.storageKey, as: PageSettings.self) ?? PageSettings()
         } catch {
             log.error("Reloading failed: \(String(describing: error), privacy: .public)")
         }
@@ -794,6 +797,12 @@ final class AppModel {
         guard let db else { return }
         self.stretch = stretch
         try? await SettingsRepository(db).save(stretch, for: StretchSettings.storageKey)
+    }
+
+    func save(_ pages: PageSettings) async {
+        guard let db else { return }
+        self.pages = pages
+        try? await SettingsRepository(db).save(pages, for: PageSettings.storageKey)
     }
 
     func save(_ profile: WorkProfile) async {

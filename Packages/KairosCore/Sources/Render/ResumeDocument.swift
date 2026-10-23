@@ -192,6 +192,15 @@ public enum ResumeTemplate: String, Codable, Sendable, CaseIterable {
     /// use does; Classic gives only its page count.
     public var isMeasured: Bool { self == .harvard }
 
+    /// About how many characters a line of bullets holds (Harvard measured at 104 for typical text),
+    /// so the writers can fill whole lines.
+    public var lineCharacters: Int {
+        switch self {
+        case .classic: 105
+        case .harvard: 100
+        }
+    }
+
     public func source() throws(RenderError) -> String {
         try Self.source(named: rawValue)
     }

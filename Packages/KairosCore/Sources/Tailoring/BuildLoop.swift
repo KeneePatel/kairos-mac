@@ -17,6 +17,10 @@ public struct BuildRequest: Sendable, Equatable {
     public var locale: SpellingLocale
     public var mode: BuildMode
     public var pageBudget: Int
+    /// You allow a second page when the posting's evidence needs it (`PageSettings`).
+    public var twoPagesWhenNeeded: Bool
+    /// Characters a line of the template's bullets holds.
+    public var lineCharacters: Int
     /// Stretch mode's cap per role (your setting, 0 to 2).
     public var gapBulletsPerRole: Int
     /// Write a cover letter too (optional per build).
@@ -27,8 +31,9 @@ public struct BuildRequest: Sendable, Equatable {
 
     public init(
         jobTitle: String, company: String, companyProducts: [String] = [], requirements: JobRequirements,
-        locale: SpellingLocale, mode: BuildMode = .strict, pageBudget: Int = 1,
-        gapBulletsPerRole: Int = StretchSettings().limit, coverLetter: Bool = false, summary: Bool = true
+        locale: SpellingLocale, mode: BuildMode = .strict, pageBudget: Int = 1, twoPagesWhenNeeded: Bool = false,
+        lineCharacters: Int = 100, gapBulletsPerRole: Int = StretchSettings().limit, coverLetter: Bool = false,
+        summary: Bool = true
     ) {
         self.jobTitle = jobTitle
         self.company = company
@@ -37,6 +42,8 @@ public struct BuildRequest: Sendable, Equatable {
         self.locale = locale
         self.mode = mode
         self.pageBudget = pageBudget
+        self.twoPagesWhenNeeded = twoPagesWhenNeeded
+        self.lineCharacters = lineCharacters
         self.gapBulletsPerRole = gapBulletsPerRole
         self.coverLetter = coverLetter
         self.summary = summary
@@ -49,6 +56,8 @@ public enum BuildStep: Sendable, Equatable {
     case rewriting(MatchScore.Section, pass: Int)
     /// Stretch mode only.
     case gapBullets
+    /// Bullets that run a few words onto another line, cut to a line fewer.
+    case shortening
     case fitting(pages: Int)
     case coverLetter
 }
@@ -67,6 +76,8 @@ public struct BuildOutcome: Sendable, Equatable {
     public var dropped: Int
     /// When one was asked for; nil if it still failed its checks after the repair.
     public var coverLetter: CoverLetter?
+    /// What the checks still found wrong with a letter left out.
+    public var coverLetterProblem: String?
 }
 
 /// One build (SPEC §5.3): select, write the four sections in parallel, polish, score, rewrite any
@@ -113,7 +124,9 @@ public struct BuildLoop: Sendable {
         let verifier = Verifier(
             resume: master, mode: request.mode == .stretch ? .stretch : .strict, hiringCompany: request.company,
             companyProducts: request.companyProducts)
-        let brief = WriterBrief(jobTitle: request.jobTitle, requirements: request.requirements, locale: request.locale)
+        let brief = WriterBrief(
+            jobTitle: request.jobTitle, requirements: request.requirements, locale: request.locale,
+            lineCharacters: request.lineCharacters)
         let experienceInput = WriteSectionInput(
             brief: brief, entries: selection.experience, skills: selection.skills, verifier: verifier)
         let projectsInput = WriteSectionInput(
@@ -146,7 +159,8 @@ public struct BuildLoop: Sendable {
             skills: written.skills ?? [SkillGroup(label: "Skills", skills: selection.skills.map(\.name))],
             experience: entries(written.experience.entries, from: selection.experience, polish: polish, ranks: ranks),
             projects: entries(written.projects.entries, from: selection.projects, polish: polish, ranks: ranks),
-            education: education(), certifications: certifications(), languages: languages())
+            education: education(), certifications: certifications(for: request.requirements),
+            languages: request.requirements.asksForLanguages ? languages() : nil)
 
         progress(.scoring)
         var score = MatchScore.score(resume, for: request.requirements)
@@ -178,7 +192,10 @@ public struct BuildLoop: Sendable {
                         candidate.projects = rewritten
                     }
                     let candidateScore = MatchScore.score(candidate, for: request.requirements)
-                    if (candidateScore.score(section) ?? 0) > (score.score(section) ?? 0) {
+                    let before = section == .experience ? resume.experience : resume.projects
+                    if (candidateScore.score(section) ?? 0) > (score.score(section) ?? 0),
+                        Self.keepsTheFacts(rewritten, of: before, master: master)
+                    {
                         resume = candidate
                         score = candidateScore
                         improved = true
@@ -202,31 +219,60 @@ public struct BuildLoop: Sendable {
             }
         }
 
-        var layout: PageLayout?
-        var dropped = 0
-        if let measure {
-            layout = try await measure(resume)
-            while let count = layout?.pages, count > request.pageBudget, Self.dropLowest(&resume) {
-                progress(.fitting(pages: count))
-                dropped += 1
-                layout = try await measure(resume)
+        // Bullets a few words past a line cost the page a line each: one call cuts them to a line
+        // fewer, keeping every number and claim, before the fitter decides what stays.
+        if let measure, request.mode != .lite {
+            let input = ShortenBulletsInput(
+                resume, layout: try await measure(resume), lineCharacters: request.lineCharacters,
+                locale: request.locale, verifier: verifier)
+            if !input.items.isEmpty {
+                progress(.shortening)
+                if let output = try await shorten(input) {
+                    resume = ShortenBulletsTask.applying(output, input: input, to: resume, polish: polish)
+                }
             }
         }
+
+        var layout: PageLayout?
+        var dropped = 0
+        var budget = request.pageBudget
+        if let measure {
+            let fitter = PageFitter(
+                budget: request.pageBudget, allowingTwo: request.twoPagesWhenNeeded, measure: measure)
+            let fitted = try await fitter.fit(resume, progress: progress)
+            resume = fitted.resume
+            layout = fitted.layout
+            dropped = fitted.dropped
+            budget = fitted.budget
+        }
         let pages = layout?.pages
-        score = MatchScore.score(resume, for: request.requirements, pages: pages, pageBudget: request.pageBudget)
+        score = MatchScore.score(resume, for: request.requirements, pages: pages, pageBudget: budget)
 
         var letter: CoverLetter?
+        var problem: String?
         if request.coverLetter {
             progress(.coverLetter)
             let input = CoverLetterInput(
                 brief: brief, company: request.company, entries: selection.experience + selection.projects,
                 skills: selection.skills, totalYears: master.header.totalYears,
                 verifier: Verifier(resume: master, companyProducts: request.companyProducts))
-            letter = try await coverLetter(input, header: resume.header)
+            (letter, problem) = try await coverLetter(input, header: resume.header)
         }
         return BuildOutcome(
             resume: resume, score: score, rewrites: rewrites, fellBack: fellBack, pages: pages, layout: layout,
-            dropped: dropped, coverLetter: letter)
+            dropped: dropped, coverLetter: letter, coverLetterProblem: problem)
+    }
+
+    /// A rewrite counts only if it keeps every bullet and every number the section had: one that
+    /// showed more of the posting's keywords by merging bullets or rounding off specifics made the
+    /// resume thinner (resume v2 plan, phase 1).
+    static func keepsTheFacts(
+        _ rewritten: [TailoredResume.Entry], of current: [TailoredResume.Entry], master: MasterResume
+    ) -> Bool {
+        let after = rewritten.flatMap(\.bullets)
+        let before = current.flatMap(\.bullets)
+        return after.count >= before.count
+            && BuildReport.numbersKept(after, master: master) >= BuildReport.numbersKept(before, master: master)
     }
 
     // MARK: - Writers
@@ -277,11 +323,24 @@ public struct BuildLoop: Sendable {
         }
     }
 
-    /// Nil when the reply still fails its checks after the repair: the build has no letter.
-    private func coverLetter(_ input: CoverLetterInput, header: TailoredResume.Header) async throws -> CoverLetter? {
+    /// No letter when the reply still fails its checks after the repair, and what they found.
+    private func coverLetter(_ input: CoverLetterInput, header: TailoredResume.Header) async throws -> (
+        CoverLetter?, String?
+    ) {
         do {
             let result = try await run(CoverLetterTask(), input)
-            return CoverLetterTask.letter(result.output, input: input, header: header, date: settings.selector.now)
+            return (
+                CoverLetterTask.letter(result.output, input: input, header: header, date: settings.selector.now), nil
+            )
+        } catch .invalidOutput(let problems) {
+            return (nil, problems)
+        }
+    }
+
+    /// Nil when the reply still fails its checks after the repair: the bullets stay as written.
+    private func shorten(_ input: ShortenBulletsInput) async throws -> ShortenBulletsOutput? {
+        do {
+            return try await run(ShortenBulletsTask(), input).output
         } catch .invalidOutput {
             return nil
         }
@@ -354,10 +413,12 @@ public struct BuildLoop: Sendable {
         return entry
     }
 
+    /// Your degrees, each with its honours or grade ("GPA 3.78/4.3") after it.
     private func education() -> [TailoredResume.Entry] {
         master.entries(.education).compactMap { entry in
             guard case .education(let school) = entry.fields else { return nil }
-            let title = [school.credential, school.field].filter { !$0.isEmpty }.joined(separator: ", ")
+            let title = [school.credential, school.field, school.honours].filter { !$0.isEmpty }.joined(
+                separator: ", ")
             return TailoredResume.Entry(
                 entryID: entry.id, title: title.isEmpty ? school.institution : title,
                 organization: title.isEmpty ? nil : school.institution,
@@ -366,9 +427,16 @@ public struct BuildLoop: Sendable {
         }
     }
 
-    private func certifications() -> [TailoredResume.Entry] {
-        master.entries(.certification).compactMap { entry in
-            guard case .certification(let certificate) = entry.fields else { return nil }
+    /// Only when the posting asks about certifications, and only yours that match what it names (or,
+    /// when it names none, what it asks for overall): four unasked-for courses cost the page a role.
+    private func certifications(for job: JobRequirements) -> [TailoredResume.Entry] {
+        guard !job.certificationAsks.isEmpty else { return [] }
+        let named = Set(job.certificationAsks.flatMap { Keywords.terms(in: $0) })
+        let wanted = named.isEmpty ? Set((job.musts + job.nices).flatMap { Keywords.terms(in: $0) }) : named
+        return master.entries(.certification).compactMap { entry in
+            guard case .certification(let certificate) = entry.fields,
+                !Keywords.terms(in: certificate.name).isDisjoint(with: wanted)
+            else { return nil }
             return TailoredResume.Entry(
                 entryID: entry.id, title: certificate.name, dates: entry.start.map { "\($0.year)" },
                 period: TailoredResume.Period(entry))

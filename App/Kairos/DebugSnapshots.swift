@@ -8,9 +8,9 @@
     import SwiftUI
     import Tailoring
 
-    /// Debug builds only: `Kairos --render-snapshots` draws screens offscreen, in light and dark, to
-    /// PNGs in the app's temporary folder, then quits before any window opens. It lets screens be
-    /// checked from the terminal. The data is the design's sample persona (previews only).
+    /// Debug builds only: `Kairos --render-snapshots [--print=<name>]` draws screens offscreen, in light
+    /// and dark, to PNGs in the app's temporary folder, then quits before any window opens. It lets
+    /// screens be checked from the terminal. The data is the design's sample persona (previews only).
     enum DebugSnapshots {
         @MainActor static func runIfRequested() {
             guard CommandLine.arguments.contains("--render-snapshots") else { return }
@@ -152,11 +152,30 @@
                     .frame(width: 1_340, height: 900),
                     to: folder.appending(path: "build-stretch-\(name).png"), appearance: appearance)
                 render(
-                    ScrollView { StretchModeView().padding(Spacing.space6) }.environment(stretchModel)
-                        .frame(width: 820, height: 560).background(Color(.surface)),
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: Spacing.space6) {
+                            ResumeLengthView()
+                            StretchModeView()
+                        }
+                        .padding(Spacing.space6)
+                    }
+                    .environment(stretchModel)
+                    .frame(width: 820, height: 760).background(Color(.surface)),
                     to: folder.appending(path: "general-settings-\(name).png"), appearance: appearance)
             }
             print("snapshots: \(folder.path)")
+            // `--print=<name>`: the snapshots whose file names start with it, as base64, for a terminal
+            // that macOS keeps out of the app's container.
+            if let prefix = CommandLine.arguments.first(where: { $0.hasPrefix("--print=") })?.dropFirst(8),
+                let files = try? FileManager.default.contentsOfDirectory(atPath: folder.path)
+            {
+                for file in files.sorted() where file.hasPrefix(prefix) {
+                    guard let data = FileManager.default.contents(atPath: folder.appending(path: file).path) else {
+                        continue
+                    }
+                    print("snapshot \(file) \(data.base64EncodedString())")
+                }
+            }
             exit(0)
         }
 

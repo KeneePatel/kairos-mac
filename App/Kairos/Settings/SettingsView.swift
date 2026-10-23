@@ -35,10 +35,13 @@ struct SettingsView: View {
                 SearchPreferencesView()
             case .general:
                 ScrollView {
-                    StretchModeView()
-                        .padding(Spacing.space6)
-                        .frame(maxWidth: 760, alignment: .leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(alignment: .leading, spacing: Spacing.space6) {
+                        ResumeLengthView()
+                        StretchModeView()
+                    }
+                    .padding(Spacing.space6)
+                    .frame(maxWidth: 760, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             case .schedule, .account:
                 ContentUnavailableView(

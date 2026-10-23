@@ -8,10 +8,13 @@ public struct PageLayout: Codable, Sendable, Equatable {
     public struct Bullet: Codable, Sendable, Equatable {
         public var lines: Int
         public var lastLineFill: Double
+        /// Characters a full line of this bullet holds, from its own text; nil when not measured.
+        public var lineCharacters: Double?
 
-        public init(lines: Int, lastLineFill: Double) {
+        public init(lines: Int, lastLineFill: Double, lineCharacters: Double? = nil) {
             self.lines = lines
             self.lastLineFill = lastLineFill
+            self.lineCharacters = lineCharacters
         }
 
         /// Runs onto a line it barely uses: a few words that cost a whole line.
@@ -52,4 +55,23 @@ public struct PageLayout: Codable, Sendable, Equatable {
 
     /// Every measured bullet, experience first.
     public var bullets: [Bullet] { (experience + projects).flatMap { $0 } }
+}
+
+/// How long a resume may run (Settings, General): one page unless you allow a second, and then
+/// only when the posting's evidence needs it.
+public struct PageSettings: Codable, Sendable, Equatable {
+    public var twoPagesWhenNeeded: Bool
+
+    public static let storageKey = "resume_pages"
+
+    public init(twoPagesWhenNeeded: Bool = false) {
+        self.twoPagesWhenNeeded = twoPagesWhenNeeded
+    }
+
+    private enum CodingKeys: String, CodingKey { case twoPagesWhenNeeded }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        twoPagesWhenNeeded = try container.decodeIfPresent(Bool.self, forKey: .twoPagesWhenNeeded) ?? false
+    }
 }

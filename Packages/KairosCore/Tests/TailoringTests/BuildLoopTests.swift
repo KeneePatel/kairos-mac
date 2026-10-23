@@ -2,13 +2,18 @@ import Foundation
 import LLM
 import MasterResume
 import Store
+import Synchronization
 import Testing
 
 @testable import Tailoring
 
-private let request = BuildRequest(
-    jobTitle: "Backend Developer II", company: "Northline Freight", requirements: WriterFixtures.requirements,
-    locale: .canada)
+/// The posting asks for an AWS certification, so the build shows yours.
+private let request: BuildRequest = {
+    var requirements = WriterFixtures.requirements
+    requirements.certificationAsks = ["AWS certification preferred"]
+    return BuildRequest(
+        jobTitle: "Backend Developer II", company: "Northline Freight", requirements: requirements, locale: .canada)
+}()
 
 /// With the default caps the selection is: Harbourline b1 pipeline, b2 Kubernetes, b3 carriers,
 /// b4 on-call; Rivet b5 APIs, b6 CI; Maplepay b7 reconciliation. Projects: Dockyard, b1.
@@ -47,7 +52,7 @@ private func loop(_ scripts: [TaskID: [FakeProvider.Reply]], master: MasterResum
     let routes = Dictionary(
         uniqueKeysWithValues: [
             TaskID.writeExperience, .writeProjects, .writeSummary, .writeSkills, .rewriteSection, .gapBullets,
-            .coverLetter,
+            .coverLetter, .shortenBullets,
         ].map {
             ($0, [ModelRef(provider: "fake", model: "flash")])
         })
@@ -186,6 +191,160 @@ struct BuildLoopTests {
         #expect(!kept.contains(Sample.onCall.id))  // the lowest-ranked went first
         #expect(outcome.resume.experience.allSatisfy { !$0.bullets.isEmpty })
         #expect(outcome.score.breakdown.structure > 2)
+    }
+
+    /// Certifications and spoken languages show only when the posting asks: one asking for another
+    /// certification gets none, and one that doesn't mention languages gets no languages row. A
+    /// degree carries its honours.
+    @Test func certificationsAndLanguagesShowWhenThePostingAsks() async throws {
+        var master = Sample.resume
+        master.entries =
+            master.entries.map { entry in
+                var entry = entry
+                if entry.id == Sample.degree.id {
+                    entry.fields = .education(
+                        .init(
+                            institution: "University of Waterloo", credential: "BMath", field: "Computer Science",
+                            honours: "With Distinction"))
+                }
+                return entry
+            } + [ResumeEntry(id: Sample.id(108), fields: .language(.init(language: "French", proficiency: .fluent)))]
+        let scripts: [TaskID: [FakeProvider.Reply]] = [
+            .writeExperience: [.reply(goodExperience)], .writeProjects: [.reply(projects)],
+            .writeSummary: [.reply(summary)], .writeSkills: [.reply(skills)],
+        ]
+        var asking = request
+        asking.requirements.asksForLanguages = true
+        let resume = try await loop(scripts, master: master).0.run(asking).resume
+        #expect(resume.certifications.map(\.title) == ["AWS Solutions Architect – Associate"])
+        #expect(resume.languages == "French (fluent)")
+        #expect(resume.education.first?.title == "BMath, Computer Science, With Distinction")
+        var other = request
+        other.requirements.certificationAsks = ["Azure certification required"]
+        let without = try await loop(scripts, master: master).0.run(other).resume
+        #expect(without.certifications.isEmpty && without.languages == nil)
+        other.requirements.certificationAsks = []
+        #expect(try await loop(scripts, master: master).0.run(other).resume.certifications.isEmpty)
+    }
+
+    /// A rewrite that scores better but merges bullets or rounds off a number isn't kept.
+    @Test func aRewriteThatLosesABulletOrANumberIsRejected() async throws {
+        let merged = """
+            {"entries":[
+              {"id":"e1","bullets":[
+                {"text":"Built a Go and Kafka event pipeline at p99 under 120 ms, moved 14 services to Kubernetes with Helm and cut carrier onboarding with gRPC.","source_ids":["b1","b2","b3"]}]},
+              {"id":"e2","bullets":[{"text":"Shipped REST APIs in Django and PostgreSQL for client projects.","source_ids":["b5"]}]},
+              {"id":"e3","bullets":[{"text":"Wrote Java reconciliation jobs that matched card transactions nightly.","source_ids":["b7"]}]}]}
+            """
+        // Weak openers, but every number kept: the merged rewrite shows more of the posting and
+        // loses "30+" and "2M".
+        let weakWithNumbers = """
+            {"entries":[
+              {"id":"e1","bullets":[{"text":"Worked on the event pipeline handling 4.2M events a day at p99 under 120 ms.","source_ids":["b1"]}]},
+              {"id":"e2","bullets":[{"text":"Worked on client APIs for 30+ client projects.","source_ids":["b5"]}]},
+              {"id":"e3","bullets":[{"text":"Worked on reconciliation jobs matching 2M card transactions nightly.","source_ids":["b7"]}]}]}
+            """
+        let (loop, fake) = try loop([
+            .writeExperience: [.reply(weakWithNumbers)], .writeProjects: [.reply(projects)],
+            .writeSummary: [.reply(summary)], .writeSkills: [.reply(skills)],
+            .rewriteSection: [.reply(merged)],
+        ])
+        let outcome = try await loop.run(request)
+        #expect(fake.requests.count { $0.task == .rewriteSection } == 1 && outcome.rewrites == 1)
+        #expect(outcome.resume.experience.map(\.bullets.count) == [1, 1, 1])
+        #expect(outcome.resume.experience[1].bullets.first?.text.contains("30+") == true)
+        let written = [
+            TailoredResume.Entry(
+                entryID: UUID(), title: "Role",
+                bullets: [
+                    TailoredBullet(
+                        text: "Built an event pipeline in Go handling 4.2M events a day.",
+                        sourceIDs: [Sample.pipeline.id])
+                ])
+        ]
+        var rounded = written
+        rounded[0].bullets[0].text = "Built a high-volume event pipeline in Go."
+        #expect(BuildLoop.keepsTheFacts(written, of: written, master: Sample.resume))
+        #expect(!BuildLoop.keepsTheFacts(rounded, of: written, master: Sample.resume))
+        #expect(!BuildLoop.keepsTheFacts([], of: written, master: Sample.resume))
+    }
+
+    /// A page measured at 80 characters a line: bullets of 83 to 93 run a few words onto a second.
+    private static let narrow: BuildLoop.Measure = { resume in
+        func lines(_ entries: [TailoredResume.Entry]) -> [[PageLayout.Bullet]] {
+            entries.map {
+                $0.bullets.map { bullet in
+                    let count = bullet.text.count
+                    let lines = max(1, (count + 79) / 80)
+                    return .init(lines: lines, lastLineFill: Double(count - (lines - 1) * 80) / 80)
+                }
+            }
+        }
+        return PageLayout(
+            pages: 1, linesPerPage: 60, freeLines: 10, experience: lines(resume.experience),
+            projects: lines(resume.projects))
+    }
+
+    private static let shortened = """
+        {"bullets":[
+          {"id":"s1","text":"Built a Go and Kafka pipeline handling 4.2M events a day at p99 under 120 ms."},
+          {"id":"s2","text":"Moved 14 services to Kubernetes on Helm; deploys fell from 25 to 6 minutes."},
+          {"id":"s3","text":"Led the five-person on-call rotation that cut repeat incidents by 40%."},
+          {"id":"s4","text":"Built Dockyard, a Go CLI that clears dangling Docker images; 400+ stars."}]}
+        """
+
+    /// Bullets a few words past a line are shortened in one call before fitting, keeping every
+    /// number; the rest stay as written.
+    @Test func bulletsThatWasteALineAreShortenedBeforeFitting() async throws {
+        let (loop, fake) = try loop([
+            .writeExperience: [.reply(goodExperience)], .writeProjects: [.reply(projects)],
+            .writeSummary: [.reply(summary)], .writeSkills: [.reply(skills)], .shortenBullets: [.reply(Self.shortened)],
+        ])
+        var narrow = request
+        narrow.lineCharacters = 80
+        let steps = Mutex<[BuildStep]>([])
+        let outcome = try await loop.run(narrow, measure: Self.narrow) { step in steps.withLock { $0.append(step) } }
+        #expect(steps.withLock { $0.contains(.shortening) } && fake.requests.count { $0.task == .shortenBullets } == 1)
+        let texts = outcome.resume.allBullets.map(\.text)
+        #expect(texts.contains("Moved 14 services to Kubernetes on Helm; deploys fell from 25 to 6 minutes."))
+        // A one-line bullet stays as written.
+        #expect(texts.contains("Cut carrier onboarding from 3 weeks to 4 days with a gRPC integration kit."))
+        #expect(outcome.layout?.bullets.allSatisfy { !$0.isShortWrap } == true)
+    }
+
+    /// A shortened bullet that drops a number keeps its own words while the others land; a reply in
+    /// which every bullet fails goes back once for repair, then all stay as written. Lite never asks.
+    @Test func aShorteningThatLosesANumberIsLeftOut() async throws {
+        let lossy = Self.shortened.replacing("by 40%", with: "sharply")
+        let (builder, fake) = try loop([
+            .writeExperience: [.reply(goodExperience)], .writeProjects: [.reply(projects)],
+            .writeSummary: [.reply(summary)], .writeSkills: [.reply(skills)], .shortenBullets: [.reply(lossy)],
+        ])
+        var narrow = request
+        narrow.lineCharacters = 80
+        let outcome = try await builder.run(narrow, measure: Self.narrow)
+        #expect(fake.requests.count { $0.task == .shortenBullets } == 1)
+        let texts = outcome.resume.allBullets.map(\.text)
+        #expect(texts.contains { $0.contains("by 40% over two quarters") })  // kept as written
+        #expect(texts.contains("Moved 14 services to Kubernetes on Helm; deploys fell from 25 to 6 minutes."))
+
+        let ruined = """
+            {"bullets":[{"id":"s1","text":"Built a pipeline."},{"id":"s2","text":"Moved services."},
+              {"id":"s3","text":"Led on-call."},{"id":"s4","text":"Built Dockyard."}]}
+            """
+        let (failing, failingFake) = try loop([
+            .writeExperience: [.reply(goodExperience)], .writeProjects: [.reply(projects)],
+            .writeSummary: [.reply(summary)], .writeSkills: [.reply(skills)],
+            .shortenBullets: [.reply(ruined), .reply(ruined)],
+        ])
+        let kept = try await failing.run(narrow, measure: Self.narrow)
+        #expect(failingFake.requests.count { $0.task == .shortenBullets } == 2)
+        #expect(!kept.resume.allBullets.map(\.text).contains("Built a pipeline."))
+
+        let (lite, liteFake) = try loop([.writeSummary: [.reply(summary)], .writeSkills: [.reply(skills)]])
+        narrow.mode = .lite
+        _ = try await lite.run(narrow, measure: Self.narrow)
+        #expect(!liteFake.requests.contains { $0.task == .shortenBullets })
     }
 
     @Test func runningOutOfBudgetStopsTheBuild() async throws {

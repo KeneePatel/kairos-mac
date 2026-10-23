@@ -242,6 +242,7 @@ struct BuildsView: View {
         case .scoring: "scoring"
         case .rewriting(let section, let pass): "rewriting \(section.rawValue), pass \(pass)"
         case .gapBullets: "adding gap bullets"
+        case .shortening: "shortening bullets that waste a line"
         case .coverLetter: "writing the cover letter"
         case .fitting(let pages): "fitting \(pages) pages onto one"
         }
@@ -436,7 +437,7 @@ private struct BuildStepsColumn: View {
             case .writing?: 1
             case .scoring?, .rewriting?: 4
             case .gapBullets?: 5
-            case .fitting?: renderedIndex
+            case .shortening?, .fitting?: renderedIndex
             case .coverLetter?: letterIndex ?? renderedIndex
             }
         switch build.status {

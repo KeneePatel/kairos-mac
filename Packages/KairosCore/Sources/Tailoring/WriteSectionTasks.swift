@@ -7,11 +7,24 @@ public struct WriterBrief: Sendable, Equatable {
     public var jobTitle: String
     public var requirements: JobRequirements
     public var locale: SpellingLocale
+    /// Characters a line of the template's bullets holds, so bullets fill whole lines.
+    public var lineCharacters: Int
 
-    public init(jobTitle: String, requirements: JobRequirements, locale: SpellingLocale) {
+    public init(jobTitle: String, requirements: JobRequirements, locale: SpellingLocale, lineCharacters: Int = 100) {
         self.jobTitle = jobTitle
         self.requirements = requirements
         self.locale = locale
+        self.lineCharacters = lineCharacters
+    }
+
+    /// `<layout>`, for the section writers: a bullet a few words past a line wastes the line.
+    var layoutBlock: String {
+        let two = (Double(lineCharacters) * 1.7).rounded()
+        return """
+            <layout>
+            A line holds about \(lineCharacters) characters. A bullet of up to \(lineCharacters) characters takes one line; one of \(Int(two)) to \(lineCharacters * 2) takes two nearly full lines. Anything between wastes most of its second line.
+            </layout>
+            """
     }
 
     /// `<job>` and `<requirements>`, shared by every writer's prompt.
@@ -118,8 +131,8 @@ enum SectionWriter {
                 ]), maxItems: 12))
     ])
 
-    static func messages(_ task: TaskID, tag: String, input: WriteSectionInput) -> [ChatMessage] {
-        let instructions = PromptLibrary.instructions(for: task, version: 1) ?? ""
+    static func messages(_ task: TaskID, version: Int, tag: String, input: WriteSectionInput) -> [ChatMessage] {
+        let instructions = PromptLibrary.instructions(for: task, version: version) ?? ""
         let entries = zip(input.entryOrder, input.entries).map { short, selected in
             let bullets = selected.bullets.map { ranked -> String in
                 let id = input.shortID(of: ranked.bullet.id) ?? "?"
@@ -137,6 +150,7 @@ enum SectionWriter {
         }
         let data = """
             \(input.brief.promptBlocks)
+            \(input.brief.layoutBlock)
             <skills>
             \(input.skills.map(\.name).joined(separator: ", "))
             </skills>
@@ -239,13 +253,14 @@ enum SectionWriter {
 /// `writeExperience`: bullets for each selected role, rewritten for the job from that role's bullets.
 public struct WriteExperienceTask: LLMTask {
     public static let id = TaskID.writeExperience
-    public static let promptVersion = 1
+    /// v2: line-filling lengths, every bullet kept, specifics kept (resume v2 plan, phase 1).
+    public static let promptVersion = 2
     public static let outputSchema = SectionWriter.schema
 
     public init() {}
 
     public func messages(for input: WriteSectionInput, budget: TokenBudget) -> [ChatMessage] {
-        SectionWriter.messages(Self.id, tag: "role", input: input)
+        SectionWriter.messages(Self.id, version: Self.promptVersion, tag: "role", input: input)
     }
 
     public func check(_ output: SectionOutput, for input: WriteSectionInput) throws {
@@ -260,13 +275,14 @@ public struct WriteExperienceTask: LLMTask {
 /// `writeProjects`: the same for the selected projects.
 public struct WriteProjectsTask: LLMTask {
     public static let id = TaskID.writeProjects
-    public static let promptVersion = 1
+    /// v2: line-filling lengths, every bullet kept, specifics kept (resume v2 plan, phase 1).
+    public static let promptVersion = 2
     public static let outputSchema = SectionWriter.schema
 
     public init() {}
 
     public func messages(for input: WriteSectionInput, budget: TokenBudget) -> [ChatMessage] {
-        SectionWriter.messages(Self.id, tag: "project", input: input)
+        SectionWriter.messages(Self.id, version: Self.promptVersion, tag: "project", input: input)
     }
 
     public func check(_ output: SectionOutput, for input: WriteSectionInput) throws {
