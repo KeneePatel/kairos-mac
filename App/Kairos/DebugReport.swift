@@ -27,6 +27,15 @@
                 }
                 exit(0)
             }
+            if CommandLine.arguments.contains("--adzuna-probe") {
+                let done = DispatchSemaphore(value: 0)
+                Task.detached {
+                    await adzunaProbe()
+                    done.signal()
+                }
+                done.wait()
+                exit(0)
+            }
             if CommandLine.arguments.contains("--key-usage") {
                 let done = DispatchSemaphore(value: 0)
                 Task { @MainActor in
@@ -367,6 +376,72 @@
                 print("ai-report: budget \(ai.settings.budget.dailyCalls) calls a day")
             } catch {
                 print("ai-report: couldn't read settings (\(error))")
+            }
+        }
+
+        /// `--adzuna-probe`: how many Canadian postings a few Adzuna searches find, for sizing a
+        /// fetch (2026-10-23 research). About 10 calls of the free 250 a day. Never the key.
+        private static func adzunaProbe() async {
+            let secrets = AppSecrets.store()
+            guard let id = (try? secrets.read(SecretKey("adzuna.app_id"))) ?? nil,
+                let key = (try? secrets.read(SecretKey("adzuna.app_key"))) ?? nil
+            else { return print("adzuna-probe: no Adzuna key saved") }
+            let probes: [(String, String, [(String, String)])] = [
+                ("categories", "categories", []),
+                (
+                    "title_only software developer", "search/1",
+                    [("title_only", "software developer"), ("max_days_old", "7")]
+                ),
+                (
+                    "title_only software engineer", "search/1",
+                    [("title_only", "software engineer"), ("max_days_old", "7")]
+                ),
+                ("title_only developer", "search/1", [("title_only", "developer"), ("max_days_old", "7")]),
+                ("category it-jobs, 7 days", "search/1", [("category", "it-jobs"), ("max_days_old", "7")]),
+                ("category it-jobs, 1 day", "search/1", [("category", "it-jobs"), ("max_days_old", "1")]),
+                (
+                    "it-jobs, what_or developer engineer programmer", "search/1",
+                    [("category", "it-jobs"), ("what_or", "developer engineer programmer"), ("max_days_old", "7")]
+                ),
+                (
+                    "it-jobs Halifax", "search/1",
+                    [("category", "it-jobs"), ("where", "Halifax"), ("max_days_old", "30")]
+                ),
+                (
+                    "results_per_page 100", "search/1",
+                    [("title_only", "software developer"), ("max_days_old", "7"), ("results_per_page", "100")]
+                ),
+            ]
+            for (label, path, items) in probes {
+                var components = URLComponents(string: "https://api.adzuna.com/v1/api/jobs/ca/\(path)")!
+                components.queryItems =
+                    [URLQueryItem(name: "app_id", value: id), URLQueryItem(name: "app_key", value: key)]
+                    + (items.contains { $0.0 == "results_per_page" } || path == "categories"
+                        ? [] : [URLQueryItem(name: "results_per_page", value: "50")])
+                    + items.map { URLQueryItem(name: $0.0, value: $0.1) }
+                guard let url = components.url, let (data, response) = try? await URLSession.shared.data(from: url)
+                else {
+                    print("adzuna-probe: \(label): network error")
+                    continue
+                }
+                let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+                if path == "categories" {
+                    let tags = (json["results"] as? [[String: Any]] ?? []).compactMap { $0["tag"] as? String }
+                    print("adzuna-probe: categories \(status): \(tags.joined(separator: ", "))")
+                    continue
+                }
+                let results = json["results"] as? [[String: Any]] ?? []
+                let titles = results.prefix(5).compactMap { $0["title"] as? String }
+                print("adzuna-probe: \(label) \(status): count \(json["count"] ?? "?"), returned \(results.count)")
+                print("adzuna-probe:   first titles: \(titles.joined(separator: " | "))")
+                if label.hasPrefix("title_only software developer"), let first = results.first {
+                    print("adzuna-probe:   fields: \(first.keys.sorted().joined(separator: ", "))")
+                    print("adzuna-probe:   location: \(first["location"] ?? "")")
+                    let text = first["description"] as? String ?? ""
+                    print("adzuna-probe:   description length \(text.count)")
+                }
+                try? await Task.sleep(for: .seconds(3))
             }
         }
 
