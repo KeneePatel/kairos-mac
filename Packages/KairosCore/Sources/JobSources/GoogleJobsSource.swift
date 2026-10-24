@@ -46,7 +46,7 @@ public struct GoogleJobsSource: JobSource {
                 do {
                     page = try await search(title, in: country)
                 } catch {
-                    guard calls > 1, error as? SourceError != .cancelled else { throw error }
+                    guard calls > 1, error != .cancelled else { throw error }
                     break searches
                 }
                 for job in page.jobsResults ?? [] where seen.insert(job.jobId).inserted {
@@ -57,7 +57,9 @@ public struct GoogleJobsSource: JobSource {
         return .postings(postings, memo: FetchMemo(etag: nil, requests: calls))
     }
 
-    private func search(_ title: String, in country: Country) async throws -> SerpApiJobs {
+    /// Typed like Adzuna's: Swift 6.3's compiler crashed on this `catch` pattern in an untyped
+    /// throwing function (CI, 2026-10-24).
+    private func search(_ title: String, in country: Country) async throws(SourceError) -> SerpApiJobs {
         var components = URLComponents(string: "https://serpapi.com/search.json")
         components?.queryItems = [
             URLQueryItem(name: "engine", value: "google_jobs"), URLQueryItem(name: "q", value: title),
@@ -65,7 +67,7 @@ public struct GoogleJobsSource: JobSource {
             URLQueryItem(name: "gl", value: country.rawValue.lowercased()), URLQueryItem(name: "hl", value: "en"),
             URLQueryItem(name: "api_key", value: key),
         ]
-        guard let url = components?.url else { throw SourceError.invalidConfiguration("Google Jobs search") }
+        guard let url = components?.url else { throw .invalidConfiguration("Google Jobs search") }
         do {
             return try await http.getJSON(url, as: SerpApiJobs.self)
         } catch .http(let status, _) where status == 401 || status == 403 {
