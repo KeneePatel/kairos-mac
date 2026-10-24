@@ -972,7 +972,11 @@ Plan: `docs/design/job-collection.md`. Research: `docs/research/job-collection/`
     - **App:** Find jobs shows Adzuna's plan in its Status column, a bar with "N of 200 searches left today · N of 2,400 this month", using a shared `Meter` (the AI key bars use it too).
     - **Live check** on a copy of your database, capped at 25 Adzuna requests (`Kairos --fetch-dry --adzuna-budget=25`): first fetch 720 new in 37 s; the second skipped Adzuna, its share spent, in 2.1 s. An uncapped run the same day found 1,473 new with 80 requests in 5 minutes, which is why the burst and the cap came in.
 - [ ] **J5 · Board catalog:** `scripts/discover-boards`, the bundled catalog, Companies list, auto-watch, cadence, gone boards
-- [ ] **J6 · Snippet upgrade:** company finder, listing matching, upgrade and re-screen
+- [x] **J6 · Snippet upgrade** (M)
+  - **Done 2026-10-23:**
+    - **`SnippetFinder`:** after the searches, the companies behind open snippet jobs (newest first, 20 a fetch) are looked up: Kairos's catalog, your sources, then `BoardProbe`, which tries the name's likely slugs (company suffixes dropped) on Greenhouse, Lever, Ashby, Workable, Recruitee and SmartRecruiters, and counts a board only when it lists a job. Every answer is kept (`014_company_lookup.sql`): a found board once, a miss for 30 days. A board found becomes a source (origin "search") and is read in the same fetch. Job sites that appear as a search's company (Jobgether, Turing, Dice…) aren't looked up: one added 207 reposted jobs in a trial.
+    - **Matching:** another source's copy of a stored job is attached whatever its age or title (it isn't a new job), so an older board posting still fills in a recent snippet. A snippet and a full posting also match on a looser title (similarity 0.75 instead of 0.9) when the snippet's opening words are in the posting's text.
+    - **Live check** on a copy of your database, no Adzuna calls (`--adzuna-budget=0`): 6 boards found for 40 companies; Syndio's (Greenhouse) and veritree's (Workable) full postings replaced their snippets in the first fetch.
 - [ ] **J7 · Optional sources:** Himalayas (and Remotive); JSearch or SerpApi with your key
 - [ ] **J8 · Coverage and docs:** `Kairos --coverage-report`, SPEC §5.2/5.4/6.2, ADR-015
 

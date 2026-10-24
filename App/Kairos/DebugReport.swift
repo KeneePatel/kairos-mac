@@ -457,6 +457,9 @@
                     let started = Date()
                     let run = FetchRun(
                         db: db, postedWithinDays: preferences.maxAgeDays, roles: preferences.roleMatcher,
+                        watch: preferences.watchCatalog
+                            ? CatalogWatch(catalog: .bundled, countries: preferences.countries) : nil,
+                        finder: SnippetFinder(db: db, probe: BoardProbe(http: http), catalog: .bundled),
                         makeSource: { try SourceFactory.make($0, http: http, search: search) })
                     var last = FetchRun.Progress()
                     for await progress in run.start() { last = progress }
@@ -465,7 +468,8 @@
                             + "\(last.found) found, \(last.added) new, \(last.attached) attached, \(last.upgraded) upgraded, "
                             + "\(last.changed) changed, \(last.closed) closed, \(last.reopened) reopened, "
                             + "\(last.unchanged) unchanged, \(last.outside) outside, \(last.tooOld) too old, "
-                            + "\(last.otherRoles) other roles, "
+                            + "\(last.otherRoles) other roles, \(last.boardsFound) boards found, "
+                            + "\(last.catalogAdded) catalog added, \(last.quiet) quiet, "
                             + "\(last.failures.count) failed")
                     for failure in last.failures { say("  failed: \(failure.message)") }
                 }

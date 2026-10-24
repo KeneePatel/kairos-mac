@@ -52,6 +52,7 @@ let package = Package(
             name: "PipelineTests",
             dependencies: [
                 "Pipeline", "Store", "JobSources", "Screening", "LLM", "MasterResume", "Tailoring", "Render",
+                "TestSupport",
             ],
             swiftSettings: strict),
         // Render knows Tailoring's types only (SPEC §4), to lay out a build.

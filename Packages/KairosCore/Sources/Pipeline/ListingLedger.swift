@@ -96,6 +96,17 @@ public struct ListingLedger: Sendable {
         }
     }
 
+    /// Whether a snippet's opening words appear in a full posting's text: Adzuna's 500 characters
+    /// come from the posting itself.
+    static func contains(snippet: String, in full: String) -> Bool {
+        func words(_ text: String) -> [String] {
+            text.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        }
+        let opening = words(snippet).prefix(16)
+        guard opening.count >= 8 else { return false }
+        return " \(words(full).joined(separator: " ")) ".contains(" \(opening.joined(separator: " ")) ")
+    }
+
     /// Closes search listings unseen for 30 days and posted 45 days ago, and their jobs when no
     /// other listing is open. Returns how many jobs closed.
     @discardableResult
@@ -188,6 +199,12 @@ private struct Writer {
                 return
             }
         }
+        // Another source's copy of a stored job is attached whatever its age or title: it isn't a
+        // new job, and it may be the full posting behind a snippet.
+        if !omitted, let copyOf = try storedCopy(of: candidate, from: source) {
+            try attach(candidate, kind: kind, to: copyOf, from: source)
+            return
+        }
         if let postedAfter, let posted = candidate.postedAt, posted < postedAfter {
             outcome.tooOld += 1
             return
@@ -200,11 +217,7 @@ private struct Writer {
             outcome.unread += 1
             return
         }
-        if let copyOf = try storedCopy(of: candidate, from: source) {
-            try attach(candidate, kind: kind, to: copyOf, from: source)
-        } else {
-            try add(candidate, kind: kind, from: source)
-        }
+        try add(candidate, kind: kind, from: source)
     }
 
     private mutating func add(_ candidate: Job, kind: DescriptionKind, from source: SourceID) throws {
@@ -303,7 +316,8 @@ private struct Writer {
         job.descriptionKind = kind
     }
 
-    /// A stored job from another source with the same company, title and place.
+    /// A stored job from another source with the same company, title and place. A snippet beside a
+    /// full posting may match on a looser title when the snippet's text is in the posting's.
     private func storedCopy(of candidate: Job, from source: SourceID) throws -> Job? {
         let company = String(DedupKey.company(of: candidate.dedupKey))
         let rows = try connection.query(
@@ -313,10 +327,18 @@ private struct Writer {
             ORDER BY first_seen_at, id
             """, [.text(company + "|"), .text(company + "}"), .text(source.lowercased)])
         for row in rows {
-            guard let key = row.string("dedup_key"), Deduplicator.isSameJob(key, candidate.dedupKey) else {
-                continue
+            guard let key = row.string("dedup_key"), let id = row.string("id") else { continue }
+            let similarity = Deduplicator.similarity(key, candidate.dedupKey)
+            guard similarity >= Deduplicator.looseThreshold else { continue }
+            guard let stored = try JobRepository.job(JobID(rawValue: id), in: connection)?.job else { continue }
+            if similarity >= Deduplicator.threshold { return stored }
+            let pair = [stored, candidate]
+            if let snippet = pair.first(where: { $0.descriptionKind == .snippet })?.descriptionMarkdown,
+                let full = pair.first(where: { $0.descriptionKind != .snippet })?.descriptionMarkdown,
+                ListingLedger.contains(snippet: snippet, in: full)
+            {
+                return stored
             }
-            return try JobRepository.job(JobID(rawValue: row.string("id") ?? ""), in: connection)?.job
         }
         return nil
     }

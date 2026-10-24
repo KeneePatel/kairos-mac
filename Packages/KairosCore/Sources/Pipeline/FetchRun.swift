@@ -40,6 +40,8 @@ public struct FetchRun: Sendable {
         public var catalogAdded = 0
         /// Catalog boards with nothing for you, checked lately, so not asked this time.
         public var quiet = 0
+        /// Companies' boards found behind search snippets and read this run (J6).
+        public var boardsFound = 0
         /// Dropped because they were posted before your "posted within" limit.
         public var tooOld = 0
         public var added = 0
@@ -78,6 +80,7 @@ public struct FetchRun: Sendable {
         public var searchesSkipped: Int?
         public var catalogAdded: Int?
         public var quiet: Int?
+        public var boardsFound: Int?
 
         public static func decode(_ json: String) -> Stats? {
             try? JSONDecoder().decode(Stats.self, from: Data(json.utf8))
@@ -93,6 +96,7 @@ public struct FetchRun: Sendable {
     let postedWithinDays: Int?
     let roles: RoleMatcher?
     let watch: CatalogWatch?
+    let finder: SnippetFinder?
 
     /// A catalog board with nothing open for you is asked every this often, not every fetch.
     public static let quietEvery: TimeInterval = 3 * 86_400
@@ -105,9 +109,10 @@ public struct FetchRun: Sendable {
     public init(
         db: Database, maxConcurrent: Int = 4, now: @escaping @Sendable () -> Date = { Date() },
         postedWithinDays: Int? = nil, roles: RoleMatcher? = nil, watch: CatalogWatch? = nil,
-        makeSource: @escaping MakeSource
+        finder: SnippetFinder? = nil, makeSource: @escaping MakeSource
     ) {
         self.watch = watch
+        self.finder = finder
         self.db = db
         self.makeSource = makeSource
         self.maxConcurrent = max(1, maxConcurrent)
@@ -172,6 +177,18 @@ public struct FetchRun: Sendable {
                 }
             }
         }
+        // Snippets: the boards behind a search's companies, read now so their full postings
+        // replace the snippets (J6).
+        if !Task.isCancelled, let finder {
+            for source in await finder.findBoards() where !Task.isCancelled {
+                progress.boardsFound += 1
+                progress.sourcesTotal += 1
+                let fetched = await fetch(source, since: nil, lastGood: nil)
+                await record(fetched, from: source, state: SourceFetchState(), run: runID, into: &progress)
+                progress.sourcesDone += 1
+                continuation.yield(progress)
+            }
+        }
         // A search can't show a job is gone, so its listings close when they've long gone unseen.
         if !Task.isCancelled,
             let stale = try? await ListingLedger(db).closeStaleSearchListings(of: searches.map(\.id), at: now())
@@ -202,7 +219,8 @@ public struct FetchRun: Sendable {
                 otherRoles: progress.otherRoles > 0 ? progress.otherRoles : nil,
                 searchesSkipped: progress.searchesSkipped > 0 ? progress.searchesSkipped : nil,
                 catalogAdded: progress.catalogAdded > 0 ? progress.catalogAdded : nil,
-                quiet: progress.quiet > 0 ? progress.quiet : nil)
+                quiet: progress.quiet > 0 ? progress.quiet : nil,
+                boardsFound: progress.boardsFound > 0 ? progress.boardsFound : nil)
             let json = (try? JSONEncoder().encode(stats)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
             try? await runs.finish(runID, stats: json, error: progress.phase == .cancelled ? "cancelled" : nil)
         }

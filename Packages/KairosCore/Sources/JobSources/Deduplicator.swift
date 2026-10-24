@@ -33,6 +33,8 @@ public enum DedupKey {
 public enum Deduplicator {
     /// Key similarity at or above this, for the same company on a different source, is the same job.
     public static let threshold = 0.9
+    /// Looser, for a snippet whose text is found in the other copy's (job collection v2, J6).
+    public static let looseThreshold = 0.75
 
     /// A job already stored, as far as de-duplication needs it.
     public struct Known: Sendable, Equatable {
@@ -70,7 +72,7 @@ public enum Deduplicator {
     }
 
     /// 1 minus the Levenshtein distance over the longer length: 1 for equal strings, 0 for nothing shared.
-    static func similarity(_ a: String, _ b: String) -> Double {
+    public static func similarity(_ a: String, _ b: String) -> Double {
         let a = Array(a)
         let b = Array(b)
         guard !a.isEmpty, !b.isEmpty else { return a.isEmpty && b.isEmpty ? 1 : 0 }

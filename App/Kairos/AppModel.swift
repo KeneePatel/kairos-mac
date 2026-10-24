@@ -317,6 +317,7 @@ final class AppModel {
                 db: db, postedWithinDays: preferences.maxAgeDays, roles: roles,
                 watch: preferences.watchCatalog
                     ? CatalogWatch(catalog: .bundled, countries: preferences.countries) : nil,
+                finder: SnippetFinder(db: db, probe: BoardProbe(http: http), catalog: .bundled),
                 makeSource: { try SourceFactory.make($0, http: http, search: search) }),
             screening: ScreeningRun(db: db, router: ai?.router()))
         fetchTask = Task { [weak self] in
@@ -985,6 +986,9 @@ final class AppModel {
         if let other = stats.otherRoles { parts.append("\(other) at other roles left out") }
         if let added = stats.catalogAdded { parts.append("\(added) catalog compan\(added == 1 ? "y" : "ies") added") }
         if let quiet = stats.quiet { parts.append("\(quiet) quiet boards rested") }
+        if let found = stats.boardsFound {
+            parts.append("\(found) compan\(found == 1 ? "y's" : "ies'") boards found behind snippets")
+        }
         if stats.searchesSkipped != nil { parts.append("Adzuna's share for today is used up") }
         if let unchanged = stats.unchanged {
             parts.append("\(unchanged) board\(unchanged == 1 ? "" : "s") unchanged")
