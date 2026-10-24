@@ -33,8 +33,8 @@ public enum DedupKey {
 public enum Deduplicator {
     /// Key similarity at or above this, for the same company on a different source, is the same job.
     public static let threshold = 0.9
-    /// Looser, for a snippet whose text is found in the other copy's (job collection v2, J6).
-    public static let looseThreshold = 0.75
+    /// Looser, on titles, for a snippet whose text is found in the other copy's (job collection v2, J6).
+    public static let looseThreshold = 0.7
 
     /// A job already stored, as far as de-duplication needs it.
     public struct Known: Sendable, Equatable {
@@ -66,9 +66,20 @@ public enum Deduplicator {
         return kept
     }
 
-    /// Whether two dedup keys name the same job: similar enough, company, title and city together.
+    /// Whether two dedup keys name the same job: the same company, the same city when both say,
+    /// and titles similar enough.
     public static func isSameJob(_ a: String, _ b: String) -> Bool {
-        similarity(a, b) >= threshold
+        titleSimilarity(a, b) >= threshold
+    }
+
+    /// How alike two jobs' titles are when they're at the same company and, when both say, in the
+    /// same city; 0 otherwise. Titles compared alone: on whole keys a shared company and city made
+    /// "QA Engineer" and "Data Engineer" 0.91 alike (2026-10-23).
+    public static func titleSimilarity(_ a: String, _ b: String) -> Double {
+        let x = a.split(separator: "|", omittingEmptySubsequences: false)
+        let y = b.split(separator: "|", omittingEmptySubsequences: false)
+        guard x.count == 3, y.count == 3, x[0] == y[0], x[2].isEmpty || y[2].isEmpty || x[2] == y[2] else { return 0 }
+        return similarity(String(x[1]), String(y[1]))
     }
 
     /// 1 minus the Levenshtein distance over the longer length: 1 for equal strings, 0 for nothing shared.

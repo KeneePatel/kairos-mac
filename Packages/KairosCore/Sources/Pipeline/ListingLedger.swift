@@ -96,15 +96,17 @@ public struct ListingLedger: Sendable {
         }
     }
 
-    /// Whether a snippet's opening words appear in a full posting's text: Adzuna's 500 characters
-    /// come from the posting itself.
+    /// Whether a snippet's opening and closing words both appear in a full posting's text: Adzuna's
+    /// 500 characters come from the posting itself. Both, because a company's postings often open
+    /// with the same paragraph about the company.
     static func contains(snippet: String, in full: String) -> Bool {
         func words(_ text: String) -> [String] {
             text.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init)
         }
-        let opening = words(snippet).prefix(16)
-        guard opening.count >= 8 else { return false }
-        return " \(words(full).joined(separator: " ")) ".contains(" \(opening.joined(separator: " ")) ")
+        let all = words(snippet)
+        guard all.count >= 8 else { return false }
+        let text = " \(words(full).joined(separator: " ")) "
+        return [all.prefix(16), all.suffix(16)].allSatisfy { text.contains(" \($0.joined(separator: " ")) ") }
     }
 
     /// Closes search listings unseen for 30 days and posted 45 days ago, and their jobs when no
@@ -334,7 +336,7 @@ private struct Writer {
             """, [.text(company + "|"), .text(company + "}"), .text(source.lowercased)])
         for row in rows {
             guard let key = row.string("dedup_key"), let id = row.string("id") else { continue }
-            let similarity = Deduplicator.similarity(key, candidate.dedupKey)
+            let similarity = Deduplicator.titleSimilarity(key, candidate.dedupKey)
             guard similarity >= Deduplicator.looseThreshold else { continue }
             guard let stored = try JobRepository.job(JobID(rawValue: id), in: connection)?.job else { continue }
             if similarity >= Deduplicator.threshold { return stored }

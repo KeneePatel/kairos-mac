@@ -28,6 +28,20 @@
                 }
                 exit(0)
             }
+            if CommandLine.arguments.contains("--coverage-report") {
+                let done = DispatchSemaphore(value: 0)
+                Task.detached {
+                    do {
+                        let db = try Database(path: try AccountStore.applicationSupport().databaseURL(for: .local).path)
+                        print(try await CoverageReport.load(from: db).text)
+                    } catch {
+                        print("coverage-report: \(error)")
+                    }
+                    done.signal()
+                }
+                done.wait()
+                exit(0)
+            }
             if CommandLine.arguments.contains("--fetch-dry") {
                 let done = DispatchSemaphore(value: 0)
                 Task.detached {

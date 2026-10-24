@@ -220,6 +220,26 @@ struct ListingLedgerTests {
         #expect(try await f.listings(job).map(\.sourceID) == [f.board.id])
     }
 
+    /// Different jobs at one company and city stay different across sources: titles are compared
+    /// alone (on whole keys "QA Engineer" and "Data Engineer" were 0.91 alike).
+    @Test func similarTitlesAtOneCompanyStayApart() async throws {
+        let f = try await Fixture()
+        try await f.fromBoard([
+            posting(f.board.id, "gh/1", title: "Data Engineer"),
+            posting(f.board.id, "gh/2", title: "Software Engineer, Payments"),
+        ])
+        let other = try await f.fromAdzuna(
+            [
+                posting(f.adzuna.id, "a/1", title: "QA Engineer"),
+                posting(f.adzuna.id, "a/2", title: "Software Engineer, Payouts"),
+                posting(f.adzuna.id, "a/3", title: "Data Engineer"),
+            ], at: day(1))
+        #expect(other.added == 2 && other.attached == 1)
+        #expect(Deduplicator.titleSimilarity("acme|qa engineer|toronto", "acme|data engineer|toronto") < 0.9)
+        #expect(Deduplicator.titleSimilarity("acme|data engineer|toronto", "other|data engineer|toronto") == 0)
+        #expect(Deduplicator.titleSimilarity("acme|data engineer|", "acme|data engineer|toronto") == 1)
+    }
+
     /// A job stays open while any of its listings is.
     @Test func aJobClosesOnlyWhenAllItsListingsHave() async throws {
         let f = try await Fixture()
