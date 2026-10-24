@@ -971,7 +971,16 @@ Plan: `docs/design/job-collection.md`. Research: `docs/research/job-collection/`
     - **Places:** city and province from Adzuna's place list, not the landmark it shows ("Regent Park, City of Toronto" is now "Toronto, Ontario"). Stored Adzuna jobs read with the new places once, as edits, and are screened again.
     - **App:** Find jobs shows Adzuna's plan in its Status column, a bar with "N of 200 searches left today · N of 2,400 this month", using a shared `Meter` (the AI key bars use it too).
     - **Live check** on a copy of your database, capped at 25 Adzuna requests (`Kairos --fetch-dry --adzuna-budget=25`): first fetch 720 new in 37 s; the second skipped Adzuna, its share spent, in 2.1 s. An uncapped run the same day found 1,473 new with 80 requests in 5 minutes, which is why the burst and the cap came in.
-- [ ] **J5 · Board catalog:** `scripts/discover-boards`, the bundled catalog, Companies list, auto-watch, cadence, gone boards
+- [x] **J5 · Board catalog** (L)
+  - **Done 2026-10-24:**
+    - **`scripts/discover-boards.py`** (standard library): reads Common Crawl's URL index for the nine ATSs' board hosts, checks each board once on its public API (4 at a time, paced, retried), and writes the boards with jobs in Canada or the US to `JobSources/Catalog/boards.json`, which the app bundles. `--only` and `--extra` re-check some kinds and feed known slugs (the index timed out on Workable and SmartRecruiters the first time); job sites and agencies are left out.
+    - **The catalog (crawl CC-MAIN-2026-43, checked 2026-10-24):** 3,672 boards; 808 with Canadian jobs (11,441 postings: 260 Greenhouse, 164 Ashby, 143 SmartRecruiters, 101 BambooHR, 76 Workable, 44 Lever, 19 Recruitee, 1 Personio), 3,434 with US jobs.
+    - **Watching** (your choice, on by default; Settings, Search, Companies): before a fetch, every catalog board with jobs in your countries becomes a source (origin "catalog"); one you removed is never added back, one you paused stays paused.
+    - **Cadence:** a catalog board with nothing open for you rests three days between checks. **Gone:** a board answering "not found" three fetches in a row stops being fetched until you resume it.
+    - **Greenhouse light list:** with roles set, Greenhouse boards send their small list, and a job's text is asked for only when it's new and at your roles, or known and edited in the last two days.
+    - **App:** Find jobs shows Yours, Catalog and All with a search; catalog rows read "Quiet: nothing for you, checked every 3 days" or "Gone"; "Stop watching" for a catalog company.
+    - **Live check** on a copy of your database (Adzuna off): the first fetch added 576 catalog companies and read 599 sources in 3.5 minutes, scanning 44,697 postings: 403 new jobs at your roles, no failures. The second took 84 s: 450 quiet boards rested, 137 of 152 answered unchanged.
+    - **Refresh** the catalog before a release: `python3 -I scripts/discover-boards.py` (about an hour for two crawls).
 - [x] **J6 · Snippet upgrade** (M)
   - **Done 2026-10-23:**
     - **`SnippetFinder`:** after the searches, the companies behind open snippet jobs (newest first, 20 a fetch) are looked up: Kairos's catalog, your sources, then `BoardProbe`, which tries the name's likely slugs (company suffixes dropped) on Greenhouse, Lever, Ashby, Workable, Recruitee and SmartRecruiters, and counts a board only when it lists a job. Every answer is kept (`014_company_lookup.sql`): a found board once, a miss for 30 days. A board found becomes a source (origin "search") and is read in the same fetch. Job sites that appear as a search's company (Jobgether, Turing, Dice…) aren't looked up: one added 207 reposted jobs in a trial.
@@ -987,7 +996,11 @@ Plan: `docs/design/job-collection.md`. Research: `docs/research/job-collection/`
     - **Not done:** Remotive (Himalayas covers remote roles with a country filter, and Remotive allows about 4 calls a day); JSearch (SerpApi covers Google for Jobs).
     - **Live check** on a copy of your database: Himalayas gave 137 remote jobs with full text, and its copies filled in 2 Adzuna snippets.
     - **Your step:** for Google Jobs, sign up at serpapi.com (free), then Find jobs, Add, Google Jobs (SerpApi)….
-- [ ] **J8 · Coverage and docs:** `Kairos --coverage-report`, SPEC §5.2/5.4/6.2, ADR-015
+- [x] **J8 · Coverage and docs** (S)
+  - **Done 2026-10-23:**
+    - **`Kairos --coverage-report`** (`CoverageReport`): open jobs by how much of the posting Kairos holds (full, snippet, none), the week's new and closed jobs, snippets filled in, sources by origin (you, catalog, search, search engine), and per kind of source its sources, open jobs, requests, unchanged answers and failures, with the week's most common failures.
+    - **Dedup fix found while testing it:** copies on different sources need the same company, the same city when both say, and similar titles compared alone; on whole keys a shared company and city made "QA Engineer" and "Data Engineer" (0.91) and "Payments" and "Payouts" one job.
+    - **Docs:** ADR-015; SPEC §5.2 (catalog, cadence, gone boards, snippet finder), §5.4 (sources), §6.2 (`listing`, `job_event`, `source_fetch_state`, `fetch_log`, `company_lookup`); `docs/design/job-collection.md` marked built; the research index lists the tools.
 
 ---
 

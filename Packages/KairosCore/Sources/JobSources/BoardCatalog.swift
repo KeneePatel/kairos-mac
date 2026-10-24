@@ -61,8 +61,26 @@ public struct BoardCatalog: Sendable, Equatable {
         let boards: [Board]
     }
 
-    /// The boards with jobs in any of `countries`, of the kinds Kairos reads.
+    /// The boards with jobs in any of `countries`, of the kinds Kairos reads, job sites and
+    /// agencies left out.
     public func boards(in countries: [Country]) -> [Board] {
-        boards.filter { $0.sourceKind != nil && $0.lists(in: countries) }
+        boards.filter { $0.sourceKind != nil && $0.lists(in: countries) && !Self.isAggregator($0.name, slug: $0.slug) }
     }
+
+    /// Job sites and agencies that repost other companies' jobs (2026-10-23: one board added 207
+    /// reposted jobs): kept out of the catalog and never looked up behind a search's company. The
+    /// discovery script keeps the same list.
+    public static func isAggregator(_ name: String, slug: String = "") -> Bool {
+        let keys = [name, slug].map { $0.lowercased().filter { $0.isLetter || $0.isNumber } }
+        return keys.contains { aggregators.contains($0) }
+            || [name, slug].contains {
+                $0.range(of: "agency|staffing|recruit", options: [.regularExpression, .caseInsensitive]) != nil
+            }
+    }
+
+    static let aggregators: Set<String> = [
+        "jobgether", "jooble", "talent", "lensa", "dice", "ziprecruiter", "indeed", "linkedin", "glassdoor", "monster",
+        "careerbuilder", "remoterocketship", "jobot", "turing", "crossover", "toptal", "hired", "recruitnet",
+        "jobsforhumanity", "clickjobs", "adzuna", "workopolis", "eluta", "bjakcareer",
+    ]
 }

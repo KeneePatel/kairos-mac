@@ -14,14 +14,6 @@ public struct SnippetFinder: Sendable {
     public static let perRun = 20
     /// A company with no board found is looked up again after this long.
     public static let recheckAfter: TimeInterval = 30 * 86_400
-    /// Job sites and staffing marketplaces that appear as the "company" in search results: their
-    /// boards repost other companies' jobs, so they aren't looked up (2026-10-23: one added 207).
-    static let aggregators: Set<String> = [
-        "jobgether", "jooble", "talent", "lensa", "dice", "ziprecruiter", "indeed", "linkedin", "glassdoor",
-        "monster", "careerbuilder", "remote rocketship", "jobot", "turing", "crossover", "toptal", "hired",
-        "recruit net", "jobs for humanity", "clickjobs", "adzuna", "workopolis", "eluta",
-    ]
-
     let db: Database
     let probe: BoardProbe
     let catalog: BoardCatalog
@@ -70,7 +62,7 @@ public struct SnippetFinder: Sendable {
         for row in rows {
             guard looked < Self.perRun, let name = row.string("company") else { break }
             let key = Self.key(name)
-            guard !key.isEmpty, byCompany[key] == nil, !Self.aggregators.contains(key) else { continue }
+            guard !key.isEmpty, byCompany[key] == nil, !BoardCatalog.isAggregator(name) else { continue }
             if let lookup = try? await db.query("SELECT * FROM company_lookup WHERE name_key = ?", [.text(key)]).first {
                 let checked = lookup.int64("checked_at").map(Date.init(milliseconds:)) ?? .distantPast
                 if lookup.string("kind") != nil || now().timeIntervalSince(checked) < Self.recheckAfter { continue }

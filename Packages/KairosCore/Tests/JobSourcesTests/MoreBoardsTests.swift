@@ -48,6 +48,42 @@ struct MoreBoardsTests {
         #expect(script.requests.count == 3)
     }
 
+    /// Greenhouse with your roles reads its light list, and asks for a job's text only when the job
+    /// is new and at your roles, or known and edited in the last two days.
+    @Test func greenhouseReadsItsLightListWithRoles() async throws {
+        let now = try #require(date("2026-10-23T12:00:00Z"))
+        func job(_ id: Int, _ title: String, updated: String) -> String {
+            #"{"id":\#(id),"title":"\#(title)","updated_at":"\#(updated)","absolute_url":"https://job-boards.greenhouse.io/acmerobotics/jobs/\#(id)","location":{"name":"Toronto, ON"}}"#
+        }
+        let list = Data(
+            ("{\"jobs\":["
+                + [
+                    job(1, "Backend Developer", updated: "2026-10-22T10:00:00Z"),
+                    job(2, "Account Executive", updated: "2026-10-22T10:00:00Z"),
+                    job(3, "Data Engineer", updated: "2026-10-23T09:00:00Z"),
+                    job(4, "QA Engineer", updated: "2026-09-01T10:00:00Z"),
+                ].joined(separator: ",") + "]}").utf8)
+        let detail = Data(
+            #"{"id":1,"title":"Backend Developer","first_published":"2026-10-20T10:00:00Z","absolute_url":"https://job-boards.greenhouse.io/acmerobotics/jobs/1","location":{"name":"Toronto, ON"},"content":"&lt;p&gt;Build APIs.&lt;/p&gt;"}"#
+                .utf8)
+        let base = "https://boards-api.greenhouse.io/v1/boards/acmerobotics/jobs"
+        let (http, script) = ScriptedURLProtocol.client([
+            base: .http(status: 200, body: list),
+            base + "/1?pay_transparency=true": .http(status: 200, body: detail),
+            base + "/3?pay_transparency=true": .http(status: 200, body: detail),
+        ])
+        let known: Set<String> = [
+            "https://job-boards.greenhouse.io/acmerobotics/jobs/3",
+            "https://job-boards.greenhouse.io/acmerobotics/jobs/4",
+        ]
+        let postings = try await GreenhouseSource(id: sourceID, boardToken: "acmerobotics", http: http, now: { now })
+            .fetch(SourceQuery(roles: RoleMatcher(families: [.software, .data, .qa]), knownURLs: known))
+        #expect(postings.map(\.textOmitted) == [false, true, false, true])
+        #expect(
+            postings[0].descriptionHTML == "<p>Build APIs.</p>" && postings[0].postedAt == date("2026-10-20T10:00:00Z"))
+        #expect(script.requests.count == 3)
+    }
+
     /// Workable's widget feed: every job with its text, places and remote flag.
     @Test func workableMapsItsFeed() async throws {
         let url = "https://apply.workable.com/api/v1/widget/accounts/acmerobotics?details=true"

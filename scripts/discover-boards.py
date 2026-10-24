@@ -53,6 +53,19 @@ NOT_COMPANIES = {
     "favicon.ico", "robots.txt", "sitemap.xml", "v1", "o",
 }
 SLUG = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
+# Job sites and agencies whose boards repost other companies' jobs (the app's BoardCatalog keeps
+# the same list): left out of the catalog.
+AGGREGATORS = {
+    "jobgether", "jooble", "talent", "lensa", "dice", "ziprecruiter", "indeed", "linkedin", "glassdoor", "monster",
+    "careerbuilder", "remoterocketship", "jobot", "turing", "crossover", "toptal", "hired", "recruitnet",
+    "jobsforhumanity", "clickjobs", "adzuna", "workopolis", "eluta", "bjakcareer",
+}
+AGENCY = re.compile(r"agency|staffing|recruit", re.IGNORECASE)
+
+
+def is_aggregator(slug, name=""):
+    key = re.sub(r"[^a-z0-9]", "", slug.lower())
+    return key in AGGREGATORS or bool(AGENCY.search(slug)) or bool(AGENCY.search(name or ""))
 
 PROVINCES = r"ON|BC|QC|AB|MB|SK|NS|NB|NL|PE|YT|NT|NU"
 CANADA = re.compile(
@@ -244,11 +257,27 @@ def main():
     parser.add_argument("--crawls", type=int, default=2, help="how many of the latest crawls to read")
     parser.add_argument("--limit", type=int, default=0, help="check at most this many boards (testing)")
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--only", default="", help="kinds to discover and check again, comma-separated; "
+                        "the catalog's other boards are kept as they are")
+    parser.add_argument("--extra", default="", help="a JSON file of more slugs by kind, {kind: [slug, ...]}")
     args = parser.parse_args()
+    only = {kind for kind in args.only.split(",") if kind}
+
+    def wanted(kind):
+        return not only or kind in only or (kind == "lever-eu" and "lever" in only)
 
     candidates = set()
+    kept = []
+    if args.extra:
+        with open(args.extra) as extra:
+            for kind, slugs in json.load(extra).items():
+                if wanted(kind):
+                    candidates |= {(kind, slug if kind == "smartrecruiters" else slug.lower())
+                                   for slug in slugs if SLUG.match(slug)}
     for crawl in crawls(args.crawls):
         for query, kind, how in HOSTS:
+            if not wanted(kind):
+                continue
             suffix = query[1:] if how == "subdomain" else ""
             urls = index_urls(crawl, query)
             slugs = {slug_of(url, how, suffix) for url in urls}
@@ -261,7 +290,11 @@ def main():
         with open(args.out) as existing:
             for board in json.load(existing).get("boards", []):
                 kind = "lever-eu" if board["kind"] == "lever" and board.get("region") == "eu" else board["kind"]
-                candidates.add((kind, board["slug"]))
+                if wanted(kind):
+                    candidates.add((kind, board["slug"]))
+                elif not is_aggregator(board["slug"], board.get("name", "")):
+                    kept.append(board)
+    candidates = {(kind, slug) for kind, slug in candidates if not is_aggregator(slug)}
     candidates = sorted(candidates)
     if args.limit:
         candidates = candidates[: args.limit]
@@ -282,7 +315,7 @@ def main():
                 continue
             name, places = answer
             canada, states = count(places)
-            if canada == 0 and states == 0:
+            if (canada == 0 and states == 0) or is_aggregator(slug, name or ""):
                 continue
             entry = {"kind": "lever" if kind == "lever-eu" else kind, "slug": slug,
                      "name": (name or humanize(slug)).strip(), "ca": canada, "us": states, "jobs": len(places)}
@@ -290,6 +323,7 @@ def main():
                 entry["region"] = "eu"
             boards.append(entry)
 
+    boards += kept
     boards.sort(key=lambda board: (board["kind"], board["slug"].lower()))
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     with open(args.out, "w") as out:

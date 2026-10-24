@@ -59,6 +59,20 @@ struct CatalogWatchTests {
         #expect(BoardCatalog.bundled.boards.allSatisfy { $0.sourceKind != nil })
     }
 
+    /// Job sites and agencies that repost other companies' jobs stay out.
+    @Test func jobSitesAndAgenciesStayOut() {
+        let reposting = BoardCatalog(
+            checked: "2026-10-24",
+            boards: [
+                .init(kind: "lever", slug: "jobgether", name: "Jobgether", ca: 333, us: 1_004, jobs: 4_147),
+                .init(kind: "lever", slug: "aogarciaagency", name: "Aogarciaagency", ca: 159, us: 3_593, jobs: 3_752),
+                .init(kind: "greenhouse", slug: "northstaff", name: "North Staffing Group", ca: 5, us: 0, jobs: 5),
+                .init(kind: "greenhouse", slug: "clutch", name: "Clutch Technologies Inc.", ca: 76, us: 0, jobs: 76),
+            ])
+        #expect(reposting.boards(in: [.canada]).map(\.slug) == ["clutch"])
+        #expect(BoardCatalog.isAggregator("Remote Rocketship") && !BoardCatalog.isAggregator("Stripe"))
+    }
+
     /// Syncing adds what's missing once; a board you added yourself, removed or paused stays as you left it.
     @Test func syncAddsWhatsMissingAndRespectsYou() async throws {
         let db = try await database()

@@ -1,6 +1,6 @@
 # Job collection v2: design and plan
 
-Status: **approved 2026-10-23** with the owner's four decisions:
+Status: **approved 2026-10-23, built the same day** (J1–J8; `tasks/todo.md`, ADR-015), with the owner's four decisions:
 
 1. **Companies**: watch every catalog company with jobs in your countries (plus pasted ones and
    ones found through Adzuna), each mutable.

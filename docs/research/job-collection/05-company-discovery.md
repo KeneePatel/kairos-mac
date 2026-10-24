@@ -77,3 +77,20 @@ screening (`GET /v1/boards/{token}/jobs/{id}?pay_transparency=true`).
 - The app adds boards three ways: the catalog, a pasted URL, and companies seen in search
   results. Each board remembers its ETag, how often it has relevant jobs, and whether it's
   gone (404 several times) so dead boards drop out.
+
+## Built (J5, 2026-10-24)
+
+`scripts/discover-boards.py` read CC-MAIN-2026-43 and checked 7,549 candidate boards, then 1,811
+Workable and SmartRecruiters slugs whose index queries had timed out. The catalog kept 3,672
+boards: **808 with Canadian jobs** (11,441 postings) and 3,434 with US jobs. Canadian boards by
+ATS: Greenhouse 260, Ashby 164, SmartRecruiters 143, BambooHR 101, Workable 76, Lever 44,
+Recruitee 19, Personio 1, Teamtailor 0.
+
+Lessons:
+- Common Crawl's index answers 504 often; one query per host can return nothing. Retry, and keep
+  slugs from earlier runs (`--extra`).
+- Job sites and agencies run public boards too (Jobgether: 4,147 jobs, 333 Canadian; an agency's
+  Lever board: 3,752): they repost other companies' jobs and are left out by name.
+- Watching 600 boards: the first fetch read 599 sources in 3.5 minutes (44,697 postings scanned,
+  403 new at the owner's roles); afterwards boards with nothing for the owner rest three days and
+  the rest mostly answer 304.
