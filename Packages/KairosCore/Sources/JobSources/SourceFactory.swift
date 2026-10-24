@@ -40,10 +40,18 @@ public struct SearchContext: Sendable, Equatable {
     public var query: SourceQuery
     /// Your Adzuna app ID and key, when saved.
     public var adzuna: AdzunaSource.Credentials?
+    /// Your Himalayas key (optional: it lifts the limit) and SerpApi key (needed for Google Jobs).
+    public var himalayasKey: String?
+    public var serpAPIKey: String?
 
-    public init(query: SourceQuery = SourceQuery(), adzuna: AdzunaSource.Credentials? = nil) {
+    public init(
+        query: SourceQuery = SourceQuery(), adzuna: AdzunaSource.Credentials? = nil, himalayasKey: String? = nil,
+        serpAPIKey: String? = nil
+    ) {
         self.query = query
         self.adzuna = adzuna
+        self.himalayasKey = himalayasKey
+        self.serpAPIKey = serpAPIKey
     }
 }
 
@@ -84,7 +92,14 @@ public enum SourceFactory {
                 AdzunaSource(id: source.id, credentials: credentials, http: http, pace: .milliseconds(2_500)),
                 search.query
             )
-        case .linkedIn, .indeedCanada, .indeedUS, .glassdoor, .googleJobs, .wellfound, .jobBank:
+        case .himalayas:
+            return (HimalayasSource(id: source.id, key: search.himalayasKey, http: http), search.query)
+        case .googleJobs:
+            guard let key = search.serpAPIKey, !key.isEmpty else {
+                throw .invalidConfiguration("add your SerpApi key in Find jobs, Google Jobs")
+            }
+            return (GoogleJobsSource(id: source.id, key: key, http: http), search.query)
+        case .linkedIn, .indeedCanada, .indeedUS, .glassdoor, .wellfound, .jobBank:
             throw .invalidConfiguration("\(source.kind.rawValue) isn't available yet")
         }
     }

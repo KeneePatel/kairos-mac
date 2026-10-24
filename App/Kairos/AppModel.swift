@@ -243,6 +243,32 @@ final class AppModel {
         adzunaUsed = (await used(.day), await used(.month))
     }
 
+    static let himalayasKey = SecretKey("himalayas.key")
+    static let serpAPIKey = SecretKey("serpapi.key")
+
+    func source(of kind: SourceKind) -> Source? { sources.first { $0.kind == kind } }
+
+    /// Adds Himalayas or Google Jobs (job collection v2, J7) with its key: optional for Himalayas,
+    /// needed for Google Jobs through SerpApi. Returns why it couldn't, or nil once saved.
+    func saveSearch(_ kind: SourceKind, key: String) async -> String? {
+        guard let db else { return "The database isn't open." }
+        let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        if kind == .googleJobs, key.isEmpty { return "Paste your SerpApi key." }
+        do {
+            let name = kind == .googleJobs ? Self.serpAPIKey : Self.himalayasKey
+            if key.isEmpty {
+                try secrets.delete(name)
+            } else {
+                try secrets.write(key, for: name, hint: LLMSettings.masked(key))
+            }
+            if source(of: kind) == nil { _ = try await SourceRepository(db).add(kind: kind) }
+        } catch {
+            return "Couldn't save it on this Mac."
+        }
+        await reload()
+        return nil
+    }
+
     /// Saves your Adzuna app ID and key, and adds the Adzuna search if it isn't there yet. Returns
     /// why it couldn't, or nil once saved.
     func saveAdzuna(appID: String, appKey: String) async -> String? {
@@ -311,7 +337,8 @@ final class AppModel {
             query: SourceQuery(
                 titles: roles.searches, countries: preferences.countries, maxAgeDays: preferences.maxAgeDays,
                 roles: roles.isOpen ? nil : roles),
-            adzuna: adzunaCredentials)
+            adzuna: adzunaCredentials, himalayasKey: (try? secrets.read(Self.himalayasKey)) ?? nil,
+            serpAPIKey: (try? secrets.read(Self.serpAPIKey)) ?? nil)
         let run = PipelineRun(
             fetch: FetchRun(
                 db: db, postedWithinDays: preferences.maxAgeDays, roles: roles,

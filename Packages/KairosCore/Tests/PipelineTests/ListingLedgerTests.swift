@@ -209,6 +209,17 @@ struct ListingLedgerTests {
         #expect(try await f.events(job) == [.found])
     }
 
+    /// A search linking to a company board's own address doesn't touch the board's listing.
+    @Test func anotherSourcesAddressIsLeftAlone() async throws {
+        let f = try await Fixture()
+        try await f.fromBoard([posting(f.board.id, "gh/1")])
+        let same = try await f.fromAdzuna([posting(f.adzuna.id, "gh/1", text: "A search's own words.")], at: day(1))
+        #expect(same.known == 1 && same.changed == 0)
+        let job = try #require(try await f.jobs().first)
+        #expect(job.descriptionMarkdown?.contains("Build APIs in Go") == true)
+        #expect(try await f.listings(job).map(\.sourceID) == [f.board.id])
+    }
+
     /// A job stays open while any of its listings is.
     @Test func aJobClosesOnlyWhenAllItsListingsHave() async throws {
         let f = try await Fixture()

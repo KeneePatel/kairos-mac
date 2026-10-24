@@ -33,6 +33,13 @@ public struct AdzunaSource: JobSource {
         /// One fetch's share, so several fetches a day all find jobs.
         public let run: Int
 
+        public init(day: Int, week: Int, month: Int, run: Int) {
+            self.day = day
+            self.week = week
+            self.month = month
+            self.run = run
+        }
+
         public static let standard = Budget(day: 200, week: 950, month: 2_400, run: 80)
 
         /// Requests left now, given what was used today (UTC), in the last 7 days and this month.

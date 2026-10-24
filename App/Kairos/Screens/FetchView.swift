@@ -9,6 +9,13 @@ struct FetchView: View {
     @Environment(AppModel.self) private var model
     @State private var addingCompany = false
     @State private var addingAdzuna = false
+    @State private var addingSearch: SearchChoice?
+
+    /// Which optional search's sheet is open.
+    struct SearchChoice: Identifiable {
+        let kind: SourceKind
+        var id: String { kind.rawValue }
+    }
     @State private var clearing: JobRepository.Clearing?
 
     var body: some View {
@@ -32,6 +39,12 @@ struct FetchView: View {
                 Menu {
                     Button("Company board…") { addingCompany = true }
                     Button(model.adzunaSource == nil ? "Adzuna search…" : "Change Adzuna keys…") { addingAdzuna = true }
+                    Button(model.source(of: .himalayas) == nil ? "Himalayas remote jobs…" : "Change Himalayas key…") {
+                        addingSearch = SearchChoice(kind: .himalayas)
+                    }
+                    Button(model.source(of: .googleJobs) == nil ? "Google Jobs (SerpApi)…" : "Change SerpApi key…") {
+                        addingSearch = SearchChoice(kind: .googleJobs)
+                    }
                 } label: {
                     Label("Add", systemImage: "plus").labelStyle(.titleAndIcon)
                 }
@@ -52,6 +65,7 @@ struct FetchView: View {
         }
         .sheet(isPresented: $addingCompany) { AddCompanySheet() }
         .sheet(isPresented: $addingAdzuna) { AdzunaSheet() }
+        .sheet(item: $addingSearch) { choice in SearchSourceSheet(kind: choice.kind) }
         .confirmationDialog(
             "Delete all jobs?",
             isPresented: Binding(get: { clearing != nil }, set: { if !$0 { clearing = nil } }),

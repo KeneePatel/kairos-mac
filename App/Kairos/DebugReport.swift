@@ -411,6 +411,11 @@
                 // `--add=<careers URL>`: a board added to the copy only, to try a reader live.
                 for argument in CommandLine.arguments where argument.hasPrefix("--add=") {
                     let address = String(argument.dropFirst(6))
+                    if address == "himalayas" {
+                        _ = try await SourceRepository(db).add(kind: .himalayas)
+                        say("added himalayas")
+                        continue
+                    }
                     guard case .detected(let kind, let slug) = ATSDetector.detect(address) else {
                         say("can't add \(address)")
                         continue

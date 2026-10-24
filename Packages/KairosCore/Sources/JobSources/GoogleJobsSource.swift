@@ -1,0 +1,142 @@
+import Foundation
+import Store
+
+/// Google for Jobs, through SerpApi with your own key (serpapi.com/google-jobs-api; job collection
+/// v2, J7, the owner's choice of 2026-10-23). Google for Jobs gathers postings from LinkedIn,
+/// Indeed, Workday career sites and the rest, which Kairos can't read itself. SerpApi queries
+/// Google for you; its free plan allows 250 searches a month, 10 jobs each, so Kairos asks your
+/// first roles' searches, a few a day.
+public struct GoogleJobsSource: JobSource {
+    /// What Kairos spends of SerpApi's free plan (250 searches a month).
+    public static let budget = AdzunaSource.Budget(day: 12, week: 70, month: 240, run: 12)
+
+    public let id: SourceID
+    let key: String
+    let http: any HTTPClient
+    let now: @Sendable () -> Date
+
+    public init(id: SourceID, key: String, http: any HTTPClient, now: @escaping @Sendable () -> Date = { Date() }) {
+        self.id = id
+        self.key = key
+        self.http = http
+        self.now = now
+    }
+
+    public func fetch(_ query: SourceQuery) async throws -> [Posting] {
+        guard case .postings(let postings, _) = try await fetch(query, since: nil) else { return [] }
+        return postings
+    }
+
+    /// One page (10 jobs) per search, your roles' searches in order, until the run's share is spent.
+    public func fetch(_ query: SourceQuery, since memo: FetchMemo?) async throws -> FetchAnswer {
+        let titles = query.titles.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        guard !titles.isEmpty else {
+            throw SourceError.invalidConfiguration(
+                "Google Jobs searches by your roles; choose some in Settings, Search")
+        }
+        let budget = query.callBudget ?? Self.budget.run
+        var calls = 0
+        var seen: Set<String> = []
+        var postings: [Posting] = []
+        searches: for country in query.countries {
+            for title in titles {
+                guard calls < budget else { break searches }
+                calls += 1
+                let page: SerpApiJobs
+                do {
+                    page = try await search(title, in: country)
+                } catch {
+                    guard calls > 1, error as? SourceError != .cancelled else { throw error }
+                    break searches
+                }
+                for job in page.jobsResults ?? [] where seen.insert(job.jobId).inserted {
+                    if let posting = posting(job, country: country) { postings.append(posting) }
+                }
+            }
+        }
+        return .postings(postings, memo: FetchMemo(etag: nil, requests: calls))
+    }
+
+    private func search(_ title: String, in country: Country) async throws -> SerpApiJobs {
+        var components = URLComponents(string: "https://serpapi.com/search.json")
+        components?.queryItems = [
+            URLQueryItem(name: "engine", value: "google_jobs"), URLQueryItem(name: "q", value: title),
+            URLQueryItem(name: "location", value: country == .canada ? "Canada" : "United States"),
+            URLQueryItem(name: "gl", value: country.rawValue.lowercased()), URLQueryItem(name: "hl", value: "en"),
+            URLQueryItem(name: "api_key", value: key),
+        ]
+        guard let url = components?.url else { throw SourceError.invalidConfiguration("Google Jobs search") }
+        do {
+            return try await http.getJSON(url, as: SerpApiJobs.self)
+        } catch .http(let status, _) where status == 401 || status == 403 {
+            throw SourceError.invalidConfiguration("SerpApi didn't accept the key; check it in Find jobs, Google Jobs")
+        }
+    }
+
+    private func posting(_ job: SerpApiJobs.Job, country: Country) -> Posting? {
+        // Google's link for the job: one per posting, so it never collides with a board's address.
+        guard
+            let url = job.shareLink.flatMap(URL.init(string:))
+                ?? job.applyOptions?.first.flatMap({ URL(string: $0.link) })
+        else { return nil }
+        let highlights = (job.jobHighlights ?? []).map { highlight in
+            "<h3>\(HTMLEntities.escape(highlight.title ?? ""))</h3><ul>"
+                + highlight.items.map { "<li>\(HTMLEntities.escape($0))</li>" }.joined() + "</ul>"
+        }.joined()
+        let location = job.location ?? ""
+        let remote =
+            job.detectedExtensions?.workFromHome == true || location.localizedCaseInsensitiveContains("anywhere")
+            || location.localizedCaseInsensitiveContains("remote")
+        return Posting(
+            sourceID: id, url: url, company: job.companyName, title: job.title,
+            location: remote && location.localizedCaseInsensitiveContains("anywhere")
+                ? "Remote - \(country == .canada ? "Canada" : "United States")" : location,
+            postedAt: job.detectedExtensions?.postedAt.flatMap(posted),
+            descriptionHTML: "<p>"
+                + HTMLEntities.escape(job.description ?? "").replacing("\n", with: "</p><p>") + "</p>" + highlights,
+            countryHint: country.rawValue, workplace: remote ? .remote : nil)
+    }
+
+    /// "3 days ago", "5 hours ago", "1 month ago".
+    func posted(_ text: String) -> Date? {
+        let words = text.lowercased().split(separator: " ")
+        guard words.count >= 2, let count = Double(words[0]) else { return nil }
+        let unit: Double =
+            switch words[1] {
+            case let word where word.hasPrefix("minute"): 60
+            case let word where word.hasPrefix("hour"): 3_600
+            case let word where word.hasPrefix("day"): 86_400
+            case let word where word.hasPrefix("week"): 7 * 86_400
+            case let word where word.hasPrefix("month"): 30 * 86_400
+            default: 0
+            }
+        return unit == 0 ? nil : now().addingTimeInterval(-count * unit)
+    }
+}
+
+struct SerpApiJobs: Decodable {
+    struct Job: Decodable {
+        struct Highlight: Decodable {
+            let title: String?
+            let items: [String]
+        }
+        struct Extensions: Decodable {
+            let postedAt: String?
+            let workFromHome: Bool?
+        }
+        struct Option: Decodable {
+            let title: String?
+            let link: String
+        }
+        let jobId: String
+        let title: String
+        let companyName: String
+        let location: String?
+        let description: String?
+        let shareLink: String?
+        let jobHighlights: [Highlight]?
+        let detectedExtensions: Extensions?
+        let applyOptions: [Option]?
+    }
+    let jobsResults: [Job]?
+}

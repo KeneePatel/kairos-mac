@@ -7,6 +7,8 @@ public enum SourceKind: String, Sendable, CaseIterable {
     case workable, recruitee, personio
     case bambooHR = "bamboohr"
     case teamtailor
+    /// Remote jobs, searched (job collection v2, J7).
+    case himalayas
     case linkedIn = "linkedin"
     case indeedCanada = "indeed_ca"
     case indeedUS = "indeed_us"

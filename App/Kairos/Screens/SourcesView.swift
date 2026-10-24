@@ -382,6 +382,74 @@ struct AdzunaSheet: View {
     }
 }
 
+/// Himalayas (remote jobs, a key optional) or Google Jobs through SerpApi (your key needed), the
+/// optional searches of job collection v2, J7. Laid out like the Adzuna sheet.
+struct SearchSourceSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let kind: SourceKind
+    @State private var key = ""
+    @State private var error: String?
+    @State private var saving = false
+
+    private var isGoogle: Bool { kind == .googleJobs }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.space4) {
+            Text(isGoogle ? "Search Google Jobs" : "Search Himalayas").font(TypeStyle.title3).foregroundStyle(
+                Color(.ink))
+            Text(
+                isGoogle
+                    ? "Google for Jobs gathers postings from LinkedIn, Indeed, Workday career sites and more, which Kairos can't read itself. SerpApi asks Google for you with your key: its free plan allows 250 searches a month, and Kairos uses at most 12 a day."
+                    : "Himalayas lists remote jobs and says which countries can apply. Kairos searches it for your roles in your countries, with each job's full text. A free key lifts its limits; it works without one."
+            )
+            .font(TypeStyle.body).foregroundStyle(Color(.ink2)).fixedSize(horizontal: false, vertical: true)
+            LabeledField(title: isGoogle ? "SerpApi key" : "Himalayas key (optional)") {
+                SecureField(
+                    "Key", text: $key, prompt: Text(isGoogle ? "Paste the key" : "Leave empty to use it without one")
+                )
+                .textFieldStyle(.roundedBorder)
+            }
+            if let url = URL(string: isGoogle ? "https://serpapi.com/users/sign_up" : "https://himalayas.app/api") {
+                Link(isGoogle ? "Get a free SerpApi key" : "About Himalayas's API and keys", destination: url)
+                    .font(TypeStyle.callout)
+            }
+            Label(
+                isGoogle
+                    ? "SerpApi queries Google on your behalf. Its jobs name the site they came from; Kairos opens Google's page for each."
+                    : "Its jobs say \"via Himalayas\" and open on Himalayas, with its apply link, as its terms ask.",
+                systemImage: "info.circle"
+            )
+            .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).fixedSize(horizontal: false, vertical: true)
+            if let error {
+                Label(error, systemImage: "exclamationmark.triangle.fill").font(TypeStyle.callout)
+                    .foregroundStyle(Color(.error))
+            }
+            HStack {
+                Spacer()
+                Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(model.source(of: kind) == nil ? "Add" : "Save") { save() }
+                    .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+                    .disabled(saving || (isGoogle && key.trimmingCharacters(in: .whitespaces).isEmpty))
+            }
+        }
+        .padding(Spacing.space6)
+        .frame(width: 480)
+    }
+
+    private func save() {
+        saving = true
+        Task {
+            if let problem = await model.saveSearch(kind, key: key) {
+                error = problem
+            } else {
+                dismiss()
+            }
+            saving = false
+        }
+    }
+}
+
 /// "Jobs by Adzuna", linked: Adzuna's terms ask every listing shown from it to name it.
 struct AdzunaCredit: View {
     var body: some View {

@@ -977,7 +977,16 @@ Plan: `docs/design/job-collection.md`. Research: `docs/research/job-collection/`
     - **`SnippetFinder`:** after the searches, the companies behind open snippet jobs (newest first, 20 a fetch) are looked up: Kairos's catalog, your sources, then `BoardProbe`, which tries the name's likely slugs (company suffixes dropped) on Greenhouse, Lever, Ashby, Workable, Recruitee and SmartRecruiters, and counts a board only when it lists a job. Every answer is kept (`014_company_lookup.sql`): a found board once, a miss for 30 days. A board found becomes a source (origin "search") and is read in the same fetch. Job sites that appear as a search's company (Jobgether, Turing, Dice…) aren't looked up: one added 207 reposted jobs in a trial.
     - **Matching:** another source's copy of a stored job is attached whatever its age or title (it isn't a new job), so an older board posting still fills in a recent snippet. A snippet and a full posting also match on a looser title (similarity 0.75 instead of 0.9) when the snippet's opening words are in the posting's text.
     - **Live check** on a copy of your database, no Adzuna calls (`--adzuna-budget=0`): 6 boards found for 40 companies; Syndio's (Greenhouse) and veritree's (Workable) full postings replaced their snippets in the first fetch.
-- [ ] **J7 · Optional sources:** Himalayas (and Remotive); JSearch or SerpApi with your key
+- [x] **J7 · Optional sources** (M)
+  - **Done 2026-10-23:**
+    - **Himalayas** (remote jobs, `himalayas.app/jobs/api/search`): your roles in your countries, newest first, up to 3 pages a search and 30 requests a fetch, full text; expired and too-old jobs left out; a free key optional (Bearer), lifting its limits. Its jobs open on Himalayas (its page carries the apply link) and read "via Himalayas", as its terms ask.
+    - **Google Jobs through SerpApi** (your choice; your key): one page of 10 per search, your roles' searches in order, at most 12 a day, 70 a week, 240 a month (the free plan allows 250). Google's link is each job's address, so it never collides with a company board's; highlights follow the text; "3 days ago" becomes a date. Not tried live: it needs your key.
+    - **Budgets** for every search source come from the fetch log (Adzuna's, SerpApi's, Himalayas's).
+    - **Ledger:** a search linking to a company board's own address never touches that board's listing.
+    - **App:** Find jobs, Add has "Himalayas remote jobs…" and "Google Jobs (SerpApi)…", each with a sheet for its key (kept on this Mac).
+    - **Not done:** Remotive (Himalayas covers remote roles with a country filter, and Remotive allows about 4 calls a day); JSearch (SerpApi covers Google for Jobs).
+    - **Live check** on a copy of your database: Himalayas gave 137 remote jobs with full text, and its copies filled in 2 Adzuna snippets.
+    - **Your step:** for Google Jobs, sign up at serpapi.com (free), then Find jobs, Add, Google Jobs (SerpApi)….
 - [ ] **J8 · Coverage and docs:** `Kairos --coverage-report`, SPEC §5.2/5.4/6.2, ADR-015
 
 ---

@@ -242,9 +242,16 @@ public struct FetchRun: Sendable {
         let milliseconds: Int
     }
 
-    /// What a search may spend this run: Adzuna's share of its free plan, from the fetch log.
+    /// What a search may spend this run: its share of its plan, from the fetch log (Adzuna's free
+    /// plan, SerpApi's for Google Jobs, Himalayas's allowance).
     private func callBudget(for source: Source) async -> Int? {
-        guard source.kind == .adzuna else { return nil }
+        let plan: AdzunaSource.Budget
+        switch source.kind {
+        case .adzuna: plan = .standard
+        case .googleJobs: plan = GoogleJobsSource.budget
+        case .himalayas: plan = AdzunaSource.Budget(day: 300, week: 2_000, month: 8_000, run: 30)
+        default: return nil
+        }
         let at = now()
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
@@ -253,7 +260,7 @@ public struct FetchRun: Sendable {
             guard let date else { return 0 }
             return (try? await log.requests(of: source.id, since: date)) ?? 0
         }
-        return AdzunaSource.Budget.standard.remaining(
+        return plan.remaining(
             today: await used(since: utc.dateInterval(of: .day, for: at)?.start),
             week: await used(since: at.addingTimeInterval(-7 * 86_400)),
             month: await used(since: utc.dateInterval(of: .month, for: at)?.start))

@@ -14,6 +14,7 @@ extension SourceKind {
         case .personio: "Personio"
         case .bambooHR: "BambooHR"
         case .teamtailor: "Teamtailor"
+        case .himalayas: "Himalayas"
         case .adzuna: "Adzuna"
         case .linkedIn: "LinkedIn"
         case .indeedCanada: "Indeed Canada"
@@ -29,7 +30,7 @@ extension SourceKind {
 extension Source {
     /// The name you gave the company, else its board slug; a search says what it searches.
     var displayName: String {
-        if kind == .adzuna { return "Your job titles" }
+        if kind == .adzuna || kind == .himalayas || kind == .googleJobs { return "Your roles" }
         return BoardConfig.decode(config).map { $0.company ?? $0.slug } ?? kind.displayName
     }
 }

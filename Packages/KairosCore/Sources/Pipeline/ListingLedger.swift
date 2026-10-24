@@ -184,6 +184,12 @@ private struct Writer {
         if let row = try connection.query("SELECT * FROM listing WHERE id = ?", [.text(candidate.id.rawValue)]).first {
             let stored = try ListingRepository.listing(row)
             let deleted = row.bool("deleted") ?? false
+            // The same address listed by another source (a search linking to a company's board):
+            // that source's listing is its own, and this one adds nothing to it.
+            if stored.sourceID != source {
+                outcome.known += 1
+                return
+            }
             // A job you cleared comes back as new; one retention removed stays gone.
             let cleared = try JobRepository.job(stored.jobID, in: connection)?.cleared ?? false
             if !deleted {
