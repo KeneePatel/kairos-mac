@@ -23,7 +23,8 @@ let package = Package(
         .target(name: "Store", resources: [.copy("Schema")], swiftSettings: strict),
         .testTarget(name: "StoreTests", dependencies: ["Store"], swiftSettings: strict),
         .target(
-            name: "JobSources", dependencies: ["Store"], resources: [.copy("Geo/places.json")], swiftSettings: strict),
+            name: "JobSources", dependencies: ["Store"], resources: [.copy("Geo/places.json"), .copy("Catalog")],
+            swiftSettings: strict),
         .testTarget(name: "JobSourcesTests", dependencies: ["JobSources", "TestSupport"], swiftSettings: strict),
         .target(name: "LLM", dependencies: ["Secrets", "Store"], resources: [.copy("Prompts")], swiftSettings: strict),
         // LLMTests also reach every module with a task, so PromptPrivacyTests and PromptEvals can

@@ -68,6 +68,9 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
     /// The kinds of work you look for (job collection v2, J3). With any set, a title must be one of
     /// them or contain one of `titleInclude`; searches ask for them; a board's other jobs aren't kept.
     public var roles: Set<RoleFamily> = []
+    /// Watch every company in Kairos's board catalog with jobs in your countries (job collection
+    /// v2, J5; on, as the owner chose on 2026-10-23).
+    public var watchCatalog = true
     /// When any are set, a title must contain one of them (whole words, any case); with roles set,
     /// these are your other titles.
     public var titleInclude: [String] = []
@@ -99,7 +102,8 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
     public var roleMatcher: RoleMatcher { RoleMatcher(families: roles, extra: titleInclude) }
 
     private enum CodingKeys: String, CodingKey {
-        case roles, titleInclude, titleExclude, seniority, maxYearsRequired, countries, regions, remoteAllowed,
+        case roles, watchCatalog, titleInclude, titleExclude, seniority, maxYearsRequired, countries, regions,
+            remoteAllowed,
             blacklist
         case maxAgeDays, thresholds
     }
@@ -109,6 +113,8 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = SearchPreferences()
         roles = try container.decodeIfPresent(Set<RoleFamily>.self, forKey: .roles) ?? defaults.roles
+        watchCatalog =
+            try container.decodeIfPresent(Bool.self, forKey: .watchCatalog) ?? defaults.watchCatalog
         titleInclude = try container.decodeIfPresent([String].self, forKey: .titleInclude) ?? defaults.titleInclude
         titleExclude = try container.decodeIfPresent([String].self, forKey: .titleExclude) ?? defaults.titleExclude
         seniority = try container.decodeIfPresent(Set<Seniority>.self, forKey: .seniority) ?? defaults.seniority

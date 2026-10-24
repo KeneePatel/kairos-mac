@@ -129,6 +129,18 @@ public struct ListingRepository: Sendable {
         ).map(Self.listing)
     }
 
+    /// Each source's open listings, counted: which catalog boards have anything for you.
+    public func openCounts() async throws -> [UUID: Int] {
+        var counts: [UUID: Int] = [:]
+        for row in try await db.query(
+            "SELECT source_id, COUNT(*) AS n FROM listing WHERE deleted = 0 AND closed_at IS NULL GROUP BY source_id")
+        {
+            guard let id = row.string("source_id").flatMap(UUID.init(uuidString:)) else { continue }
+            counts[id] = row.int("n") ?? 0
+        }
+        return counts
+    }
+
     /// A job's history, oldest first.
     public func events(of job: JobID) async throws -> [JobEvent] {
         try await db.query(

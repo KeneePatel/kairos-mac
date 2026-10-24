@@ -187,6 +187,11 @@ final class AppModel {
         guard let db else { return }
         var changed = source
         changed.enabled = enabled
+        // Resuming a gone board tries it again.
+        if enabled, changed.health == .gone {
+            changed.health = .ok
+            changed.emptyRuns = 0
+        }
         _ = try? await SourceRepository(db).save(changed)
         await reload()
     }
@@ -216,6 +221,11 @@ final class AppModel {
 
     /// The Adzuna search, if you've added it.
     var adzunaSource: Source? { sources.first { $0.kind == .adzuna } }
+
+    /// A catalog board with no open job for you: checked every few days, not every fetch (J5).
+    func isQuiet(_ source: Source) -> Bool {
+        source.isFromCatalog && openRoles(for: source) == 0 && source.lastRunAt != nil
+    }
 
     /// Adzuna requests used today (UTC) and this month, against its plan (job collection v2, J4).
     private(set) var adzunaUsed = (today: 0, month: 0)
@@ -305,6 +315,8 @@ final class AppModel {
         let run = PipelineRun(
             fetch: FetchRun(
                 db: db, postedWithinDays: preferences.maxAgeDays, roles: roles,
+                watch: preferences.watchCatalog
+                    ? CatalogWatch(catalog: .bundled, countries: preferences.countries) : nil,
                 makeSource: { try SourceFactory.make($0, http: http, search: search) }),
             screening: ScreeningRun(db: db, router: ai?.router()))
         fetchTask = Task { [weak self] in
@@ -971,6 +983,8 @@ final class AppModel {
         if let changed = stats.changed { parts.append("\(changed) edited") }
         if let closed = stats.closed { parts.append("\(closed) no longer posted") }
         if let other = stats.otherRoles { parts.append("\(other) at other roles left out") }
+        if let added = stats.catalogAdded { parts.append("\(added) catalog compan\(added == 1 ? "y" : "ies") added") }
+        if let quiet = stats.quiet { parts.append("\(quiet) quiet boards rested") }
         if stats.searchesSkipped != nil { parts.append("Adzuna's share for today is used up") }
         if let unchanged = stats.unchanged {
             parts.append("\(unchanged) board\(unchanged == 1 ? "" : "s") unchanged")

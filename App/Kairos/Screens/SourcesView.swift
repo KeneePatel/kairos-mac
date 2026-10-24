@@ -3,10 +3,28 @@ import Store
 import SwiftUI
 
 /// The company watchlist (part of Fetch since polish P3): each board's status, pause or remove one.
+/// Companies you added and Kairos's catalog (job collection v2, J5) are shown apart, with a search.
 struct SourcesTable: View {
     @Environment(AppModel.self) private var model
     @State private var selection: Source.ID?
     @State private var changingAdzuna = false
+    @State private var scope = Scope.yours
+    @State private var search = ""
+
+    enum Scope: String, CaseIterable, Identifiable {
+        case yours = "Yours"
+        case catalog = "Catalog"
+        case all = "All"
+        var id: Self { self }
+    }
+
+    private var shown: [Source] {
+        model.sources.filter { source in
+            let catalog = source.isFromCatalog
+            let inScope = scope == .all || (scope == .catalog) == catalog
+            return inScope && (search.isEmpty || source.displayName.localizedCaseInsensitiveContains(search))
+        }
+    }
 
     var body: some View {
         content.sheet(isPresented: $changingAdzuna) { AdzunaSheet() }
@@ -23,7 +41,18 @@ struct SourcesTable: View {
                 .foregroundStyle(Color(.inkSecondary))
             }
         } else {
-            Table(model.sources, selection: $selection) {
+            HStack(spacing: Spacing.space3) {
+                Picker("Show", selection: $scope) {
+                    ForEach(Scope.allCases) { scope in
+                        Text("\(scope.rawValue) (\(count(scope)))").tag(scope)
+                    }
+                }
+                .pickerStyle(.segmented).labelsHidden().fixedSize()
+                TextField("Search companies", text: $search).textFieldStyle(.roundedBorder).frame(maxWidth: 240)
+                Spacer()
+            }
+            .padding(.horizontal, Spacing.space4).padding(.vertical, Spacing.space2)
+            Table(shown, selection: $selection) {
                 TableColumn("Company") { source in
                     Text(source.displayName).font(TypeStyle.headline).foregroundStyle(Color(.ink))
                 }
@@ -46,7 +75,8 @@ struct SourcesTable: View {
                     if source.kind == .adzuna, source.enabled, model.failure(for: source) == nil {
                         AdzunaPlan(used: model.adzunaUsed)
                     } else {
-                        SourceStatus(source: source, failure: model.failure(for: source))
+                        SourceStatus(
+                            source: source, failure: model.failure(for: source), quiet: model.isQuiet(source))
                     }
                 }
                 .width(min: 140, ideal: 220)
@@ -60,7 +90,11 @@ struct SourcesTable: View {
                         Button("Change Adzuna keys…") { changingAdzuna = true }
                     }
                     Divider()
-                    Button("Remove \(source.displayName)", role: .destructive) {
+                    // A catalog company you stop watching isn't added back.
+                    Button(
+                        source.isFromCatalog ? "Stop watching \(source.displayName)" : "Remove \(source.displayName)",
+                        role: .destructive
+                    ) {
                         Task { await model.remove(source) }
                     }
                 }
@@ -68,6 +102,18 @@ struct SourcesTable: View {
         }
     }
 
+    private func count(_ scope: Scope) -> Int {
+        switch scope {
+        case .yours: model.sources.count { !$0.isFromCatalog }
+        case .catalog: model.sources.count(where: \.isFromCatalog)
+        case .all: model.sources.count
+        }
+    }
+}
+
+extension Source {
+    /// Added from Kairos's board catalog rather than by you (J5).
+    var isFromCatalog: Bool { BoardConfig.decode(config)?.origin == "catalog" }
 }
 
 /// What's left of Adzuna's free plan today, as Kairos spends it (job collection v2, J4): a bar
@@ -94,16 +140,22 @@ private struct AdzunaPlan: View {
 private struct SourceStatus: View {
     let source: Source
     let failure: String?
+    var quiet = false
 
     var body: some View {
         if !source.enabled {
             dot("Paused by you", Color(.inkSecondary))
+        } else if source.health == .gone {
+            warning(
+                "Gone", detail: "The board answered \"not found\" three times. Resume it to try again.")
         } else if let failure {
             warning("Can't reach", detail: failure)
         } else if source.health == .degraded {
             warning("No jobs in \(source.emptyRuns) checks", detail: "The board may have moved or been emptied.")
         } else if source.lastRunAt == nil {
             dot("Not checked yet", Color(.inkSecondary))
+        } else if quiet {
+            dot("Quiet: nothing for you, checked every 3 days", Color(.inkSecondary))
         } else {
             dot("Active", Color(.yes))
         }

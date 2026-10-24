@@ -36,6 +36,10 @@ public struct FetchRun: Sendable {
         public var otherRoles = 0
         /// Searches not asked this time: their plan's share for now was spent.
         public var searchesSkipped = 0
+        /// Catalog boards added as sources before the fetch (J5).
+        public var catalogAdded = 0
+        /// Catalog boards with nothing for you, checked lately, so not asked this time.
+        public var quiet = 0
         /// Dropped because they were posted before your "posted within" limit.
         public var tooOld = 0
         public var added = 0
@@ -72,6 +76,8 @@ public struct FetchRun: Sendable {
         public var unchanged: Int?
         public var otherRoles: Int?
         public var searchesSkipped: Int?
+        public var catalogAdded: Int?
+        public var quiet: Int?
 
         public static func decode(_ json: String) -> Stats? {
             try? JSONDecoder().decode(Stats.self, from: Data(json.utf8))
@@ -86,14 +92,22 @@ public struct FetchRun: Sendable {
     let now: @Sendable () -> Date
     let postedWithinDays: Int?
     let roles: RoleMatcher?
+    let watch: CatalogWatch?
+
+    /// A catalog board with nothing open for you is asked every this often, not every fetch.
+    public static let quietEvery: TimeInterval = 3 * 86_400
+    /// "Not found" this many fetches in a row, and a board is gone.
+    public static let goneAfterMisses = 3
 
     /// At most 4 HTTP sources at a time (SPEC §5.2). `postedWithinDays` is your Fetch screen's
     /// "Posted" setting: older postings are never stored; nil keeps every age. `roles`: new
     /// postings whose titles aren't among them are counted, not stored (J3).
     public init(
         db: Database, maxConcurrent: Int = 4, now: @escaping @Sendable () -> Date = { Date() },
-        postedWithinDays: Int? = nil, roles: RoleMatcher? = nil, makeSource: @escaping MakeSource
+        postedWithinDays: Int? = nil, roles: RoleMatcher? = nil, watch: CatalogWatch? = nil,
+        makeSource: @escaping MakeSource
     ) {
+        self.watch = watch
         self.db = db
         self.makeSource = makeSource
         self.maxConcurrent = max(1, maxConcurrent)
@@ -113,7 +127,18 @@ public struct FetchRun: Sendable {
         var progress = Progress()
         let runs = RunRepository(db)
         let runID = try? await runs.begin(kind: "fetch")
-        let sources = (try? await SourceRepository(db).sources(enabledOnly: true)) ?? []
+        if let watch { progress.catalogAdded = (try? await watch.sync(db)) ?? 0 }
+        let open = (try? await ListingRepository(db).openCounts()) ?? [:]
+        let at = now()
+        // A gone board waits for you to resume it; a quiet catalog board waits its turn.
+        let sources = ((try? await SourceRepository(db).sources(enabledOnly: true)) ?? []).filter { source in
+            guard source.health != .gone else { return false }
+            let quiet =
+                BoardConfig.decode(source.config)?.origin == "catalog" && (open[source.id] ?? 0) == 0
+                && source.lastRunAt.map { at.timeIntervalSince($0) < Self.quietEvery } == true
+            if quiet { progress.quiet += 1 }
+            return !quiet
+        }
         progress.sourcesTotal = sources.count
         continuation.yield(progress)
 
@@ -175,7 +200,9 @@ public struct FetchRun: Sendable {
                 closed: progress.closed > 0 ? progress.closed : nil,
                 unchanged: progress.unchanged > 0 ? progress.unchanged : nil,
                 otherRoles: progress.otherRoles > 0 ? progress.otherRoles : nil,
-                searchesSkipped: progress.searchesSkipped > 0 ? progress.searchesSkipped : nil)
+                searchesSkipped: progress.searchesSkipped > 0 ? progress.searchesSkipped : nil,
+                catalogAdded: progress.catalogAdded > 0 ? progress.catalogAdded : nil,
+                quiet: progress.quiet > 0 ? progress.quiet : nil)
             let json = (try? JSONEncoder().encode(stats)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
             try? await runs.finish(runID, stats: json, error: progress.phase == .cancelled ? "cancelled" : nil)
         }
@@ -259,6 +286,10 @@ public struct FetchRun: Sendable {
             state.failRuns += 1
             entry.outcome = .failed
             entry.error = message
+            // The company left that ATS or closed its board.
+            if case .notFound? = error as? SourceError, state.failRuns >= Self.goneAfterMisses {
+                try? await sources.markGone(source.id)
+            }
         case .success(.unchanged)?:
             // Every job it had open is still there: seen now, and the board isn't empty.
             let closed = (try? await ListingLedger(db).recordUnchanged(source.id, at: at)) ?? 0

@@ -1,3 +1,4 @@
+import JobSources
 import Screening
 import Store
 import SwiftUI
@@ -30,6 +31,18 @@ struct SearchPreferencesView: View {
                             .toggleStyle(.checkbox)
                         }
                     }
+                }
+                FormSection(
+                    title: "Companies",
+                    caption:
+                        "Kairos's catalog lists companies whose public job boards had jobs in Canada or the US when it was checked (\(BoardCatalog.bundled.checked.isEmpty ? "not yet" : BoardCatalog.bundled.checked))."
+                ) {
+                    Toggle(isOn: $preferences.watchCatalog) {
+                        Text(
+                            "Watch every catalog company with jobs in your countries (\(BoardCatalog.bundled.boards(in: preferences.countries).count))"
+                        )
+                    }
+                    .toggleStyle(.checkbox)
                 }
                 FormSection(
                     title: preferences.roles.isEmpty ? "Job titles" : "Other titles",

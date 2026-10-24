@@ -8,11 +8,20 @@ public struct BoardConfig: Codable, Sendable, Equatable {
     public var company: String?
     /// "eu" for a company on Lever's EU instance.
     public var region: String?
+    /// How it came: nil when you added it, `catalog` from Kairos's board catalog, `search` found
+    /// behind a search's company (job collection v2).
+    public var origin: String?
 
-    public init(slug: String, company: String? = nil, region: String? = nil) {
+    public init(slug: String, company: String? = nil, region: String? = nil, origin: String? = nil) {
         self.slug = slug
         self.company = company
         self.region = region
+        self.origin = origin
+    }
+
+    /// The same board whatever the case of its slug; SmartRecruiters ids keep theirs.
+    public static func key(kind: SourceKind, slug: String) -> String {
+        "\(kind.rawValue)|\(kind == .smartRecruiters ? slug : slug.lowercased())"
     }
 
     public var json: String {

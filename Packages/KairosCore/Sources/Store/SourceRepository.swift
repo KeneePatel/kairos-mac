@@ -30,6 +30,9 @@ public enum SourceKind: String, Sendable, CaseIterable {
 
 public enum SourceHealth: String, Sendable, CaseIterable {
     case ok, degraded
+    /// The board answered "not found" fetch after fetch: the company left that ATS or closed its
+    /// board. It isn't fetched again until you resume it.
+    case gone
 }
 
 /// One configured source (SPEC §6.2, `source`).
@@ -109,6 +112,34 @@ public struct SourceRepository: Sendable {
         return try await db.query(sql).map(Self.source)
     }
 
+    /// Every source ever added, removed ones too: so a catalog board you removed isn't added back.
+    public func everySource() async throws -> [Source] {
+        try await db.query("SELECT * FROM source ORDER BY id").map(Self.source)
+    }
+
+    /// Adds many sources in one transaction (the catalog's boards), each with a new UUIDv7 id.
+    @discardableResult
+    public func add(_ boards: [(kind: SourceKind, config: String)]) async throws -> Int {
+        var made: [UUID] = []
+        for _ in boards { made.append(await db.newID()) }
+        let ids = made
+        return try await db.write { connection, stamp in
+            for (board, id) in zip(boards, ids) {
+                try connection.execute(
+                    "INSERT INTO source (id, kind, config, enabled, health, empty_runs, updated_hlc) VALUES (?, ?, ?, 1, 'ok', 0, ?)",
+                    [.text(id.lowercased), SQLValue(board.kind), .text(board.config), .text(stamp.hlc.description)])
+            }
+            return boards.count
+        }
+    }
+
+    /// Marks a board gone: it isn't fetched again until you resume it.
+    public func markGone(_ id: UUID) async throws {
+        guard var source = try await source(id) else { return }
+        source.health = .gone
+        try await save(source)
+    }
+
     /// Records a finished run: when it ran, and whether it found anything. A source is degraded
     /// after `Source.degradedAfterEmptyRuns` empty runs in a row, and healthy again after any result.
     /// Returns nil if the source no longer exists.
@@ -117,7 +148,9 @@ public struct SourceRepository: Sendable {
         guard var source = try await source(id) else { return nil }
         source.lastRunAt = date
         source.emptyRuns = count > 0 ? 0 : source.emptyRuns + 1
-        source.health = source.emptyRuns >= Source.degradedAfterEmptyRuns ? .degraded : .ok
+        if source.health != .gone {
+            source.health = source.emptyRuns >= Source.degradedAfterEmptyRuns ? .degraded : .ok
+        }
         source.updatedHLC = try await save(source)
         return source
     }
