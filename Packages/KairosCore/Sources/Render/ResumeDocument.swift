@@ -93,16 +93,19 @@ public struct ResumeDocument: Codable, Sendable, Equatable {
         public var location: String?
         public var dates: String?
         public var bullets: [String]
+        /// Makes the title a link in the PDF: a project's page in the master resume export.
+        public var url: String?
 
         public init(
             title: String, subtitle: String? = nil, location: String? = nil, dates: String? = nil,
-            bullets: [String] = []
+            bullets: [String] = [], url: String? = nil
         ) {
             self.title = title
             self.subtitle = subtitle
             self.location = location
             self.dates = dates
             self.bullets = bullets
+            self.url = url
         }
     }
 

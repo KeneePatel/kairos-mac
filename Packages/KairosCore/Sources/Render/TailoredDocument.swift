@@ -65,14 +65,10 @@ extension ResumeDocument {
     ///   under way, so it's marked "(Expected)", Harvard's word, after the range.
     /// - The contact line in the order of its master's samples: place, phone, email, then links.
     static func harvard(_ resume: TailoredResume, now: Date) -> ResumeDocument {
-        let today = Calendar(identifier: .gregorian).dateComponents([.year, .month], from: now)
         func item(_ entry: TailoredResume.Entry, degree: Bool = false) -> Item {
-            var dates = entry.period.flatMap(HarvardDates.text) ?? entry.dates.map(HarvardDates.spelledOut)
-            if degree, let end = entry.period?.end, let year = today.year, let month = today.month,
-                (end.year, end.month) > (year, month), let text = dates
-            {
-                dates = text + " (Expected)"
-            }
+            let dates =
+                entry.period.flatMap { HarvardDates.text($0, expected: degree, now: now) }
+                ?? entry.dates.map(HarvardDates.spelledOut)
             return Item(
                 title: entry.title, subtitle: entry.organization, location: entry.location, dates: dates,
                 bullets: entry.bullets.map(\.text))
@@ -127,6 +123,17 @@ enum HarvardDates {
         "Aug": "August", "Sep": "September", "Sept": "September", "Oct": "October", "Nov": "November",
         "Dec": "December",
     ]
+
+    /// `text(_:)`, plus Harvard's "(Expected)" after a degree that ends after `now`: it's still
+    /// under way.
+    static func text(_ period: TailoredResume.Period, expected: Bool, now: Date) -> String? {
+        guard let text = text(period) else { return nil }
+        let today = Calendar(identifier: .gregorian).dateComponents([.year, .month], from: now)
+        guard expected, let end = period.end, let year = today.year, let month = today.month,
+            (end.year, end.month) > (year, month)
+        else { return text }
+        return text + " (Expected)"
+    }
 
     /// "January 2024 – August 2025", "September 2024 – Present", or one date when there's one.
     static func text(_ period: TailoredResume.Period) -> String? {

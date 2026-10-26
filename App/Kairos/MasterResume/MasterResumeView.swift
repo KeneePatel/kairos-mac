@@ -1,4 +1,6 @@
+import AppKit
 import MasterResume
+import Render
 import SwiftUI
 
 /// The master resume: every section on one scrolling page, with build readiness in the inspector.
@@ -10,6 +12,8 @@ struct MasterResumeView: View {
     @State private var importingGitHub = false
     @State private var deleting: ResumeEntry?
     @State private var showsReadiness = true
+    @State private var exporting = false
+    @State private var exportError: String?
 
     var body: some View {
         ScrollView {
@@ -43,6 +47,15 @@ struct MasterResumeView: View {
         .background(Color(.surface))
         .navigationTitle("Master resume")
         .toolbar {
+            ToolbarItem {
+                Button {
+                    exportPDF()
+                } label: {
+                    Label("Export PDF", systemImage: "square.and.arrow.up").labelStyle(.titleAndIcon)
+                }
+                .disabled(exporting)
+                .help("Save everything here as one PDF with no page budget, laid out like a build")
+            }
             ToolbarItem {
                 Menu {
                     Button("From a resume…") { importing = ImportSession(router: ai.router()) }
@@ -84,6 +97,40 @@ struct MasterResumeView: View {
         .inspector(isPresented: $showsReadiness) {
             ReadinessPanel(resume: model.resume, readiness: model.readiness)
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 360)
+        }
+        .alert(
+            "Couldn't export the PDF",
+            isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } }),
+            presenting: exportError
+        ) { _ in
+            Button("OK") {}
+        } message: { error in
+            Text(error)
+        }
+    }
+
+    /// Renders every entry and bullet as one PDF (SPEC §5.10, Export) and saves it where you choose,
+    /// named for you.
+    private func exportPDF() {
+        exporting = true
+        Task {
+            defer { exporting = false }
+            do {
+                let pdf = try await model.exportPDF()
+                let panel = NSSavePanel()
+                panel.allowedContentTypes = [.pdf]
+                panel.nameFieldStringValue = "\(model.resume.header.fullName) - Master resume.pdf"
+                guard panel.runModal() == .OK, let destination = panel.url else { return }
+                try pdf.write(to: destination)
+            } catch let error as RenderError {
+                exportError =
+                    switch error {
+                    case .workspace(let why), .launch(let why), .compile(let why): why
+                    case .timedOut: "typst took too long."
+                    }
+            } catch {
+                exportError = error.localizedDescription
+            }
         }
     }
 }

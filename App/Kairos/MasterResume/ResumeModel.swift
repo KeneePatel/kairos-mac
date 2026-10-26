@@ -2,7 +2,9 @@ import Foundation
 import MasterResume
 import OSLog
 import Observation
+import Render
 import Store
+import Tailoring
 
 /// The master resume as the editor sees it. Each edit is one repository operation (one version
 /// bump), after which the resume is reloaded so ids, order and the version are the stored ones.
@@ -111,6 +113,17 @@ final class ResumeModel {
         }
         let order = ids
         await perform { try await $0.reorderSkills(order) }
+    }
+
+    /// Your whole master resume as one PDF with no page budget (SPEC §5.10, Export), rendered with
+    /// the typst in the app bundle: every entry and bullet, Proven and Can-discuss skills, and
+    /// every other section, laid out as a build is.
+    func exportPDF() async throws -> Data {
+        guard let typst = Bundle.main.url(forAuxiliaryExecutable: "typst") else {
+            throw RenderError.launch("typst isn't in the app bundle")
+        }
+        let renderer = ResumeRenderer(runner: TypstRunner(executable: typst))
+        return try await renderer.render(ResumeDocument(FullResume(resume))).data
     }
 
     private func perform(_ change: @Sendable (MasterResumeRepository) async throws -> Int) async {

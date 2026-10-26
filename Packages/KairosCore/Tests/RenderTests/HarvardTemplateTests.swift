@@ -274,6 +274,24 @@ struct HarvardTemplateTests {
             ])
     }
 
+    /// A contact line too long for its page wraps after a separator, never before one.
+    @Test func aLongContactLineWrapsAfterASeparator() async throws {
+        var document = ResumeDocument(jordanBuild(), for: .harvard)
+        document.header.contact += [
+            .init(text: "github.com/jordan-rivera", url: "https://github.com/jordan-rivera"),
+            .init(text: "jordanrivera.example.com", url: "https://jordanrivera.example.com"),
+        ]
+        let (_, pdf, _) = try await render(document)
+        let lines = try #require(pdf.string).split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        let first = try #require(lines.firstIndex { $0.hasPrefix("Toronto, ON") })
+        let sections = try #require(lines.firstIndex { $0 == "EDUCATION" })
+        let contact = Array(lines[first..<sections])
+        #expect(contact.count >= 2, "six items don't fit on one line")
+        #expect(contact.allSatisfy { !$0.hasPrefix("|") }, "\(contact)")
+        #expect(contact.dropLast().allSatisfy { $0.hasSuffix("|") }, "\(contact)")
+    }
+
     @Test func sectionOrderAndVisibilityAreInputs() async throws {
         var document = ResumeDocument(jordanBuild(), for: .harvard)
         document.sections.swapAt(0, 2)
