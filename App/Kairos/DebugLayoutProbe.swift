@@ -59,13 +59,16 @@
         /// `--screens`: screens offscreen snapshots can't show whole, each in a titled window with its
         /// toolbar: Review, Improve, a job with a resume and that job's resume page, a job without one.
         @MainActor private static func screens(_ model: AppModel) async {
+            // Search, not AI providers: the AI page lists models over the network.
+            model.settingsTab = .search
             let built = model.reviewJobs(.all).first { model.latestBuild(for: $0)?.status == .done }
             let unbuilt = model.reviewJobs(.yes).first { model.latestBuild(for: $0) == nil }
             var shown: [(String, AnyView)] = [
                 ("inbox", AnyView(JobsView(scope: .inbox))), ("resumes", AnyView(ResumesView())),
                 ("applied", AnyView(AppliedView())), ("interviews", AnyView(InterviewsView())),
-                ("improve", AnyView(ImproveView())),
+                ("sources", AnyView(SourcesView())), ("improve", AnyView(ImproveView())),
             ]
+            if let ai = model.ai { shown.append(("settings", AnyView(SettingsView().environment(ai)))) }
             if let built {
                 shown.append(("job-built", AnyView(NavigationStack { JobScreen(id: built.id) })))
                 shown.append(("job-resume", AnyView(NavigationStack { BuildsView(job: built.id) })))

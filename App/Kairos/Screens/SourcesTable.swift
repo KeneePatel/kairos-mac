@@ -2,14 +2,14 @@ import JobSources
 import Store
 import SwiftUI
 
-/// The company watchlist (part of Fetch since polish P3): each board's status, pause or remove one.
-/// Companies you added and Kairos's catalog (job collection v2, J5) are shown apart, with a search.
+/// The companies and boards Kairos watches (UI v2): the table on the left of Sources. Its scope
+/// (Yours · Catalog · All) and search come from the section's toolbar; the chosen row's board
+/// shows beside it.
 struct SourcesTable: View {
     @Environment(AppModel.self) private var model
-    @State private var selection: Source.ID?
-    @State private var changingAdzuna = false
-    @State private var scope = Scope.yours
-    @State private var search = ""
+    @Binding var selection: Source.ID?
+    var scope = Scope.yours
+    var search = ""
 
     enum Scope: String, CaseIterable, Identifiable {
         case yours = "Yours"
@@ -27,55 +27,45 @@ struct SourcesTable: View {
     }
 
     var body: some View {
-        content.sheet(isPresented: $changingAdzuna) { AdzunaSheet() }
-    }
-
-    @ViewBuilder private var content: some View {
         // Read here, once, not in each row: rows reading the model made SwiftUI abort when you
         // left Find jobs for Review (2026-10-26).
         let open = model.openRoles
         let failures = model.failures
         let adzunaUsed = model.adzunaUsed
-        if model.sources.isEmpty {
-            ContentUnavailableView {
-                Label("No companies yet", systemImage: "antenna.radiowaves.left.and.right")
-            } description: {
+        if shown.isEmpty {
+            VStack(spacing: Spacing.space2) {
+                Text(model.sources.isEmpty ? "No companies yet" : "No matches").font(TypeStyle.title2)
+                    .foregroundStyle(Color(.ink))
                 Text(
-                    "Choose Add company and paste a careers page from Greenhouse, Lever, Ashby, SmartRecruiters, Workable, Recruitee, Personio, BambooHR or Teamtailor."
+                    model.sources.isEmpty
+                        ? "Choose Add, then paste a careers page from Greenhouse, Lever, Ashby, SmartRecruiters, Workable, Recruitee, Personio, BambooHR or Teamtailor."
+                        : "Nothing in this scope matches the search."
                 )
-                .foregroundStyle(Color(.inkSecondary))
+                .font(TypeStyle.body).foregroundStyle(Color(.inkSecondary)).multilineTextAlignment(.center)
             }
+            .padding(Spacing.space7)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            HStack(spacing: Spacing.space3) {
-                Picker("Show", selection: $scope) {
-                    ForEach(Scope.allCases) { scope in
-                        Text("\(scope.rawValue) (\(count(scope)))").tag(scope)
-                    }
-                }
-                .pickerStyle(.segmented).labelsHidden().fixedSize()
-                TextField("Search companies", text: $search).textFieldStyle(.roundedBorder).frame(maxWidth: 240)
-                Spacer()
-            }
-            .padding(.horizontal, Spacing.space4).padding(.vertical, Spacing.space2)
             Table(shown, selection: $selection) {
                 TableColumn("Company") { source in
-                    Text(source.displayName).font(TypeStyle.headline).foregroundStyle(Color(.ink))
+                    Text(source.displayName).font(TypeStyle.headline)
+                        .foregroundStyle(source.enabled ? Color(.ink) : Color(.inkDimmed)).lineLimit(1)
                 }
-                .width(min: 160, ideal: 220)
-                TableColumn("Job board") { source in
-                    Text(source.kind.displayName).foregroundStyle(Color(.ink2))
+                .width(min: 140, ideal: 200)
+                TableColumn("Board") { source in
+                    Text(source.kind.displayName).foregroundStyle(Color(.ink2)).lineLimit(1)
                 }
-                .width(min: 90, ideal: 120)
+                .width(min: 80, ideal: 110)
                 TableColumn("Open roles") { source in
                     Text(source.lastRunAt == nil ? "—" : "\(open[source.id, default: 0])")
                         .monospacedDigit().foregroundStyle(Color(.ink2))
                 }
-                .width(min: 70, ideal: 90)
-                TableColumn("Last checked") { source in
-                    Text(source.lastRunAt?.formatted(date: .abbreviated, time: .shortened) ?? "Not yet")
-                        .monospacedDigit().foregroundStyle(Color(.inkSecondary))
+                .width(min: 64, ideal: 76)
+                TableColumn("Checked") { source in
+                    Text(source.lastRunAt.map(Self.checked) ?? "Not yet")
+                        .monospacedDigit().foregroundStyle(Color(.inkSecondary)).lineLimit(1)
                 }
-                .width(min: 110, ideal: 150)
+                .width(min: 72, ideal: 90)
                 TableColumn("Status") { source in
                     if source.kind == .adzuna, source.enabled, failures[source.id] == nil {
                         AdzunaPlan(used: adzunaUsed)
@@ -85,15 +75,12 @@ struct SourcesTable: View {
                             quiet: source.isQuiet(openRoles: open[source.id, default: 0]))
                     }
                 }
-                .width(min: 140, ideal: 220)
+                .width(min: 120, ideal: 170)
             }
             .contextMenu(forSelectionType: Source.ID.self) { ids in
                 if let id = ids.first, let source = model.source(id) {
                     Button(source.enabled ? "Pause" : "Resume") {
                         Task { await model.setEnabled(!source.enabled, for: source) }
-                    }
-                    if source.kind == .adzuna {
-                        Button("Change Adzuna keys…") { changingAdzuna = true }
                     }
                     Divider()
                     // A catalog company you stop watching isn't added back.
@@ -108,12 +95,10 @@ struct SourcesTable: View {
         }
     }
 
-    private func count(_ scope: Scope) -> Int {
-        switch scope {
-        case .yours: model.sources.count { !$0.isFromCatalog }
-        case .catalog: model.sources.count(where: \.isFromCatalog)
-        case .all: model.sources.count
-        }
+    /// "12:39 AM" today, else "Oct 24".
+    static func checked(_ date: Date) -> String {
+        Calendar.current.isDateInToday(date)
+            ? date.formatted(date: .omitted, time: .shortened) : date.formatted(.dateTime.month(.abbreviated).day())
     }
 }
 

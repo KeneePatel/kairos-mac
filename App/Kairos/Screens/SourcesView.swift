@@ -2,37 +2,69 @@ import Screening
 import Store
 import SwiftUI
 
-/// Sources (UI v2, 2026-10-26; the Find jobs page until then): the companies and boards Kairos
-/// watches, with Add, the Posted limit, and Find new jobs. What the last run did is the sidebar's
-/// status line; what the filters dropped is in Filtered out.
+/// Sources (UI v2): the companies and boards Kairos watches in a table, with the chosen board
+/// beside it: its status, the open roles it has for you, what the filters dropped from it, and
+/// Pause or Stop watching. The toolbar holds the scope, the search, Add, the Posted limit and
+/// Find new jobs.
 struct SourcesView: View {
     @Environment(AppModel.self) private var model
+    @State private var path: [JobID] = []
+    @State private var selection: Source.ID?
+    @State private var scope = SourcesTable.Scope.yours
+    @State private var search = ""
     @State private var addingCompany = false
     @State private var addingAdzuna = false
     @State private var addingSearch: SearchChoice?
+    @State private var clearing: JobRepository.Clearing?
 
     /// Which optional search's sheet is open.
     struct SearchChoice: Identifiable {
         let kind: SourceKind
         var id: String { kind.rawValue }
     }
-    @State private var clearing: JobRepository.Clearing?
 
     var body: some View {
-        // One container: the table's body is two sibling views, and a toolbar on a tuple of views
-        // is added once per view.
-        VStack(spacing: 0) { SourcesTable() }
+        NavigationStack(path: $path) {
+            ListPaneLayout(listWidth: 640) {
+                VStack(spacing: 0) {
+                    ColumnTitle(title: "Sources", line: countLine)
+                    SourcesTable(selection: $selection, scope: scope, search: search)
+                    Divider()
+                    Text("↑↓ move · ↩ open the board · P pause or resume")
+                        .font(TypeStyle.caption).foregroundStyle(Color(.inkSecondary)).lineLimit(1)
+                        .padding(.horizontal, Spacing.space6).padding(.vertical, Spacing.space3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } pane: {
+                if let id = selection, let source = model.source(id) {
+                    SourcePane(source: source, changeAdzuna: { addingAdzuna = true }) { path.append($0) }
+                } else {
+                    VStack(spacing: Spacing.space1) {
+                        Text("Nothing selected").font(TypeStyle.title2).foregroundStyle(Color(.ink))
+                        Text("Choose a company in the table.").font(TypeStyle.body)
+                            .foregroundStyle(Color(.inkSecondary))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
             .navigationTitle("Sources")
-            .navigationSubtitle(subtitle)
+            .searchable(text: $search, placement: .toolbar, prompt: "Search companies")
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    Picker("Show", selection: $scope) {
+                        ForEach(SourcesTable.Scope.allCases) { scope in
+                            Text("\(scope.rawValue) \(count(scope))").tag(scope)
+                        }
+                    }
+                    .pickerStyle(.segmented).labelsHidden().monospacedDigit().fixedSize()
                     Menu {
                         Button("Company board…") { addingCompany = true }
                         Button(model.adzunaSource == nil ? "Adzuna search…" : "Change Adzuna keys…") {
                             addingAdzuna = true
                         }
-                        Button(model.source(of: .himalayas) == nil ? "Himalayas remote jobs…" : "Change Himalayas key…")
-                        {
+                        Button(
+                            model.source(of: .himalayas) == nil ? "Himalayas remote jobs…" : "Change Himalayas key…"
+                        ) {
                             addingSearch = SearchChoice(kind: .himalayas)
                         }
                         Button(model.source(of: .googleJobs) == nil ? "Google Jobs (SerpApi)…" : "Change SerpApi key…")
@@ -42,9 +74,7 @@ struct SourcesView: View {
                     } label: {
                         Label("Add", systemImage: "plus").labelStyle(.titleAndIcon)
                     }
-                }
-                ToolbarItem(placement: .primaryAction) { PostedWithinMenu() }
-                ToolbarItem(placement: .primaryAction) {
+                    PostedWithinMenu()
                     Menu {
                         Button("Delete all jobs…", role: .destructive) {
                             Task { clearing = await model.clearingPreview() }
@@ -57,28 +87,48 @@ struct SourcesView: View {
                 }
                 RunControls(model: model, title: "Find new jobs")
             }
-            .sheet(isPresented: $addingCompany) { AddCompanySheet() }
-            .sheet(isPresented: $addingAdzuna) { AdzunaSheet() }
-            .sheet(item: $addingSearch) { choice in SearchSourceSheet(kind: choice.kind) }
-            .confirmationDialog(
-                "Delete all jobs?",
-                isPresented: Binding(get: { clearing != nil }, set: { if !$0 { clearing = nil } }),
-                titleVisibility: .visible, presenting: clearing
-            ) { plan in
-                Button("Delete \(plan.deleted) job\(plan.deleted == 1 ? "" : "s")", role: .destructive) {
-                    Task { await model.deleteAllJobs() }
-                }
-                .disabled(plan.deleted == 0)
-            } message: { plan in
-                Text(Self.clearingMessage(plan))
+            .navigationDestination(for: JobID.self) { JobScreen(id: $0) }
+        }
+        .task(id: model.sources.map(\.id)) {
+            if selection.map({ model.source($0) == nil }) ?? true {
+                selection = model.sources.first { !$0.isFromCatalog }?.id ?? model.sources.first?.id
             }
+        }
+        .sheet(isPresented: $addingCompany) { AddCompanySheet() }
+        .sheet(isPresented: $addingAdzuna) { AdzunaSheet() }
+        .sheet(item: $addingSearch) { choice in SearchSourceSheet(kind: choice.kind) }
+        .confirmationDialog(
+            "Delete all jobs?",
+            isPresented: Binding(get: { clearing != nil }, set: { if !$0 { clearing = nil } }),
+            titleVisibility: .visible, presenting: clearing
+        ) { plan in
+            Button("Delete \(plan.deleted) job\(plan.deleted == 1 ? "" : "s")", role: .destructive) {
+                Task { await model.deleteAllJobs() }
+            }
+            .disabled(plan.deleted == 0)
+        } message: { plan in
+            Text(Self.clearingMessage(plan))
+        }
     }
 
-    private var subtitle: String {
-        let count = model.sources.count
-        let watched = "\(count) compan\(count == 1 ? "y" : "ies") watched"
-        guard let checked = model.sources.compactMap(\.lastRunAt).max() else { return watched }
-        return "\(watched) · checked \(checked.formatted(date: .omitted, time: .shortened))"
+    private func count(_ scope: SourcesTable.Scope) -> Int {
+        switch scope {
+        case .yours: model.sources.count { !$0.isFromCatalog }
+        case .catalog: model.sources.count(where: \.isFromCatalog)
+        case .all: model.sources.count
+        }
+    }
+
+    /// "27 companies you added · 794 from the catalog · checked 12:39 AM".
+    private var countLine: String {
+        let yours = count(.yours)
+        let catalog = count(.catalog)
+        var parts = ["\(yours) compan\(yours == 1 ? "y" : "ies") you added"]
+        if catalog > 0 { parts.append("\(catalog) from the catalog") }
+        if let checked = model.sources.compactMap(\.lastRunAt).max() {
+            parts.append("checked \(SourcesTable.checked(checked))")
+        }
+        return parts.joined(separator: " · ")
     }
 
     /// "Deletes 1,612 jobs, with their verdicts and analyses. The 3 you saved, … stay."
@@ -96,8 +146,8 @@ struct SourcesView: View {
 }
 
 /// "Posted: past week": how recent a posting must be to be fetched at all. Older ones are never
-/// stored, so they don't fill Prefiltered; a posting with no date is kept. It's Search's posting-age
-/// limit, moved here from Settings because it now acts while fetching.
+/// stored, so they don't fill Filtered out; a posting with no date is kept. It's Search's
+/// posting-age limit, kept here because it acts while fetching.
 struct PostedWithinMenu: View {
     @Environment(AppModel.self) private var model
 
