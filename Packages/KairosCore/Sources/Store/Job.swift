@@ -99,6 +99,11 @@ public struct Job: Sendable, Equatable, Identifiable {
     public var descriptionKind: DescriptionKind
     /// The listing whose text and link the job shows: a company's board over a search's copy.
     public var primaryListingID: JobID?
+    /// The page Open posting opens: where the posting lives (job collection v3, ADR-018). Nil when
+    /// the source gave nothing better than the job's own address.
+    public var applyURL: String?
+    /// The site the posting was taken from, when a search says ("Scotiabank", "LinkedIn").
+    public var via: String?
     /// Set by the repository on every write.
     public internal(set) var updatedHLC: HLCTimestamp?
 
@@ -108,7 +113,8 @@ public struct Job: Sendable, Equatable, Identifiable {
         remoteScope: RemoteScope = .unknown, currency: String? = nil, salary: Salary? = nil, postedAt: Date? = nil,
         descriptionMarkdown: String? = nil, state: JobState = .new, verdict: Verdict? = nil,
         verdictSource: VerdictSource? = nil, rank: Double? = nil, firstSeenAt: Date, lastSeenAt: Date? = nil,
-        closedAt: Date? = nil, descriptionKind: DescriptionKind = .full, primaryListingID: JobID? = nil
+        closedAt: Date? = nil, descriptionKind: DescriptionKind = .full, primaryListingID: JobID? = nil,
+        applyURL: String? = nil, via: String? = nil
     ) {
         self.id = JobID(canonicalURL: canonicalURL)
         self.canonicalURL = canonicalURL
@@ -135,7 +141,12 @@ public struct Job: Sendable, Equatable, Identifiable {
         self.closedAt = closedAt
         self.descriptionKind = descriptionKind
         self.primaryListingID = primaryListingID
+        self.applyURL = applyURL
+        self.via = via
     }
+
+    /// The address Open posting and Copy link use: where the posting lives, else the job's own.
+    public var openURL: String { applyURL ?? url }
 
     /// Still posted somewhere.
     public var isOpen: Bool { closedAt == nil }

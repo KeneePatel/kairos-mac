@@ -154,6 +154,8 @@ public struct FetchRun: Sendable {
         let log = FetchLog(db)
         var memos: [UUID: SourceFetchState] = [:]
         for source in sources { memos[source.id] = (try? await log.state(of: source.id)) ?? SourceFetchState() }
+        // Boards Kairos reads, behind a search's links (C1): each names a company to watch.
+        var linked: [SourceKind: [BoardsFromLinks.Found]] = [:]
         for batch in [boards, searches] where !batch.isEmpty && !Task.isCancelled {
             await withTaskGroup(of: (Source, Fetched).self) { group in
                 var pending = batch[...]
@@ -168,6 +170,9 @@ public struct FetchRun: Sendable {
                 for _ in 0..<maxConcurrent { startNext() }
                 for await (source, fetched) in group {
                     guard !Task.isCancelled else { break }
+                    if source.kind.isSearch, case .success(.postings(let postings, _))? = fetched.answer {
+                        linked[source.kind, default: []] += BoardsFromLinks.boards(in: postings)
+                    }
                     await record(
                         fetched, from: source, state: memos[source.id] ?? SourceFetchState(), run: runID,
                         into: &progress)
@@ -175,6 +180,17 @@ public struct FetchRun: Sendable {
                     continuation.yield(progress)
                     startNext()
                 }
+            }
+        }
+        // The companies behind a search's links, read now so their postings arrive in full (C1).
+        for (kind, boards) in linked.sorted(by: { $0.key.rawValue < $1.key.rawValue }) where !Task.isCancelled {
+            for source in (try? await BoardsFromLinks.add(boards, via: kind, to: db)) ?? [] where !Task.isCancelled {
+                progress.boardsFound += 1
+                progress.sourcesTotal += 1
+                let fetched = await fetch(source, since: nil, lastGood: nil)
+                await record(fetched, from: source, state: SourceFetchState(), run: runID, into: &progress)
+                progress.sourcesDone += 1
+                continuation.yield(progress)
             }
         }
         // Snippets: the boards behind a search's companies, read now so their full postings

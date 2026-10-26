@@ -29,7 +29,8 @@ public enum Normalizer {
                 dedupKey: DedupKey.make(company: company, title: title, city: geo.city),
                 company: company, title: title, location: locations.joined(separator: "; "), city: geo.city,
                 region: geo.region, country: geo.country, remoteScope: geo.remoteScope, postedAt: posting.postedAt,
-                descriptionMarkdown: markdown.isEmpty ? nil : markdown, firstSeenAt: firstSeenAt))
+                descriptionMarkdown: markdown.isEmpty ? nil : markdown, firstSeenAt: firstSeenAt,
+                applyURL: posting.applyURL?.absoluteString, via: posting.via))
     }
 
     /// Single spaces, no ends.

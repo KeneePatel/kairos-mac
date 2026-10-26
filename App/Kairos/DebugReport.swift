@@ -46,7 +46,12 @@
                 let done = DispatchSemaphore(value: 0)
                 Task.detached {
                     do {
-                        let db = try Database(path: try AccountStore.applicationSupport().databaseURL(for: .local).path)
+                        // `--on-copy`: a migrated copy of the database, so a migration can be tried
+                        // on your data before it runs for real.
+                        let db =
+                            CommandLine.arguments.contains("--on-copy")
+                            ? try await copiedDatabase()
+                            : try Database(path: try AccountStore.applicationSupport().databaseURL(for: .local).path)
                         print(try await sourcesReport(db))
                     } catch {
                         print("sources-report: \(error)")
@@ -151,11 +156,28 @@
         /// `--sources-report`: what each kind of source yields on this Mac (no contact details, no
         /// keys): jobs, snippets, verdicts, what you acted on, link hosts, posting ages, and how the
         /// company lookups and the catalog's boards fared. Research for the collection redesign.
+        /// A migrated copy of this Mac's database in a temporary folder: a dry run's playground.
+        private static func copiedDatabase() async throws -> Database {
+            let fm = FileManager.default
+            let original = try AccountStore.applicationSupport().databaseURL(for: .local)
+            let copy = fm.temporaryDirectory.appending(path: "kairos-copy-\(UUID().uuidString)")
+            try fm.createDirectory(at: copy, withIntermediateDirectories: true)
+            for suffix in ["", "-wal", "-shm"] where fm.fileExists(atPath: original.path + suffix) {
+                try fm.copyItem(
+                    atPath: original.path + suffix, toPath: copy.appending(path: "kairos.sqlite").path + suffix)
+            }
+            let db = try Database(path: copy.appending(path: "kairos.sqlite").path)
+            let before = try await db.userVersion()
+            try await Migrator.migrate(db, with: Migrator.bundled())
+            print("on a copy: migrated \(before) → \(try await db.userVersion())")
+            return db
+        }
+
         private static func sourcesReport(_ db: Database) async throws -> String {
-            var out = "# Kairos sources report\n"
+            var out = "# Kairos sources report (schema \(try await db.userVersion()))\n"
             out += "\n## By kind (open and closed jobs still stored)\n"
             out +=
-                "kind | jobs | snippets | yes | maybe | no | filtered | waiting | applied | saved | skipped | closed | avg chars | ≤7d | ≤30d\n"
+                "kind | jobs | snippets | yes | maybe | no | filtered | waiting | applied | saved | skipped | archived | closed | avg chars | ≤7d | ≤30d | with apply link | with via\n"
             let now = Int64(Date().timeIntervalSince1970 * 1_000)
             for row in try await db.query(
                 """
@@ -164,16 +186,17 @@
                     SUM(j.verdict = 'no' AND j.verdict_source != 'prefilter') AS no,
                     SUM(j.verdict_source = 'prefilter') AS filtered, SUM(j.verdict IS NULL) AS waiting,
                     SUM(j.state = 'applied') AS applied, SUM(j.state = 'shortlisted') AS saved,
-                    SUM(j.state = 'skipped') AS skipped, SUM(j.closed_at IS NOT NULL) AS closed,
-                    CAST(AVG(LENGTH(j.description)) AS INTEGER) AS avg_len,
-                    SUM(j.posted_at > ?) AS week, SUM(j.posted_at > ?) AS month
+                    SUM(j.state = 'skipped') AS skipped, SUM(j.state = 'archived') AS archived,
+                    SUM(j.closed_at IS NOT NULL) AS closed, CAST(AVG(LENGTH(j.description)) AS INTEGER) AS avg_len,
+                    SUM(j.posted_at > ?) AS week, SUM(j.posted_at > ?) AS month,
+                    SUM(j.apply_url IS NOT NULL) AS apply, SUM(j.via IS NOT NULL) AS via
                 FROM job j JOIN source s ON s.id = j.source_id WHERE j.deleted = 0 GROUP BY s.kind ORDER BY n DESC
                 """, [.integer(now - 7 * 86_400_000), .integer(now - 30 * 86_400_000)])
             {
                 let cols = [
                     "n", "snippets", "yes", "maybe", "no", "filtered", "waiting", "applied", "saved", "skipped",
-                    "closed",
-                    "avg_len", "week", "month",
+                    "archived",
+                    "closed", "avg_len", "week", "month", "apply", "via",
                 ]
                 out +=
                     (row.string("kind") ?? "?") + " | " + cols.map { "\(row.int($0) ?? 0)" }.joined(separator: " | ")

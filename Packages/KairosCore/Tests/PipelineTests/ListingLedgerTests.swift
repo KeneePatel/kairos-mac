@@ -99,6 +99,26 @@ struct ListingLedgerTests {
         #expect(try await f.jobs().first?.verdict == .yes)
     }
 
+    /// Where a job lives (v3, C1) follows its shown listing: stored with the job, kept while a
+    /// search's copy is attached, and replaced when a fuller posting takes over.
+    @Test func whereAJobLivesFollowsItsShownListing() async throws {
+        let f = try await Fixture()
+        var snippet = posting(f.adzuna.id, "adzuna/1", text: "Build APIs")
+        snippet.via = "Adzuna"
+        snippet.applyURL = URL(string: "https://www.adzuna.ca/land/ad/1")
+        try await f.fromAdzuna([snippet])
+        var job = try #require(try await f.jobs().first)
+        #expect(job.via == "Adzuna" && job.applyURL == "https://www.adzuna.ca/land/ad/1")
+        #expect(job.openURL == "https://www.adzuna.ca/land/ad/1")
+
+        var full = posting(f.board.id, "gh/1", text: "Build APIs in Go. Full posting.")
+        full.applyURL = URL(string: "https://jobs.example/gh/1?apply=1")
+        try await f.fromBoard([full], at: day(1))
+        job = try #require(try await f.jobs().first)
+        #expect(job.applyURL == "https://jobs.example/gh/1?apply=1" && job.via == nil)
+        #expect(job.openURL == "https://jobs.example/gh/1?apply=1")
+    }
+
     /// Seen again, a posting moves its job's last-seen time; edited, it's updated and screened
     /// again, unless you've acted on the job.
     @Test func anEditedPostingIsUpdatedAndScreenedAgain() async throws {

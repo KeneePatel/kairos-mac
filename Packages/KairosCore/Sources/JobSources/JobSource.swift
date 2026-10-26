@@ -103,13 +103,24 @@ public struct Posting: Sendable, Equatable {
     /// roles, on a board that needs a request per job): it counts as seen, and nothing about its
     /// text changes.
     public var textOmitted: Bool
+    /// Where the posting lives, when that's a better page to open than `url` (job collection v3):
+    /// the employer's own page behind a job board's copy, Himalayas's application link.
+    public var applyURL: URL?
+    /// The site the posting was taken from, when a search says ("Scotiabank", "LinkedIn").
+    public var via: String?
+    /// Every other link the source gave for the posting (a search's apply options), so the fetch
+    /// can find boards Kairos reads behind them.
+    public var links: [URL]
 
     public init(
         sourceID: SourceID, url: URL, company: String, title: String, location: String, postedAt: Date?,
         descriptionHTML: String, otherLocations: [String] = [], countryHint: String? = nil, workplace: Workplace? = nil,
-        textOmitted: Bool = false
+        textOmitted: Bool = false, applyURL: URL? = nil, via: String? = nil, links: [URL] = []
     ) {
         self.textOmitted = textOmitted
+        self.applyURL = applyURL
+        self.via = via
+        self.links = links
         self.sourceID = sourceID
         self.url = url
         self.company = company

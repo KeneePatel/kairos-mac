@@ -189,6 +189,39 @@ struct FetchRunTests {
 
     /// A search source (Adzuna) runs after every company board, so when both list a job the board's
     /// full posting is the one kept, however fast the search answers.
+    /// A board Kairos reads behind a search result's links names a company to watch (v3, C1): it
+    /// becomes a source in the same fetch, read right away, with the search as its origin.
+    @Test func boardsBehindASearchsLinksAreWatchedAndReadNow() async throws {
+        let db = try await database()
+        let google = try await SourceRepository(db).add(kind: .googleJobs)
+        let board = URL(string: "https://boards.greenhouse.io/acme/jobs/1")!
+        let run = FetchRun(
+            db: db, now: { seenAt },
+            makeSource: { source in
+                if source.id == google.id {
+                    var found = posting(google.id, "Backend Developer", "Toronto, ON", path: "google/1")
+                    found.url = URL(string: "https://ca.indeed.com/viewjob?jk=1")!
+                    found.links = [board]
+                    let reply = found
+                    return (FakeSource(id: google.id, reply: { [reply] }), SourceQuery())
+                }
+                guard source.kind == .greenhouse else { throw SourceError.invalidConfiguration("unexpected") }
+                var own = posting(source.id, "Backend Developer", "Toronto, ON", path: "gh/1")
+                own.url = board
+                let reply = own
+                return (FakeSource(id: source.id, reply: { [reply] }), SourceQuery())
+            })
+        let outcome = try #require(await collect(run).last)
+        #expect(outcome.boardsFound == 1 && outcome.sourcesTotal == 2 && outcome.sourcesDone == 2)
+        let sources = try await SourceRepository(db).sources()
+        let added = try #require(sources.first { $0.kind == .greenhouse })
+        let config = try #require(BoardConfig.decode(added.config))
+        #expect(config.slug == "acme" && config.company == "Acme Robotics" && config.origin == "google_jobs")
+        // The board's copy of the posting attached to the job the search found.
+        let listings = try await db.query("SELECT COUNT(*) AS n FROM listing WHERE deleted = 0").first?.int("n")
+        #expect(try await JobRepository(db).jobs().count == 1 && listings == 2)
+    }
+
     @Test func searchSourcesRunAfterTheBoards() async throws {
         let db = try await database()
         let sources = SourceRepository(db)

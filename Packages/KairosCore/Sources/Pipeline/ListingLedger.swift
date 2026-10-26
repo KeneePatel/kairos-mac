@@ -322,6 +322,8 @@ private struct Writer {
         job.postedAt = candidate.postedAt ?? job.postedAt
         job.descriptionMarkdown = candidate.descriptionMarkdown
         job.descriptionKind = kind
+        job.applyURL = candidate.applyURL
+        job.via = candidate.via
     }
 
     /// A stored job from another source with the same company, title and place. A snippet beside a

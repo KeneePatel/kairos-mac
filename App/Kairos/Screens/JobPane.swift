@@ -96,10 +96,8 @@ struct JobPane: View {
                     Text("\(job.company) ·").font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
                     AdzunaCredit()
                 } else {
-                    Text(
-                        model.source(job.sourceID).map { "\(job.company) · via \($0.kind.displayName)" } ?? job.company
-                    )
-                    .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                    Text(Self.companyLine(job, source: model.source(job.sourceID)))
+                        .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
                 }
             }
             Text(job.title).font(TypeStyle.title1).foregroundStyle(Color(.ink))
@@ -410,6 +408,15 @@ struct JobPane: View {
         }
         .padding(.horizontal, Spacing.space3)
         .padding(.vertical, Spacing.space2)
+    }
+
+    /// "Scotiabank · posted on its own site · found on Google Jobs", "Softline Technology · posted
+    /// on Indeed · found on Google Jobs", or "Stripe · via Greenhouse" for a board's job.
+    static func companyLine(_ job: Job, source: Source?) -> String {
+        guard let source else { return job.company }
+        guard let via = job.via, !via.isEmpty else { return "\(job.company) · via \(source.kind.displayName)" }
+        let own = via.compare(job.company, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        return "\(job.company) · posted on \(own ? "its own site" : via) · found on \(source.kind.displayName)"
     }
 
     /// "Stripe on Greenhouse", or "A Greenhouse board" when you didn't name the company.

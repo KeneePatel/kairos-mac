@@ -276,7 +276,7 @@ public struct JobRepository: Sendable {
         "id", "source_id", "url", "canonical_url", "dedup_key", "company", "title", "location", "city", "region",
         "country", "remote_scope", "currency", "salary", "posted_at", "description", "state", "verdict",
         "verdict_source", "rank", "first_seen_at", "last_seen_at", "closed_at", "description_kind",
-        "primary_listing_id", "updated_hlc",
+        "primary_listing_id", "apply_url", "via", "updated_hlc",
     ]
 
     private static let upsertSQL: String = {
@@ -297,7 +297,7 @@ public struct JobRepository: Sendable {
             try SQLValue(json: job.salary), SQLValue(job.postedAt), SQLValue(job.descriptionMarkdown),
             SQLValue(job.state), SQLValue(job.verdict), SQLValue(job.verdictSource), SQLValue(job.rank),
             SQLValue(job.firstSeenAt), SQLValue(job.lastSeenAt), SQLValue(job.closedAt), SQLValue(job.descriptionKind),
-            SQLValue(job.primaryListingID?.rawValue),
+            SQLValue(job.primaryListingID?.rawValue), SQLValue(job.applyURL), SQLValue(job.via),
         ]
     }
 
@@ -322,6 +322,8 @@ public struct JobRepository: Sendable {
         guard job.id.rawValue == row.string("id") else {
             throw .corruptRow(table: "job", id: job.id.rawValue, column: "id")
         }
+        job.applyURL = row.string("apply_url")
+        job.via = row.string("via")
         job.updatedHLC = try r.hlc("updated_hlc")
         return job
     }

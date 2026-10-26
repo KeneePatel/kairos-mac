@@ -47,7 +47,7 @@ Every row names the command that produces its verdict. Gitleaks is the external 
 
 | ID | Rule | Path | Reason | Owner | Expires |
 |----|------|------|--------|-------|---------|
-| — | — | — | None | — | — |
+| E3 | Floor guard: assertion-removed (1 line) | `Packages/KairosCore/Tests/JobSourcesTests/OptionalSourcesTests.swift` | Approved by you 2026-10-26 (job collection v3, C1). The Google Jobs test asserted that a job's address starts with Google's search page (`share_link`), the bug v3 fixes: the address is now the page Google took the posting from, and the test asserts that instead. | Kenee Patel | When `collection-v3-c1` merges into `main` |
 
 ## Where each check runs
 

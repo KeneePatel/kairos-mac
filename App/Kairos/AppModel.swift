@@ -716,14 +716,16 @@ final class AppModel {
     }
 
     /// Opens the posting in your browser (O). For a snippet that's Adzuna's advert page.
+    /// Opens where the posting lives (job collection v3): the employer's page behind a job board's
+    /// copy, Himalayas's application link, else the job's own address.
     func openPosting(_ job: Job) {
-        guard let url = URL(string: job.url) else { return }
+        guard let url = URL(string: job.openURL) else { return }
         NSWorkspace.shared.open(url)
     }
 
     func copyLink(_ job: Job) {
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(job.url, forType: .string)
+        NSPasteboard.general.setString(job.openURL, forType: .string)
     }
 
     /// The application the Applied table or the Interviews board shows beside the list.

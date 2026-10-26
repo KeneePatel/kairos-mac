@@ -5,7 +5,8 @@ import Store
 /// v2, J7, the owner's choice of 2026-10-23). Google for Jobs gathers postings from LinkedIn,
 /// Indeed, Workday career sites and the rest, which Kairos can't read itself. SerpApi queries
 /// Google for you; its free plan allows 250 searches a month, 10 jobs each, so Kairos asks your
-/// first roles' searches, a few a day.
+/// first roles' searches, a few a day. Each result keeps the page Google took it from as its
+/// address and, behind a job board's copy, the employer's own page to apply on (v3, C1).
 public struct GoogleJobsSource: JobSource {
     /// What Kairos spends of SerpApi's free plan (250 searches a month).
     public static let budget = AdzunaSource.Budget(day: 12, week: 70, month: 240, run: 12)
@@ -76,11 +77,16 @@ public struct GoogleJobsSource: JobSource {
     }
 
     private func posting(_ job: SerpApiJobs.Job, country: Country) -> Posting? {
-        // Google's link for the job: one per posting, so it never collides with a board's address.
+        let options = (job.applyOptions ?? []).compactMap { option in
+            URL(string: option.link).map { (title: option.title ?? "", link: $0) }
+        }
+        // The page Google took the posting from is the job's address (job collection v3, C1); a
+        // trusted apply option stands in when Google gave none. Google's own search page never does.
         guard
-            let url = job.shareLink.flatMap(URL.init(string:))
-                ?? job.applyOptions?.first.flatMap({ URL(string: $0.link) })
+            let page = job.sourceLink.flatMap(URL.init(string:))
+                ?? Self.employerOption(options, company: job.companyName, via: job.via)?.link ?? options.first?.link
         else { return nil }
+        let url = JobBoards.stripped(page)
         let highlights = (job.jobHighlights ?? []).map { highlight in
             "<h3>\(HTMLEntities.escape(highlight.title ?? ""))</h3><ul>"
                 + highlight.items.map { "<li>\(HTMLEntities.escape($0))</li>" }.joined() + "</ul>"
@@ -89,14 +95,35 @@ public struct GoogleJobsSource: JobSource {
         let remote =
             job.detectedExtensions?.workFromHome == true || location.localizedCaseInsensitiveContains("anywhere")
             || location.localizedCaseInsensitiveContains("remote")
+        // "7 days ago" sits in `extensions`; `detected_extensions` is usually empty (2026-10-26).
+        let posted = (job.extensions ?? []).compactMap(posted).first ?? job.detectedExtensions?.postedAt.flatMap(posted)
         return Posting(
             sourceID: id, url: url, company: job.companyName, title: job.title,
             location: remote && location.localizedCaseInsensitiveContains("anywhere")
                 ? "Remote - \(country == .canada ? "Canada" : "United States")" : location,
-            postedAt: job.detectedExtensions?.postedAt.flatMap(posted),
+            postedAt: posted,
             descriptionHTML: "<p>"
                 + HTMLEntities.escape(job.description ?? "").replacing("\n", with: "</p><p>") + "</p>" + highlights,
-            countryHint: country.rawValue, workplace: remote ? .remote : nil)
+            countryHint: country.rawValue, workplace: remote ? .remote : nil,
+            applyURL: Self.applyLink(page: page, options: options, company: job.companyName, via: job.via),
+            via: job.via, links: options.map(\.link))
+    }
+
+    /// Where to apply: the page itself, unless it's a job board's copy and an option names the
+    /// employer's own page. Tracking parameters are dropped either way.
+    static func applyLink(page: URL, options: [(title: String, link: URL)], company: String, via: String?) -> URL {
+        guard JobBoards.isJobBoard(page), let employer = employerOption(options, company: company, via: via) else {
+            return JobBoards.stripped(page)
+        }
+        return JobBoards.stripped(employer.link)
+    }
+
+    /// The first option off a job board whose title names the company or the site the posting
+    /// came from: Google lists other postings' links among a job's options now and then.
+    static func employerOption(_ options: [(title: String, link: URL)], company: String, via: String?)
+        -> (title: String, link: URL)?
+    {
+        options.first { !JobBoards.isJobBoard($0.link) && JobBoards.names($0.title, company: company, via: via) }
     }
 
     /// "3 days ago", "5 hours ago", "1 month ago".
@@ -134,8 +161,14 @@ struct SerpApiJobs: Decodable {
         let title: String
         let companyName: String
         let location: String?
+        /// Where Google took the posting from: "Scotiabank", "LinkedIn", "Indeed".
+        let via: String?
         let description: String?
         let shareLink: String?
+        /// The page the posting was taken from.
+        let sourceLink: String?
+        /// "7 days ago", "Full-time", "$65K–$75K a year".
+        let extensions: [String]?
         let jobHighlights: [Highlight]?
         let detectedExtensions: Extensions?
         let applyOptions: [Option]?
