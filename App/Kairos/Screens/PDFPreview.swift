@@ -12,7 +12,7 @@ struct PDFPreview: NSViewRepresentable {
         view.autoScales = true
         view.displayMode = .singlePageContinuous
         view.displaysPageBreaks = true
-        view.backgroundColor = NSColor(resource: .surfaceGrouped)
+        view.backgroundColor = NSColor(resource: .surfaceRaised)
         view.document = PDFDocument(url: url)
         context.coordinator.observe(view)
         return view

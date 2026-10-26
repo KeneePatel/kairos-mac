@@ -111,7 +111,7 @@ struct SearchPreferencesView: View {
                     countryRow(country, position: preferences.countries.firstIndex(of: country))
                 }
             }
-            .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+            .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
             Toggle("Remote jobs", isOn: $preferences.remoteAllowed).toggleStyle(.switch)
                 .help("Off: only on-site and hybrid jobs.")
         }

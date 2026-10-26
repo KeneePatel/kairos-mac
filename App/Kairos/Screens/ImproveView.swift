@@ -460,7 +460,7 @@ struct ImproveView: View {
         }
         .padding(Spacing.space4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
     }
 
     // MARK: - Words

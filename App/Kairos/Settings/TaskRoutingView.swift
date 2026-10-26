@@ -48,7 +48,7 @@ struct TaskRoutingView: View {
                             row(task)
                         }
                     }
-                    .background(RoundedRectangle(cornerRadius: Radius.group).fill(Color(.surfaceGrouped)))
+                    .background(RoundedRectangle(cornerRadius: Radius.group).fill(Color(.surfaceRaised)))
                     .padding(.top, Spacing.space2)
                 }
                 .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
@@ -81,7 +81,7 @@ struct TaskRoutingView: View {
                         }
                         .padding(Spacing.space3)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                        .background(RoundedRectangle(cornerRadius: Radius.group).fill(Color(.surfaceGrouped)))
+                        .background(RoundedRectangle(cornerRadius: Radius.group).fill(Color(.surfaceRaised)))
                     }
                 }
                 .fixedSize(horizontal: false, vertical: true)
@@ -184,7 +184,7 @@ struct PrivacyPanel: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: Radius.group).fill(Color(.surfaceGrouped)))
+            .background(RoundedRectangle(cornerRadius: Radius.group).fill(Color(.surfaceRaised)))
         }
     }
 
@@ -253,7 +253,7 @@ private struct JobChainCard: View {
                     row(index, ref)
                 }
             }
-            .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+            .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
             HStack {
                 if chain.count < AIJob.maxChain { addMenu }
                 if chain.count == 1 {

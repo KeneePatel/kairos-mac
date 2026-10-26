@@ -19,7 +19,7 @@ struct ResumeLengthView: View {
             .font(TypeStyle.body).foregroundStyle(Color(.ink2)).fixedSize(horizontal: false, vertical: true)
             .padding(Spacing.space4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+            .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
         }
     }
 

@@ -162,7 +162,7 @@ struct ImportReviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.space5) {
             VStack(alignment: .leading, spacing: Spacing.space1) {
-                Text(title).font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                Text(title).font(TypeStyle.title2).foregroundStyle(Color(.ink))
                 Text("Kairos drafts your master resume from it. You choose what to keep; nothing is saved before that.")
                     .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
             }
@@ -208,7 +208,7 @@ struct ImportReviewView: View {
                     .scrollContentBackground(.hidden)
                     .padding(6)
                     .background(RoundedRectangle(cornerRadius: Radius.field).fill(Color(.surface)))
-                    .overlay(RoundedRectangle(cornerRadius: Radius.field).stroke(Color(.fieldBorderStrong)))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.field).stroke(Color(.outline)))
             }
         }
         if case .success(let sent) = preview {
@@ -361,7 +361,7 @@ struct ImportReviewView: View {
             VStack(alignment: .leading, spacing: Spacing.space3) { content() }
                 .padding(Spacing.space3)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+                .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
         }
     }
 
@@ -374,7 +374,7 @@ struct ImportReviewView: View {
         .font(TypeStyle.callout)
         .padding(Spacing.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
     }
 
     private func footer(@ViewBuilder _ buttons: () -> some View) -> some View {

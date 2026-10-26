@@ -40,7 +40,7 @@ struct FormSection<Accessory: View, Content: View>: View {
         VStack(alignment: .leading, spacing: Spacing.space3) {
             HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                    Text(title).font(TypeStyle.title2).foregroundStyle(Color(.ink))
                     if let caption {
                         Text(caption).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
                     }

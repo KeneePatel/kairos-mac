@@ -113,7 +113,7 @@ struct EntryList: View {
                         row(entry, index: index, count: entries.count)
                     }
                 }
-                .background(RoundedRectangle(cornerRadius: Radius.group).fill(Color(.surfaceGrouped)))
+                .background(RoundedRectangle(cornerRadius: Radius.group).fill(Color(.surfaceRaised)))
             }
         }
     }

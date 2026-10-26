@@ -59,7 +59,7 @@ struct ContactSection: View {
                         .scrollContentBackground(.hidden)
                         .padding(6)
                         .background(RoundedRectangle(cornerRadius: Radius.field).fill(Color(.surface)))
-                        .overlay(RoundedRectangle(cornerRadius: Radius.field).stroke(Color(.fieldBorderStrong)))
+                        .overlay(RoundedRectangle(cornerRadius: Radius.field).stroke(Color(.outline)))
                         .focused($editingHighlights)
                 }
             }

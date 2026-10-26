@@ -238,7 +238,7 @@ private struct ProviderCard: View {
                 .padding(Spacing.space3)
             }
         }
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
     }
 
     /// Where the bars' numbers come from, once there are bars.
@@ -346,7 +346,7 @@ private struct KeySheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.space5) {
             VStack(alignment: .leading, spacing: Spacing.space1) {
-                Text(title).font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                Text(title).font(TypeStyle.title2).foregroundStyle(Color(.ink))
                 Text(
                     "It's saved on this Mac only, in a file only you can read. Kairos shows only its first and last characters."
                 )
@@ -409,7 +409,7 @@ private struct CustomProviderSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.space5) {
             VStack(alignment: .leading, spacing: Spacing.space1) {
-                Text("Add a provider by address").font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                Text("Add a provider by address").font(TypeStyle.title2).foregroundStyle(Color(.ink))
                 Text("Any service that speaks the OpenAI chat API. Add keys afterwards if it needs them.")
                     .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
             }
@@ -477,7 +477,7 @@ private struct ModelGuideList: View {
         }
         .padding(Spacing.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
     }
 
     @ViewBuilder private func group(_ title: String, _ advice: ModelGuide.Advice) -> some View {

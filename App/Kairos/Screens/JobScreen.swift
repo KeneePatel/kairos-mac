@@ -152,7 +152,7 @@ struct JobScreen: View {
                 if !listings.isEmpty { wherePosted(job) }
                 if let description = job.descriptionMarkdown, !description.isEmpty {
                     VStack(alignment: .leading, spacing: Spacing.space3) {
-                        Text("The posting").font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                        Text("The posting").font(TypeStyle.title2).foregroundStyle(Color(.ink))
                         MarkdownView(description)
                     }
                 }
@@ -207,7 +207,7 @@ struct JobScreen: View {
     private func wherePosted(_ job: Job) -> some View {
         VStack(alignment: .leading, spacing: Spacing.space2) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Where it's posted").font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                Text("Where it's posted").font(TypeStyle.title2).foregroundStyle(Color(.ink))
                 Spacer()
                 Text(seenLine(job)).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
             }
@@ -217,7 +217,7 @@ struct JobScreen: View {
                     listingRow(listing, shown: listing.id == (job.primaryListingID ?? job.id))
                 }
             }
-            .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+            .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
             if !history.isEmpty {
                 Text(history.map(describe).joined(separator: " · ")).font(TypeStyle.callout)
                     .foregroundStyle(Color(.inkSecondary)).fixedSize(horizontal: false, vertical: true)
@@ -332,7 +332,7 @@ struct JobScreen: View {
         }
         .padding(Spacing.space4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
     }
 
     /// What the AI took from the posting besides its requirements.
@@ -363,7 +363,7 @@ struct JobScreen: View {
     private func requirements(_ title: String, _ items: [JobAnalysis.Requirement]) -> some View {
         VStack(alignment: .leading, spacing: Spacing.space2) {
             HStack(alignment: .firstTextBaseline) {
-                Text(title).font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                Text(title).font(TypeStyle.title2).foregroundStyle(Color(.ink))
                 Spacer()
                 Text(items.isEmpty ? "None listed" : items.shownSummary).font(TypeStyle.callout)
                     .foregroundStyle(Color(.inkSecondary)).monospacedDigit()
@@ -376,7 +376,7 @@ struct JobScreen: View {
                 }
                 .padding(Spacing.space4)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+                .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
             }
         }
     }

@@ -37,7 +37,7 @@ struct BulletTraceView: View {
                             }
                             .padding(.horizontal, Spacing.space2).padding(.vertical, 6)
                             .background(
-                                RoundedRectangle(cornerRadius: Radius.row)
+                                RoundedRectangle(cornerRadius: Radius.card)
                                     .fill(selected == index ? Color(.accentTint) : .clear)
                             )
                             .overlay { if line.bullet.gap { GapOutline() } }
@@ -126,7 +126,7 @@ struct BulletTraceView: View {
             }
             .padding(Spacing.space3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+            .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
         } else {
             Text("This line's source has since been changed or deleted in your master resume.")
                 .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))

@@ -28,7 +28,7 @@ struct GitHubImportView: View {
     private var picker: some View {
         VStack(alignment: .leading, spacing: Spacing.space5) {
             VStack(alignment: .leading, spacing: Spacing.space1) {
-                Text("Import GitHub projects").font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                Text("Import GitHub projects").font(TypeStyle.title2).foregroundStyle(Color(.ink))
                 Text(
                     "Pick repos; Kairos drafts a project entry for each from its name, languages and README. You review them before anything is saved."
                 )
@@ -110,7 +110,7 @@ struct GitHubImportView: View {
             }
         }
         .frame(maxHeight: 360)
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
     }
 
     // MARK: - Work
@@ -184,7 +184,7 @@ struct GitHubImportView: View {
         .font(TypeStyle.callout)
         .padding(Spacing.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
     }
 
     static func describe(_ error: GitHubError) -> String {

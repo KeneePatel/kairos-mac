@@ -16,7 +16,7 @@ struct ScreeningBanner: View {
     }
 
     private func running(_ progress: ScreeningRun.Progress) -> some View {
-        bar(background: .surfaceGrouped) {
+        bar(background: .surfaceRaised) {
             ProgressView(value: model.runFraction)
                 .frame(width: 120)
                 .accessibilityLabel("Screening jobs")
@@ -31,7 +31,7 @@ struct ScreeningBanner: View {
 
     private func waiting(_ count: Int) -> some View {
         let stoppedEarly = model.screening.map { $0.stopped != nil || $0.phase == .cancelled } ?? false
-        return bar(background: stoppedEarly ? .maybeBg : .surfaceGrouped) {
+        return bar(background: stoppedEarly ? .maybeBg : .surfaceRaised) {
             Image(systemName: stoppedEarly ? "pause.circle" : "hourglass")
                 .font(TypeStyle.headline).foregroundStyle(Color(.ink2))
                 .accessibilityHidden(true)

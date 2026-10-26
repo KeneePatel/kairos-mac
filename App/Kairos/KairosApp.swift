@@ -31,5 +31,26 @@ struct KairosApp: App {
                 }
         }
         .defaultSize(width: 1280, height: 820)
+        .commands {
+            // Every shortcut the sidebar and the status line offer, in a menu so it can be learned
+            // (UI v2). The Job menu arrives with the Inbox slice.
+            CommandMenu("Go") {
+                ForEach(AppSection.working) { section in
+                    Button(section.title) { model.section = section }
+                        .keyboardShortcut(section.shortcut ?? "0", modifiers: .command)
+                }
+                Divider()
+                ForEach(AppSection.reports + AppSection.setup) { section in
+                    Button(section.title) { model.section = section }
+                }
+                Divider()
+                Button("Find New Jobs") { model.fetchNow() }
+                    .keyboardShortcut("r", modifiers: .command)
+                    .disabled(model.isFetching || model.sources.allSatisfy { !$0.enabled })
+                Button("Stop") { model.stopFetch() }
+                    .keyboardShortcut(".", modifiers: .command)
+                    .disabled(!model.isFetching)
+            }
+        }
     }
 }

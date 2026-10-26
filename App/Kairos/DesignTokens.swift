@@ -4,12 +4,12 @@ import SwiftUI
 
 /// Type styles from tokens.json, on macOS text styles so they follow the user's text size.
 enum TypeStyle {
+    /// 26/32 pt
+    static let pageTitle = Font.system(.largeTitle, weight: .bold)
     /// 22/28 pt
     static let title1 = Font.system(.title, weight: .bold)
     /// 17/22 pt
-    static let title2 = Font.system(.title2, weight: .bold)
-    /// 15/20 pt
-    static let title3 = Font.system(.title3, weight: .bold)
+    static let title2 = Font.system(.title2, weight: .semibold)
     /// 13/18 pt
     static let headline = Font.system(.headline, weight: .semibold)
     /// 13/18 pt
@@ -17,48 +17,64 @@ enum TypeStyle {
     /// 12/16 pt
     static let callout = Font.system(.callout, weight: .regular)
     /// 11/14 pt
-    static let caption = Font.system(.subheadline, weight: .semibold)
-    /// 28/32 pt, tabular figures
-    static let score = Font.system(size: 28, weight: .bold).monospacedDigit()
+    static let caption = Font.system(.subheadline, weight: .medium)
+    /// 24/28 pt, tabular figures
+    static let score = Font.system(size: 24, weight: .bold).monospacedDigit()
+    /// 15/20 pt, tabular figures
+    static let scoreSmall = Font.system(size: 15, weight: .bold).monospacedDigit()
+    /// 12/16 pt, monospaced
+    static let mono = Font.system(.callout, design: .monospaced, weight: .regular)
 }
 
 /// Spacing and layout sizes from tokens.json, in points.
 enum Spacing {
-    /// Icon to label in chips.
+    /// Icon to label; between a title and its meta line.
     static let space1: CGFloat = 4
-    /// Gaps between buttons, list items.
+    /// Between buttons; between rows' contents; chip gaps.
     static let space2: CGFloat = 8
-    /// Grouped box padding, column gaps.
+    /// Card and key-cap padding; column gaps.
     static let space3: CGFloat = 12
-    /// Phone side gutter, card padding.
+    /// Row side padding; pane section gaps; phone gutter.
     static let space4: CGFloat = 16
-    /// Inspector padding.
+    /// Inspector and sheet padding.
     static let space5: CGFloat = 20
-    /// Gap between page sections.
+    /// Between sections in a pane or a form.
     static let space6: CGFloat = 24
-    /// Desktop toolbar.
-    static let toolbarHeight: CGFloat = 52
-    /// Desktop list row minimum.
-    static let rowHeight: CGFloat = 48
+    /// Pane and page margins: the calm around content.
+    static let space7: CGFloat = 32
+    /// Compact list row: the default everywhere.
+    static let rowHeight: CGFloat = 36
+    /// Rows that carry two lines (tables with a reason line).
+    static let rowHeightComfortable: CGFloat = 48
     /// Sidebar item.
-    static let sidebarItemHeight: CGFloat = 30
-    /// Phone list row minimum.
-    static let phoneRowHeight: CGFloat = 84
+    static let sidebarItemHeight: CGFloat = 28
+    /// The system toolbar's height; set by macOS, listed for mockups.
+    static let toolbarHeight: CGFloat = 52
+    /// The list column's ideal width (320 to 420).
+    static let listWidth: CGFloat = 360
+    /// The pane never goes narrower.
+    static let paneMinWidth: CGFloat = 480
+    /// Settings and sheet forms: the reading measure.
+    static let formWidth: CGFloat = 640
     /// Minimum phone target.
     static let touchTarget: CGFloat = 44
+    /// Phone list row minimum.
+    static let phoneRowHeight: CGFloat = 84
 }
 
 /// Corner radii from tokens.json, in points.
 enum Radius {
-    /// Metric chips.
+    /// Key caps.
+    static let keycap: CGFloat = 4
+    /// Metric chips and badges.
     static let chip: CGFloat = 6
-    /// Text fields, pop-ups.
+    /// Text fields, pop-ups, selected rows.
     static let field: CGFloat = 8
-    /// Selected rows, board cards.
-    static let row: CGFloat = 10
-    /// Grouped boxes, tables, provider cards (14px).
+    /// Cards: verdict card, board cards, status card.
+    static let card: CGFloat = 10
+    /// Grouped boxes, tables, sheets.
     static let group: CGFloat = 12
-    /// Sidebar (18px), menu bar popover (20px).
+    /// The sidebar (18) and the menu bar popover (20).
     static let nav: CGFloat = 18
     /// Buttons, segmented controls, verdict pills, skill chips.
     static let capsule: CGFloat = 999

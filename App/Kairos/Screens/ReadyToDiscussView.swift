@@ -54,7 +54,7 @@ struct ReadyToDiscussView: View {
             .padding(Spacing.space3)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: Radius.row).fill(Color(selected == index ? .accentTint : .surface))
+                RoundedRectangle(cornerRadius: Radius.card).fill(Color(selected == index ? .accentTint : .surface))
             )
             .overlay(GapOutline())
         }
@@ -97,7 +97,7 @@ struct ReadyToDiscussView: View {
 /// The dashed outline Can-discuss chips use, on anything Stretch mode added.
 struct GapOutline: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: Radius.row)
+        RoundedRectangle(cornerRadius: Radius.card)
             .strokeBorder(Color(.chipDiscussBorder), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
     }
 }

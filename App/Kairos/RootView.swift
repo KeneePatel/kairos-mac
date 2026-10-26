@@ -1,46 +1,55 @@
 import SwiftUI
 
-/// The app's sections in sidebar order (polish P3; reworked 2026-10-22): the workflow, from finding
-/// jobs to reviewing the ones that passed your filters, what would widen your reach (Improve), the
-/// filtered-out ones apart, resumes, everything you applied to, and the few that reached an
-/// interview (ADR-016), then your profile. Names say what a job seeker recognizes.
+/// The app's sections in sidebar order (UI v2, 2026-10-26; ADR-017): the five places you work in,
+/// then the reports, then setup. Names say what a job seeker recognizes; each working section has
+/// a ⌘ number.
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case fetch, review, improve, filtered, builds, applied, interviews
-    case masterResume, settings, activity
+    case inbox, saved, resumes, applied, interviews
+    case improve, filtered, skipped
+    case masterResume, sources, settings
 
     var id: Self { self }
 
-    static let workflow: [AppSection] = [.fetch, .review, .improve, .filtered, .builds, .applied, .interviews]
-    static let profile: [AppSection] = [.masterResume, .settings, .activity]
+    static let working: [AppSection] = [.inbox, .saved, .resumes, .applied, .interviews]
+    static let reports: [AppSection] = [.improve, .filtered, .skipped]
+    static let setup: [AppSection] = [.masterResume, .sources, .settings]
 
     var title: String {
         switch self {
-        case .fetch: "Find jobs"
-        case .review: "Review"
-        case .improve: "Improve"
-        case .filtered: "Filtered out"
-        case .builds: "Resumes"
+        case .inbox: "Inbox"
+        case .saved: "Saved"
+        case .resumes: "Resumes"
         case .applied: "Applied"
         case .interviews: "Interviews"
+        case .improve: "Improve"
+        case .filtered: "Filtered out"
+        case .skipped: "Skipped"
         case .masterResume: "Master resume"
+        case .sources: "Sources"
         case .settings: "Settings"
-        case .activity: "Activity"
         }
     }
 
     var symbol: String {
         switch self {
-        case .fetch: "arrow.down.circle"
-        case .review: "checklist"
-        case .improve: "chart.line.uptrend.xyaxis"
-        case .filtered: "line.3.horizontal.decrease.circle"
-        case .builds: "doc.text"
+        case .inbox: "tray"
+        case .saved: "bookmark"
+        case .resumes: "doc.text"
         case .applied: "paperplane"
         case .interviews: "person.2"
+        case .improve: "chart.line.uptrend.xyaxis"
+        case .filtered: "line.3.horizontal.decrease"
+        case .skipped: "minus.circle"
         case .masterResume: "person.text.rectangle"
+        case .sources: "antenna.radiowaves.left.and.right"
         case .settings: "gearshape"
-        case .activity: "clock.arrow.circlepath"
         }
+    }
+
+    /// ⌘1 to ⌘5 for the working sections; the rest are reached from the sidebar.
+    var shortcut: KeyEquivalent? {
+        guard let index = Self.working.firstIndex(of: self) else { return nil }
+        return KeyEquivalent(Character("\(index + 1)"))
     }
 }
 
@@ -53,52 +62,12 @@ struct RootView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: selection) {
-                ForEach(AppSection.workflow) { section in
-                    Label(section.title, systemImage: section.symbol).tag(section)
-                        .badge(badge(section))
-                }
-                Section("Profile") {
-                    ForEach(AppSection.profile) { section in
-                        Label(section.title, systemImage: section.symbol).tag(section)
-                    }
-                }
-            }
-            .navigationSplitViewColumnWidth(min: 200, ideal: 232)
+            sidebar
         } detail: {
-            switch (model.phase, model.section) {
-            case (.opening, _):
-                ProgressView()
-            case (.failed(let message), _):
-                ContentUnavailableView(
-                    "Kairos couldn't start", systemImage: "exclamationmark.triangle",
-                    description: Text(message).foregroundStyle(Color(.inkSecondary)))
-            case (.ready, .fetch):
-                FetchView()
-            case (.ready, .review):
-                ReviewView()
-            case (.ready, .improve):
-                ImproveView()
-            case (.ready, .filtered):
-                FilteredOutView()
-            case (.ready, .builds):
-                BuildsView()
-            case (.ready, .applied):
-                AppliedView()
-            case (.ready, .interviews):
-                InterviewsView()
-            case (.ready, .masterResume):
-                if let resume = model.resume, let ai = model.ai {
-                    MasterResumeView().environment(resume).environment(ai)
-                }
-            case (.ready, .settings):
-                if let ai = model.ai {
-                    SettingsView().environment(ai)
-                }
-            case (.ready, let section):
-                PlaceholderView(section: section)
-            }
+            detail
         }
+        // 580 plus the toolbar keeps the window's minimum under the probe's 640-point limit.
+        .frame(minWidth: 960, minHeight: 580)
         .alert(
             model.buildNotice?.title ?? "", isPresented: noticeShown, presenting: model.buildNotice
         ) { notice in
@@ -115,6 +84,67 @@ struct RootView: View {
         }
     }
 
+    /// The working sections with their counts, the reports and setup under their headers, and the
+    /// status line at the bottom.
+    private var sidebar: some View {
+        List(selection: selection) {
+            ForEach(AppSection.working) { section in
+                Label(section.title, systemImage: section.symbol).tag(section)
+                    .badge(badge(section))
+            }
+            Section("Reports") {
+                ForEach(AppSection.reports) { section in
+                    Label(section.title, systemImage: section.symbol).tag(section)
+                }
+            }
+            Section("Setup") {
+                ForEach(AppSection.setup) { section in
+                    Label(section.title, systemImage: section.symbol).tag(section)
+                }
+            }
+        }
+        .listStyle(.sidebar)
+        .navigationSplitViewColumnWidth(min: 200, ideal: 232)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if model.phase == .ready { StatusFooter() }
+        }
+    }
+
+    @ViewBuilder private var detail: some View {
+        switch (model.phase, model.section) {
+        case (.opening, _):
+            ProgressView()
+        case (.failed(let message), _):
+            ContentUnavailableView(
+                "Kairos couldn't start", systemImage: "exclamationmark.triangle",
+                description: Text(message).foregroundStyle(Color(.inkSecondary)))
+        case (.ready, .inbox):
+            ReviewView()
+        case (.ready, .improve):
+            ImproveView()
+        case (.ready, .filtered):
+            FilteredOutView()
+        case (.ready, .resumes):
+            BuildsView()
+        case (.ready, .applied):
+            AppliedView()
+        case (.ready, .interviews):
+            InterviewsView()
+        case (.ready, .sources):
+            SourcesView()
+        case (.ready, .masterResume):
+            if let resume = model.resume, let ai = model.ai {
+                MasterResumeView().environment(resume).environment(ai)
+            }
+        case (.ready, .settings):
+            if let ai = model.ai {
+                SettingsView().environment(ai)
+            }
+        case (.ready, let section):
+            PlaceholderView(section: section)
+        }
+    }
+
     /// A build that failed, or a batch with something to say, wherever you are.
     private var noticeShown: Binding<Bool> {
         Binding(get: { model.buildNotice != nil }, set: { if !$0 { model.buildNotice = nil } })
@@ -122,17 +152,19 @@ struct RootView: View {
 }
 
 extension RootView {
-    /// Review counts the jobs worth a look; Filtered out, the jobs your filters dropped.
+    /// Inbox counts the jobs waiting for your decision, Resumes the builds under way, Interviews
+    /// the applications in progress.
     func badge(_ section: AppSection) -> Int {
         switch section {
-        case .review: model.reviewCount(.yes) + model.reviewCount(.maybe)
-        case .filtered: model.filteredCount
+        case .inbox: model.reviewCount(.yes) + model.reviewCount(.maybe)
+        case .resumes: model.buildsUnderWay
+        case .interviews: model.applications.count { $0.status.stage == .inProgress }
         default: 0
         }
     }
 }
 
-/// Stands in for each section until its task builds the real screen.
+/// Stands in for each section until its slice builds the real screen.
 struct PlaceholderView: View {
     let section: AppSection
 
@@ -140,7 +172,8 @@ struct PlaceholderView: View {
         ContentUnavailableView(
             section.title,
             systemImage: section.symbol,
-            description: Text("This screen isn't built yet.").foregroundStyle(Color(.inkSecondary))
+            description: Text("This screen comes with the next slice of the redesign.")
+                .foregroundStyle(Color(.inkSecondary))
         )
         .navigationTitle(section.title)
     }

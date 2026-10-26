@@ -311,7 +311,7 @@ struct BuildView: View {
                 preview
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(.surfaceGrouped))
+            .background(Color(.surfaceRaised))
             Divider()
             BulletTraceView(build: build, master: master, company: job?.company, selected: $selected).frame(width: 340)
         }
@@ -530,7 +530,7 @@ private struct BuildStepsColumn: View {
             }
         }
         .padding(Spacing.space3)
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
     }
 
     /// "Built from version N", and whether your master resume has changed since.

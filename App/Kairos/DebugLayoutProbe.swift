@@ -44,7 +44,7 @@
                 if height > limit { tooTall.append(name) }
             }
             tooTall += await buildScreens(model)
-            model.section = .fetch
+            model.section = .sources
             if let size = CommandLine.arguments.first(where: { $0.hasPrefix("--size=") })?.dropFirst(7)
                 .split(separator: "x").compactMap({ Double($0) }), size.count == 2
             {

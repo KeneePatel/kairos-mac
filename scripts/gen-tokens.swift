@@ -1,5 +1,4 @@
-#!/usr/bin/env swift  // Turns design/kairos/tokens.json into code once, so no view holds a raw value:
-//   - one Asset Catalog colour set per colour token (Any and Dark appearances),
+#!/usr/bin/env swift  // Turns design/kairos/tokens.json into code once, so no view holds a raw value:  //   - one Asset Catalog colour set per colour token (Any and Dark appearances),
 //     plus AccentColor, so SwiftUI's generated symbols give Color(.inkSecondary)
 //   - App/Kairos/DesignTokens.swift with type styles, spacing and radii
 //   - AppIcon and the menu bar template image from design/kairos/logo
@@ -44,6 +43,8 @@ struct Tokens: Decodable {
         let fontSize: String
         let lineHeight: String
         let fontWeight: Int
+        /// A style's own family (the mono style); else the group's.
+        let family: String?
     }
     struct LengthFamily: Decodable { let tokens: [LengthToken] }
     struct LengthToken: Decodable {
@@ -193,8 +194,8 @@ writeJSON(
 
 // The README maps each desktop style to a macOS text style, so text follows the user's size settings.
 let textStyles: [String: String] = [
-    "title1": ".title", "title2": ".title2", "title3": ".title3", "headline": ".headline",
-    "body": ".body", "callout": ".callout", "caption": ".subheadline",
+    "page-title": ".largeTitle", "title1": ".title", "title2": ".title2", "title3": ".title3",
+    "headline": ".headline", "body": ".body", "callout": ".callout", "caption": ".subheadline", "mono": ".callout",
 ]
 func weight(_ w: Int) -> String {
     switch w {
@@ -216,7 +217,11 @@ var swift = """
     """
 guard let desktop = tokens.type.groups.first(where: { $0.name == "Desktop" }) else { fail("no Desktop type group") }
 for style in desktop.styles {
-    if let textStyle = textStyles[style.name] {
+    if let textStyle = textStyles[style.name], style.family == "mono" {
+        swift += "    /// \(points(style.fontSize))/\(points(style.lineHeight)) pt, monospaced\n"
+        swift +=
+            "    static let \(camel(style.name)) = Font.system(\(textStyle), design: .monospaced, weight: \(weight(style.fontWeight)))\n"
+    } else if let textStyle = textStyles[style.name] {
         swift += "    /// \(points(style.fontSize))/\(points(style.lineHeight)) pt\n"
         swift +=
             "    static let \(camel(style.name)) = Font.system(\(textStyle), weight: \(weight(style.fontWeight)))\n"

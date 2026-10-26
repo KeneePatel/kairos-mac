@@ -89,7 +89,7 @@ private struct BulletField: View {
             }
         }
         .padding(Spacing.space3)
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
     }
 
     private var skillMenu: some View {

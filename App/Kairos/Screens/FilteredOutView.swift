@@ -105,7 +105,7 @@ struct FilteredOutView: View {
             Spacer()
             Button(rule == .postingAge ? "Change in Find jobs" : "Change in Settings") {
                 if rule == .postingAge {
-                    model.section = .fetch
+                    model.section = .sources
                 } else {
                     model.settingsTab = .search
                     model.section = .settings
@@ -114,7 +114,7 @@ struct FilteredOutView: View {
             .buttonStyle(.link)
         }
         .padding(.horizontal, Spacing.space4).padding(.vertical, Spacing.space3)
-        .background(Color(.surfaceGrouped))
+        .background(Color(.surfaceRaised))
     }
 
     private var table: some View {
@@ -175,6 +175,26 @@ struct FilteredOutView: View {
         case .blacklist?: return "Companies you've blocked: " + list(preferences.blacklist, none: "none")
         case .postingAge?: return "Older than your Posted limit, from before the limit applied while fetching"
         case .alreadyApplied?: return "Close matches to jobs you've applied to"
+        }
+    }
+}
+
+extension PrefilterRule {
+    /// Why the prefilter dropped a job, as a list label.
+    var reason: String {
+        switch self {
+        case .titleInclude: "Not one of your roles"
+        case .titleExclude: "Title you skip"
+        case .seniority: "Level you've turned off"
+        case .yearsRequired: "Asks for too many years"
+        case .location: "Outside your countries or regions"
+        case .remoteScope: "Remote only elsewhere"
+        case .workAuthorization: "Work authorization"
+        case .clearance: "Needs a security clearance"
+        case .french: "Needs French"
+        case .blacklist: "Company you've blocked"
+        case .postingAge: "Older than your limit"
+        case .alreadyApplied: "Already applied"
         }
     }
 }

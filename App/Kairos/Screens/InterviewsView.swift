@@ -100,7 +100,7 @@ private struct ApplicationCard: View {
         }
         .padding(Spacing.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
         .contentShape(Rectangle())
     }
 

@@ -28,7 +28,7 @@ final class AppModel {
 
     private(set) var phase: Phase = .opening
     /// The sidebar's selection; a build switches it to Builds.
-    var section: AppSection = .review
+    var section: AppSection = .inbox
     /// The Settings tab to show, so another screen can open the right one ("Change titles").
     var settingsTab: SettingsView.Tab = .ai
     private(set) var sources: [Source] = []
@@ -645,7 +645,7 @@ final class AppModel {
         }
         if show {
             selectedBuild = id
-            section = .builds
+            section = .resumes
         }
         return nil
     }
@@ -991,6 +991,24 @@ final class AppModel {
             await self?.reload()
         }
     }
+
+    /// The sidebar's status line (UI v2): what runs now, or when Kairos last checked.
+    var runStatus: RunStatus {
+        var input = RunStatus.Input()
+        input.fetching = isFetching
+        input.fetch = progress
+        input.screening = screening
+        input.building = builds.count { $0.status == .running }
+        input.queued = builds.count { $0.status == .queued }
+        input.lastChecked = lastFetch?.finishedAt
+        input.newLastTime = lastFetch.flatMap { FetchRun.Stats.decode($0.stats)?.added } ?? 0
+        input.waiting = waitingForAI
+        input.hasSources = !sources.isEmpty
+        return RunStatus.current(input)
+    }
+
+    /// Builds running or queued: the Resumes badge.
+    var buildsUnderWay: Int { builds.count { $0.status == .running || $0.status == .queued } }
 
     /// How far the run is: fetching boards, then screening jobs.
     var runFraction: Double {

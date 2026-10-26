@@ -96,7 +96,7 @@ struct ReadinessPanel: View {
                             .foregroundStyle(Color(readiness.isReady ? .yesSolid : .inkSecondary))
                             .accessibilityHidden(true)
                         Text(readiness.isReady ? "Ready to build" : "Not ready to build yet")
-                            .font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                            .font(TypeStyle.title2).foregroundStyle(Color(.ink))
                     }
                     Text(
                         "Every resume draws only from this page. Kairos never adds a job, skill or number you haven't written here."
@@ -122,7 +122,7 @@ struct ReadinessPanel: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: Radius.group).fill(Color(.surfaceGrouped)))
+                .background(RoundedRectangle(cornerRadius: Radius.group).fill(Color(.surfaceRaised)))
 
                 VStack(alignment: .leading, spacing: Spacing.space3) {
                     fact("Contact", contactStatus)

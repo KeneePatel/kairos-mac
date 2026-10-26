@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kairos · Menu bar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0B63CE}a:hover{color:#084C9E}
+</style>
+</helmet>
+<div style="width: 380px; height: 540px; box-sizing: border-box; overflow: hidden; padding: 12px; border-radius: 20px; background: rgba(238, 238, 243, 0.84); backdrop-filter: blur(40px) saturate(1.8); -webkit-backdrop-filter: blur(40px) saturate(1.8); box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.8); display: flex; flex-direction: column; gap: 10px; color: #1D1D1F; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 18px; -webkit-font-smoothing: antialiased">
+
+<div style="display: flex; align-items: center; gap: 8px; min-height: 28px; padding: 0 2px 0 4px">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 100 100" style="filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.14))"><rect width="100" height="100" rx="22.5" fill="#FFFFFF"></rect><rect x="1" y="1" width="98" height="98" rx="21.5" fill="none" stroke="rgba(0, 0, 0, 0.12)" stroke-width="2"></rect><path d="M63.67 24.42A29 29 0 1 0 77.56 40.97" fill="none" stroke="#1D1D1F" stroke-width="8"></path><path d="M50 50L61.49 40.36" stroke="#1D1D1F" stroke-width="8" stroke-linecap="round"></path><circle cx="72.2" cy="31.35" r="9.5" fill="#0B63CE"></circle></svg>
+<h1 style="margin: 0; flex: 1; font-size: 13px; line-height: 18px; font-weight: 700">Kairos</h1>
+<button type="button" style="display: flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px 0 10px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.16), 0 1px 3px rgba(0, 0, 0, 0.06); color: #1D1D1F; font: inherit; font-weight: 500; cursor: pointer"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#1D1D1F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.25 8a5.25 5.25 0 1 1-1.54-3.71"></path><path d="M12.25 1.75v2.75H9.5"></path></svg>Run now</button>
+</div>
+
+<section aria-label="Schedule and verdicts" style="display: flex; flex-direction: column; gap: 12px; padding: 12px; border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08)">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px">
+<div style="display: flex; flex-direction: column">
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">Next run</span>
+<span style="font-size: 20px; line-height: 24px; font-weight: 700; font-variant-numeric: tabular-nums">1:00 PM</span>
+</div>
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">in 4 hr 12 min · 3 runs a day</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #E6F4EA">
+<span style="display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: #1B7A3B"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#1B7A3B" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8.25l1.9 1.9 3.6-3.9"></path></svg>Yes</span>
+<span style="font-size: 20px; line-height: 24px; font-weight: 700; font-variant-numeric: tabular-nums">5</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #FCF0DA">
+<span style="display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: #955500"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#955500" stroke-width="1.7"><circle cx="8" cy="8" r="6.25"></circle><path d="M8 1.75a6.25 6.25 0 0 0 0 12.5z" fill="#955500" stroke="none"></path></svg>Maybe</span>
+<span style="font-size: 20px; line-height: 24px; font-weight: 700; font-variant-numeric: tabular-nums">4</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #EFEFF2">
+<span style="display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: #55555C"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#55555C" stroke-width="1.7" stroke-linecap="round"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8h5.5"></path></svg>No</span>
+<span style="font-size: 20px; line-height: 24px; font-weight: 700; font-variant-numeric: tabular-nums">3</span>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="mb-new" style="display: flex; flex-direction: column; padding: 8px 6px 6px; border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08)">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 2px 8px 4px">
+<h2 id="mb-new" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">New jobs</h2>
+<a href="Main.dc.html" style="font-size: 12px; text-decoration: none">See all 12</a>
+</div>
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 8px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg role="img" aria-label="Yes" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#1B7A3B" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8.25l1.9 1.9 3.6-3.9"></path></svg>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Backend Developer II</span><span style="font-size: 11px; line-height: 14px; color: #5C5C63">Northline Freight · Toronto, ON</span></span>
+<span style="font-weight: 700; font-variant-numeric: tabular-nums">92</span>
+</a>
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 8px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg role="img" aria-label="Yes" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#1B7A3B" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8.25l1.9 1.9 3.6-3.9"></path></svg>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Senior Software Engineer, Payments</span><span style="font-size: 11px; line-height: 14px; color: #5C5C63">Maplepay · Remote, Canada</span></span>
+<span style="font-weight: 700; font-variant-numeric: tabular-nums">88</span>
+</a>
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 8px; border-radius: 9px; color: #1D1D1F; text-decoration: none">
+<svg role="img" aria-label="Yes" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#1B7A3B" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><circle cx="8" cy="8" r="6.25"></circle><path d="M5.25 8.25l1.9 1.9 3.6-3.9"></path></svg>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Backend Engineer, Integrations</span><span style="font-size: 11px; line-height: 14px; color: #5C5C63">Fernhill Robotics · Remote, US &amp; Canada</span></span>
+<span style="font-weight: 700; font-variant-numeric: tabular-nums">86</span>
+</a>
+</section>
+
+<section aria-labelledby="mb-build" style="display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08)">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+<h2 id="mb-build" style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 700">Building a resume</h2>
+<span style="font-size: 12px; color: #5C5C63">about 1 min left</span>
+</div>
+<span style="font-size: 12px; line-height: 16px; color: #3A3A40; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Maplepay · Senior Software Engineer, Payments</span>
+<div role="progressbar" aria-label="Build progress" aria-valuemin="0" aria-valuemax="6" aria-valuenow="3" style="height: 6px; margin-top: 2px; border-radius: 3px; background: #E5E5EA"><div style="width: 50%; height: 6px; border-radius: 3px; background: #0B63CE"></div></div>
+<span style="font-size: 12px; line-height: 16px; color: #5C5C63">Step 3 of 6 · checking every claim</span>
+</section>
+
+<div style="display: flex; align-items: center; gap: 6px; padding: 0 6px; font-size: 12px; line-height: 16px; color: #3A3A40">
+<svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#3A3A40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5h7.25a3 3 0 0 0 .4-5.97A4.25 4.25 0 0 0 3.9 7.4a2.6 2.6 0 0 0 .6 5.1z"></path><path d="M6 9.4l1.5 1.5L10.25 8"></path></svg>
+<span>Synced with the web and phone · 2 min ago</span>
+</div>
+
+<a href="Main.dc.html" style="margin-top: auto; display: flex; align-items: center; justify-content: center; height: 32px; border-radius: 999px; background: #0B63CE; color: #FFFFFF; font-weight: 600; text-decoration: none">Open Kairos</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":380,"height":540}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

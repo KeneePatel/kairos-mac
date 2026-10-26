@@ -1,21 +1,23 @@
-# Kairos design reference
+# Kairos design reference (v2)
 
-This folder is the visual spec for Kairos: a native macOS 26 app with a small phone web app. It finds US and Canadian software jobs (Canada first) and builds a tailored resume for each one.
+This folder is the visual spec for Kairos: a native macOS 26 app with a small phone web app. It finds US and Canadian software jobs (Canada first) and builds a tailored resume for each one. v2 (approved 2026-10-26, ADR-017) reorganised the app around an inbox of jobs to decide and refreshed the look: calm, warm neutrals, compact rows, one key per decision.
 
-- `tokens.json` holds every colour (light and dark), the type scale, spacing and radii. Code should read its values from here.
-- `screens/` has one file per screen. Open any of them in a browser to see it.
+- `tokens.json` holds every colour (light and dark), the type scale, spacing, radii and shadows. Code reads its values from here through `scripts/gen-tokens.swift`.
+- `BRAND.md` is the brand book: voice and copy, colour, type, spacing, shape, components, iconography, logo and keyboard rules, each naming the tokens it uses. Read it before any UI change.
+- `components/` has one folder per component: guidelines (`README.md`) and a live preview (`preview.html`, rendered against the design system's `tokens.css`).
+- `screens/` has one `.dc.html` per screen. Open any of them in a browser.
 - `logo/` holds the app icon, the menu bar icon, the mark and wordmark lockups (see Logo below).
-- The source canvas is the "Kairos" Design artifact on claude.ai. It's private to Kenee, so treat this folder as the copy you work from.
+- `v1/` keeps the 2026-10-18 design (its README, tokens and screens) for the record.
+- The source canvases are the "Kairos" design system and the "Kairos v2 screens" canvas on claude.ai. They're private to Kenee, so treat this folder as the copy you work from.
 
 ## How to read the screen files
 
-Each `screens/*.dc.html` file is a static HTML mockup from the design canvas. Inline `style="…"` attributes hold the exact values: sizes, spacing, colours and font weights.
+Each `screens/*.dc.html` file is a static HTML mockup from the design canvas. Inline `style="…"` attributes and the `<helmet><style>` block hold the exact values: sizes, spacing, colours and font weights.
 
 You can ignore these parts:
 
 - the canvas wrapper: `<x-dc>`, `<helmet>`, `support.js` and the `<script type="text/x-dc">` block
-- the red, yellow and green window buttons, which the OS draws in the real app
-- the blur and translucency done with CSS `backdrop-filter`, which stands in for the system's Liquid Glass
+- the grey window buttons, which the OS draws in the real app
 - the hand-drawn SVG icons; use the closest SF Symbol instead (see Platform mapping)
 
 These files show layout, hierarchy, copy and state. They aren't code to port line by line.
@@ -24,97 +26,110 @@ These files show layout, hierarchy, copy and state. They aren't code to port lin
 
 | File | Screen | Size | What it shows |
 | --- | --- | --- | --- |
-| `Main.dc.html` | Today, light | 1440×900 | Sidebar · verdict filter and "Run now" toolbar · jobs grouped Canada then US, ranked by verdict, then score · inspector for the selected job (score, verdict, must-haves and nice-to-haves with the matched skill, three actions) |
-| `TodayDark.dc.html` | Today, dark | 1440×900 | The same screen in dark mode. The only screen drawn in both themes. |
-| `Build.dc.html` | Build | 1440×900 | Three columns: build steps and match-score breakdown · letter-size resume preview in Source Serif 4 · selected line traced to its master-resume bullet, the checks it passed, and "Be ready to discuss" (empty while Stretch mode is off). Toolbar: Full / Lite, Save PDF, Mark applied. |
-| `MasterResume.dc.html` | Master resume | 1440×900 | Contact form: name, email, phone and LinkedIn required; GitHub and portfolio optional; the portfolio field shows a validation error · experience entry with metric chips and skill chips · Proven (solid) and Can discuss (dashed) skills · "Ready to build" status |
-| `Applications.dc.html` | Applications | 1440×900 | Board columns Applied, Screen, Interview, Offer, Closed · side panel with the selected application's status pop-up, timeline, follow-up reminders and notes |
-| `Sources.dc.html` | Sources | 1440×900 | Company watchlist table (board, locations kept, open roles, status, including one error row) · opt-in boards with a caution note and switches · side panel with job titles and countries in priority order |
-| `SettingsAI.dc.html` | Settings · AI providers | 1440×900 | Gemini card with masked keys and Ollama card with local models · "Which model does what" table with daily caps · privacy panel (what leaves the Mac; contact details are never sent) |
-| `SignIn.dc.html` | Sign in | 1040×680 | Kairos mark · email and password, Google and GitHub, invite-only note, "Use Kairos on this Mac without an account" |
-| `MenuBar.dc.html` | Menu bar popover | 380×540 | Next run, Yes / Maybe / No counts, new jobs, build in progress, sync status |
-| `PhoneToday.dc.html` | Phone · Today | 390×844 | Large title, four-way verdict filter, Canada list first, floating glass tab bar |
-| `PhoneJob.dc.html` | Phone · Job detail | 390×844 | Score and verdict, must-haves, collapsed nice-to-haves, pinned actions: "Build resume on my Mac", "Mark applied", "Not for me" |
-| `Foundations.dc.html` | Foundations | 1440 wide | Colour tokens, type scale, spacing, radii, controls and the do and don't list |
+| `Main.dc.html` | Inbox, light | 1440×900 | Sidebar (five working sections, Reports, Setup, the status footer) · toolbar: search, Filter, Sort, Find new jobs · the list: Decide, Needs a full read, No from the AI · the job pane: title, Build / Save / Skip / Open posting with their keys, the verdict card, must-haves and nice-to-haves with evidence, where it's posted, the posting |
+| `InboxDark.dc.html` | Inbox, dark, while finding jobs | 1440×900 | The same screen in dark mode; the footer shows a run with its meter and Stop |
+| `InboxZero.dc.html` | Inbox, nothing to decide | 1440×900 | The empty state in the list; the pane shows Today: counts, what's due, what's saved |
+| `Job.dc.html` | Job, full width | 1440×900 | The job after Return: Inbox back button, Previous and Next, the whole posting |
+| `Resumes.dc.html` | Resumes | 1440×900 | Builds grouped Building, Today, Yesterday · the resume page: Mark applied, Open posting, Save PDF, Build again, Resume / Cover letter, the PDF, the inspector (match, build, selected line, checks, Be ready to discuss) |
+| `MenuBar.dc.html` | Menu bar item | 380×520 | To decide, need a full read, verdict tiles, new since you looked, a running build, Find new jobs, Open Kairos |
+| `Applied.dc.html` | Applied | 1440×900 | Scope control (Waiting, In progress, Closed, All) · the table · the application pane: status with Move to, next step, follow-up, timeline, notes |
+| `Interviews.dc.html` | Interviews | 1440×900 | The board of Screen, Interview and Offer · the same application pane |
+| `Sources.dc.html` | Sources | 1440×900 | Yours, Catalog, All · the companies table · the source pane: status, open roles for you, what the filters dropped, history · Add |
+| `Settings.dc.html` | Settings, Search | 1440×900 | A left list (General, Search, AI, Account) · the Search form: roles, titles, skipped titles, levels, where, limits |
+| `MasterResume.dc.html` | Master resume | 1440×900 | Contact, About you, Experience, Skills as hairline sections · readiness in the inspector |
+| `FilteredOut.dc.html` | Filtered out | 1440×900 | Reasons with counts · the dropped jobs with Bring back · Change levels |
+| `Improve.dc.html` | Improve | 1440×900 | Fixes ranked by the verdicts they could move · the detail: what your resume shows, what the jobs ask |
 
 ## Rules that hold everywhere
 
-1. **Verdicts:** Yes is green, Maybe is amber and No is grey. Always pair the colour with its icon and its word, and never use colour alone. "No" rows are dimmed with the `ink-dimmed` colour, not with opacity.
-2. **One accent:** blue (`accent`) marks only the primary action and the current selection. Allow one primary button per view.
-3. **Glass on navigation only:** the sidebar, toolbar controls, the menu bar popover and the phone tab bar. Content panels are solid.
-4. **Avoid:** purple or indigo, gradients, emoji, left-border accent cards, fake status bars and oversized padding.
-5. **Contrast:** text needs at least 4.5:1 in both themes. Every text pair in `tokens.json` passes; ratios are in each token's `usage`. Phone touch targets are at least 44 px.
-6. **Requirement states:** a solid green check means Covered. A dashed grey circle means Missing. The meta line always names the matched skill, for example "Covered · Matched: RabbitMQ, an equivalent".
-7. **Skill chips:** Proven chips are solid and Can discuss chips are dashed. Metric chips are square-cornered with a small chart mark.
-8. **Resumes:** they only claim Proven skills. Can discuss skills appear only in Stretch mode, and each one goes on that build's "Be ready to discuss" list.
+1. **Verdicts:** Yes is green, Maybe is amber and No is grey. Always pair the colour with its icon and its word, and never use colour alone. "No" rows, skipped jobs and applied jobs are dimmed with `ink-dimmed`, not with opacity.
+2. **One accent:** blue (`accent`) fills only the one primary button a view allows and the selected segment; `accent-tint` the selected row; `accent-text` links. Nothing else is blue.
+3. **Glass on navigation only:** the sidebar, toolbar controls, the menu bar popover and the phone tab bar. Content panels are solid `surface`.
+4. **Quiet surfaces:** cards are `surface-raised` with a `separator` hairline, never a filled grey box without an edge. Shadows only on board cards and popovers.
+5. **One key per decision,** shown on its button as a key cap: B build, S save, X skip, O open posting, A mark applied, V verdict, R re-evaluate; ↑↓ move; Return opens full width; Esc goes back; ⌘Z undoes a save or skip; ⌘R finds new jobs; ⌘1 to ⌘5 switch sections.
+6. **One status line:** the sidebar footer says what Kairos is doing, with Stop. No other screen announces a run, except the resume page for its own build.
+7. **Avoid:** purple or indigo, gradients, emoji, left-border accent cards, fake status bars, oversized padding, sentences that explain the mechanism on a working screen (put provenance in a tooltip, cost on the control).
+8. **Contrast:** text needs at least 4.5:1 in both themes and control outlines 3:1. Every text pair in `tokens.json` passes; ratios are in each token's `usage`. Phone touch targets are at least 44 px.
+9. **Requirement states:** a solid green check means Shown. An amber half circle means Partly shown. A dashed grey circle means Not shown. The evidence line names what matched, for example "Shown · RabbitMQ".
+10. **Skill chips:** Proven chips are solid and Can discuss chips are dashed. Metric chips are square-cornered with a small chart mark.
+11. **Resumes:** they only claim Proven skills. Can discuss skills appear only in Stretch mode, and each one goes on that build's "Be ready to discuss" list.
 
 ## Type
 
-The app uses SF Pro (the system font). The scale lines up with the macOS text styles:
+The app uses SF Pro (the system font). The scale lines up with the macOS text styles, so text follows the user's size settings; the two scores are fixed.
 
 | Role | Size / line height | Weight | macOS style |
 | --- | --- | --- | --- |
-| Title 1 | 22/28 | Bold | `.title` |
-| Title 2 (inspector heading) | 17/22 | Bold | `.title2` |
-| Title 3 (window title, section) | 15/20 | Bold | `.title3` |
-| Headline (row title) | 13/18 | Semibold | `.headline` |
+| Page title (column title) | 26/32 | Bold | `.largeTitle` |
+| Title 1 (pane title) | 22/28 | Bold | `.title` |
+| Title 2 (section heading) | 17/22 | Semibold | `.title2` |
+| Headline (row title, labels) | 13/18 | Semibold | `.headline` |
 | Body | 13/18 | Regular | `.body` |
 | Callout (meta line) | 12/16 | Regular | `.callout` |
-| Caption (table header) | 11/14 | Semibold | `.subheadline` |
-| Score | 28/32 | Bold, tabular figures | custom |
-| Phone large title / body | 32/38 Bold · 15/20 | | web only |
-| Resume, Harvard (builds use it) and the cover letter | Liberation Serif (Times New Roman metrics), 11 pt throughout: name and section labels bold capitals, labels over a 0.5 pt rule; ¾ in margins; plain contact line | | PDF only |
-| Resume, Classic | Source Serif 4: name 22, body 10.5/14, section labels 9.5 caps | | PDF only |
+| Caption (group and column headers, key caps) | 11/14 | Medium | `.subheadline` |
+| Score (pane) | 24/28 | Bold, tabular figures | custom |
+| Score, small (rows) | 15/20 | Bold, tabular figures | custom |
+| Mono (model names, masked keys) | 12/16 | Regular | `.callout`, monospaced |
+| Phone and resume styles | as in `tokens.json` | | web and PDF only |
 
 Use tabular figures for every number that lines up in a column: scores, counts and times.
 
 ## Spacing and radii
 
-- **Spacing:** 4 px base (4, 8, 12, 16, 20, 24).
-- **Layout:** panel padding 18 to 20 px · toolbar 52 px tall · desktop rows 48 px · sidebar items 30 px · phone rows 84 px.
+- **Spacing:** 4 px base (4, 8, 12, 16, 20, 24, 32). `space-7` (32) is the margin around a pane's content; `space-6` (24) between sections; `space-4` (16) is a row's side padding.
+- **Layout:** rows 36 px (48 for two-line table rows) · sidebar items 28 px · the list column 320 to 420 px · the pane at least 480 px · forms 640 px · the toolbar is the system's.
 - **Radii:**
 
   | Radius | Used on |
   | --- | --- |
-  | 6 | metric chips |
-  | 8 | fields and pop-ups |
-  | 10 | rows and cards |
-  | 12 to 14 | grouped boxes |
+  | 4 | key caps |
+  | 6 | metric chips and badges |
+  | 8 | fields, pop-ups, selected rows |
+  | 10 | cards |
+  | 12 | grouped boxes, tables, sheets |
   | 18 to 20 | sidebar and popover |
   | capsule | buttons, segmented controls, verdict pills and skill chips |
 
+  On macOS 26 nested corners are concentric: a card inside a group box takes the group's radius minus the padding.
+
 ## Platform mapping
 
-### macOS app (SwiftUI, if that's the stack)
+### macOS app (SwiftUI)
 
-- **Layout:** use `NavigationSplitView` for the sidebar and content, and `.inspector` for the right-hand panel. Put toolbar items in `.toolbar`.
+- **Layout:** `NavigationSplitView` for the sidebar and content. Inside a section, the list and the pane are one content panel split by a hairline (`ListPaneLayout`), not a third navigation column. `.inspector` for the master resume's readiness and the resume page's details. Put toolbar items in `.toolbar`; the sidebar footer is a `safeAreaInset`.
 - **Glass:** built this way, the sidebar and toolbar get Liquid Glass from the system on macOS 26. Don't hand-draw glass, and don't put glass on content.
 - **Controls:**
-  - verdict filter and Full / Lite: `Picker` with `.segmented` style
+  - scopes (Waiting · In progress · Closed · All; Yours · Catalog · All) and Resume / Cover letter: `Picker` with `.segmented` style
   - switches: `Toggle` with `.switch` style
   - status and model choices: pop-up `Picker`
-  - Today list: `List` or `Table` with Canada and United States sections
+  - lists: `List` with 36 pt rows; tables with several columns (Applied, Sources): `Table`
+  - decisions: `Button` with the key cap at the trailing edge, one `.borderedProminent` per view; shortcuts through `.keyboardShortcut` and the Job menu
 - **Menu bar:** `MenuBarExtra` with `.menuBarExtraStyle(.window)`.
-- **Colours:** one Asset Catalog colour set per token in `tokens.json`, with Any and Dark appearances.
+- **Colours:** one Asset Catalog colour set per token in `tokens.json`, with Any and Dark appearances, generated by `scripts/gen-tokens.swift`.
 - **Icons:** use SF Symbols:
 
   | Use | Symbol |
   | --- | --- |
-  | Yes | `checkmark.circle` |
-  | Maybe | `circle.lefthalf.filled` |
+  | Yes / Shown | `checkmark.circle` (filled for Shown) |
+  | Maybe / Partly shown | `circle.lefthalf.filled` |
   | No | `minus.circle` |
-  | Run now | `arrow.clockwise` |
-  | Source error | `exclamationmark.triangle.fill` |
+  | Not shown | `circle.dashed` |
+  | Inbox · Saved · Resumes · Applied · Interviews | `tray` · `bookmark` · `doc.text` · `paperplane` · `person.2` |
+  | Improve · Filtered out · Skipped | `chart.line.uptrend.xyaxis` · `line.3.horizontal.decrease` · `minus.circle` |
+  | Master resume · Sources · Settings | `person.text.rectangle` · `antenna.radiowaves.left.and.right` · `gearshape` |
+  | Find new jobs, re-evaluate | `arrow.clockwise` |
+  | Follow-up due | `bell` |
+  | Source error, failed build | `exclamationmark.triangle.fill` |
 
   For the other icons, pick the closest match to the drawn one.
-- **Resume PDF:** bundle Source Serif 4 (SIL Open Font License) for rendering, or use the system New York serif if you'd rather not bundle a font.
+- **Resume PDF:** bundled Liberation Serif for the Harvard template, Source Serif 4 (SIL Open Font License) for Classic.
 
 ### Phone web app
 
 - **Colours:** expose `tokens.json` as CSS custom properties, with dark values under `prefers-color-scheme: dark`.
 - **Fonts:** use the `-apple-system, BlinkMacSystemFont, system-ui` font stack.
 - **Tab bar and actions:** the tab bar floats above the content and pads with `env(safe-area-inset-bottom)`. The job detail screen pins its actions to the bottom.
-- **Don't draw:** a status bar or keyboard.
+- **Don't draw:** a status bar or keyboard. The phone screens are not redrawn in v2; use `v1/screens/Phone*.dc.html` with the v2 tokens.
 
 ## Logo
 
@@ -147,15 +162,15 @@ The lockup files use live text, so on a machine without the font installed they 
 
 ## Sample data
 
-The screens use a fictional persona, Jordan Rivera (backend developer in Toronto), and fictional companies (Northline Freight, Maplepay, Tidewater Health and others).
+The screens use a fictional persona, Jordan Rivera (backend developer in Toronto), and fictional companies (Northline Freight, Maplepay, Tidewater Health and others). The counts on the v2 screens are the owner's real ones from 2026-10-26.
 
 - Use them for previews, fixtures and tests only. Never ship them as real data.
-- The job boards (Greenhouse, Lever, Ashby, Workday, Job Bank, Wellfound, Hacker News, Remotive) are real services.
-- So are the AI providers (Gemini, Ollama). The model names on the Settings screen are mockup examples, so check the current names before hard-coding any.
+- The job boards (Greenhouse, Lever, Ashby, Adzuna and the rest) are real services.
+- So are the AI providers (Gemini, Ollama). The model names on the screens are examples, so check the current names before hard-coding any.
 
 ## Known gaps
 
-- **Dark mode:** only Today is drawn in dark. Derive the other screens from the dark values in `tokens.json`. The phone and the menu bar popover aren't drawn in dark at all.
-- **Control outlines are too faint:** text-field borders (`#C9C9CF`) and the off-switch track (`#D1D1D6`) are under the 3:1 contrast needed for control outlines. System controls in the macOS app handle this for you. In the web app, use `field-border-strong` from `tokens.json` (`#86868D` light, `#7C7C83` dark).
-- **Collapsed sections:** the United States section in the phone Today list and the phone Nice-to-haves section are drawn collapsed.
-- **Sign-in buttons:** "Continue with Google" and "Continue with GitHub" are text-only placeholders. Use each provider's official sign-in button assets.
+- **Dark mode:** only the Inbox is drawn in dark. Derive the other screens from the dark values in `tokens.json`.
+- **Settings:** only the Search page is drawn. General, AI and Account reuse its form pattern.
+- **Saved and Skipped:** not drawn; they are the Inbox's list and pane with their own title and actions (Skipped shows Bring back instead of Skip).
+- **Phone and the menu bar in dark:** not drawn.

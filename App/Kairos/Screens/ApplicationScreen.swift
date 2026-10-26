@@ -133,12 +133,12 @@ struct ApplicationScreen: View {
             .fixedSize()
         }
         .padding(Spacing.space4)
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
     }
 
     private func followUp(_ application: Application) -> some View {
         VStack(alignment: .leading, spacing: Spacing.space2) {
-            Text("Follow-up").font(TypeStyle.title3).foregroundStyle(Color(.ink))
+            Text("Follow-up").font(TypeStyle.title2).foregroundStyle(Color(.ink))
             if let due = application.nextActionAt {
                 Label(
                     "\(application.nextAction ?? "Follow up") · \(due.formatted(date: .complete, time: .shortened))",
@@ -165,7 +165,7 @@ struct ApplicationScreen: View {
 
     private func timeline(_ application: Application) -> some View {
         VStack(alignment: .leading, spacing: Spacing.space3) {
-            Text("Timeline").font(TypeStyle.title3).foregroundStyle(Color(.ink))
+            Text("Timeline").font(TypeStyle.title2).foregroundStyle(Color(.ink))
             VStack(alignment: .leading, spacing: Spacing.space3) {
                 ForEach(events) { event in
                     HStack(alignment: .firstTextBaseline, spacing: Spacing.space3) {
@@ -195,19 +195,19 @@ struct ApplicationScreen: View {
             }
             .padding(Spacing.space4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+            .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
         }
     }
 
     private func notesSection(_ application: Application) -> some View {
         VStack(alignment: .leading, spacing: Spacing.space2) {
-            Text("Notes").font(TypeStyle.title3).foregroundStyle(Color(.ink))
+            Text("Notes").font(TypeStyle.title2).foregroundStyle(Color(.ink))
             TextEditor(text: $notes)
                 .font(TypeStyle.body)
                 .frame(minHeight: 120)
                 .scrollContentBackground(.hidden)
                 .padding(Spacing.space2)
-                .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
+                .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
                 // Saved a moment after you stop typing.
                 .task(id: notes) {
                     try? await Task.sleep(for: .seconds(1))

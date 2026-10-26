@@ -21,7 +21,7 @@ struct EntryEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.space5) {
             Text(isNew ? "Add \(entry.kind.itemName.lowercased())" : "Edit \(entry.kind.itemName.lowercased())")
-                .font(TypeStyle.title3).foregroundStyle(Color(.ink))
+                .font(TypeStyle.title2).foregroundStyle(Color(.ink))
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.space5) {
                     LazyVGrid(columns: columns, alignment: .leading, spacing: 14) { fields }
