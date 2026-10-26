@@ -168,6 +168,36 @@
                         .frame(width: 1_200, height: 700),
                     to: folder.appending(path: "job-adzuna-\(name).png"), appearance: appearance)
             }
+            // 2026-10-26: Review's screening banner above an empty Yes list, in each of its states.
+            let waitingJobs = today.model.jobs.map { job in
+                var waiting = job
+                if job.verdictSource == .analysis {
+                    waiting.verdict = nil
+                    waiting.verdictSource = nil
+                }
+                return waiting
+            }
+            var running = ScreeningRun.Progress()
+            running.total = 436
+            running.done = 120
+            (running.yes, running.maybe, running.no) = (9, 21, 90)
+            var stopped = running
+            stopped.phase = .finished
+            stopped.stopped = Budget.reachedMessage + "; the rest wait for the next run."
+            let banners: [(String, ScreeningRun.Progress?, Bool)] = [
+                ("no-ai", nil, false), ("ready", nil, true), ("running", running, true), ("stopped", stopped, true),
+            ]
+            for (state, progress, withAI) in banners {
+                let model = AppModel(
+                    preview: waitingJobs, screenings: [:], sources: today.model.sources, resume: resume,
+                    ai: withAI ? ai : nil, screening: progress)
+                for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+                    render(
+                        ReviewView(filter: .yes).environment(model).frame(width: 1_200, height: 420)
+                            .background(Color(.surface)),
+                        to: folder.appending(path: "review-banner-\(state)-\(name).png"), appearance: appearance)
+                }
+            }
             // T45 and ADR-016: applications at every stage, one with a follow-up due today.
             let (tracked, timeline) = sampleApplications(jobs: today.model.jobs)
             let tracking = AppModel(

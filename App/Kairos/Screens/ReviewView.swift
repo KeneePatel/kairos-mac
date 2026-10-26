@@ -10,7 +10,8 @@ import Tailoring
 /// by country in your order. Yes, Maybe and No are what's left to decide; All adds the jobs you've
 /// applied to or marked "Not for me" (dimmed) and those waiting for the AI. What your filters
 /// dropped is in Filtered out. Choosing a job opens it full width. Build resumes queues one for
-/// every Yes or every Maybe job that has none, after saying what it costs.
+/// every Yes or every Maybe job that has none, after saying what it costs. Jobs waiting for the AI
+/// are screened from the banner above the list; Re-screen all is in More (2026-10-26).
 struct ReviewView: View {
     /// A "Build resumes" choice waiting for you to confirm it.
     struct BulkRequest {
@@ -43,33 +44,19 @@ struct ReviewView: View {
                 .toolbar {
                     ToolbarItem(placement: .principal) { filterPicker }
                     ToolbarItem(placement: .primaryAction) { buildMenu }
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            Task {
-                                callsNeeded = await model.analysesNeeded()
-                                if callsNeeded == 0 { model.screenAgain() } else { confirmingRescreen = true }
-                            }
-                        } label: {
-                            Label("Re-screen all", systemImage: "arrow.triangle.2.circlepath")
-                                .labelStyle(.titleAndIcon)
-                        }
-                        .disabled(model.isFetching || model.jobs.isEmpty)
-                        .help(
-                            "Applies your current settings to every job again. Jobs analysed with the current prompt keep their analysis; the rest are sent to the AI."
-                        )
-                    }
+                    ToolbarItem(placement: .primaryAction) { moreMenu }
                 }
                 .navigationDestination(for: JobID.self) { JobScreen(id: $0) }
         }
         .confirmationDialog(
-            "Re-screen all jobs?", isPresented: $confirmingRescreen, titleVisibility: .visible
+            "Re-screen every job?", isPresented: $confirmingRescreen, titleVisibility: .visible
         ) {
             Button("Re-screen, using about \(callsNeeded) AI call\(callsNeeded == 1 ? "" : "s")") {
                 model.screenAgain()
             }
         } message: {
             Text(
-                "\(callsNeeded) job\(callsNeeded == 1 ? " hasn't" : "s haven't") been analysed with the current prompt, so each costs one AI call from your daily budget. The rest reuse their analysis for free."
+                "Every job is judged again with your current settings, and keeps its verdict until it gets a new one. \(callsNeeded) job\(callsNeeded == 1 ? " hasn't" : "s haven't") been analysed with the current prompt, so each costs one AI call from your daily budget. The rest reuse their analysis for free. To screen only the jobs waiting for the AI, use Screen them above the list."
             )
         }
         .confirmationDialog(
@@ -105,20 +92,30 @@ struct ReviewView: View {
         }
     }
 
+    /// The banner stays at the top; the list, or its empty state, fills the rest (an empty state
+    /// alone used to centre the banner with it, 2026-10-26).
     @ViewBuilder private var content: some View {
         VStack(spacing: 0) {
-            if model.waitingForAI > 0 {
-                Label(
-                    "\(model.waitingForAI) job\(model.waitingForAI == 1 ? " is" : "s are") waiting for the AI. Add a key in Settings, AI providers, then choose Re-screen all.",
-                    systemImage: "hourglass"
-                )
-                .font(TypeStyle.callout).foregroundStyle(Color(.ink))
-                .padding(.horizontal, Spacing.space4).padding(.vertical, Spacing.space2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.maybeBg))
-            }
-            list
+            ScreeningBanner()
+            list.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    /// Actions you rarely need. Re-screen all judges every job again after you change settings;
+    /// the waiting jobs alone are screened from the banner.
+    private var moreMenu: some View {
+        Menu {
+            Button("Re-screen all jobs…") {
+                Task {
+                    callsNeeded = await model.analysesNeeded()
+                    if callsNeeded == 0 { model.screenAgain() } else { confirmingRescreen = true }
+                }
+            }
+            .disabled(model.isFetching || model.jobs.isEmpty)
+        } label: {
+            Label("More", systemImage: "ellipsis.circle")
+        }
+        .help("More actions")
     }
 
     @ViewBuilder private var list: some View {
@@ -144,10 +141,7 @@ struct ReviewView: View {
 
     private var emptyMessage: String {
         if model.sources.isEmpty { return "Add a company in Find jobs, then choose Find new jobs." }
-        if model.waitingForAI > 0 {
-            return
-                "\(model.waitingForAI) jobs passed your filters and wait for the AI. Add a key in Settings, then choose Re-screen all."
-        }
+        if model.isScreening || model.waitingForAI > 0 { return "Jobs show up here as the AI screens them." }
         switch filter {
         case .yes, .maybe:
             return "None right now. No shows what the AI ruled out, and Filtered out what your filters dropped."

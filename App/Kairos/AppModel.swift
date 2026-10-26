@@ -77,9 +77,13 @@ final class AppModel {
         init(
             preview jobs: [Job], screenings: [String: ScreeningRecord], sources: [Source],
             preferences: SearchPreferences = SearchPreferences(), profile: WorkProfile = WorkProfile(),
-            stretch: StretchSettings = StretchSettings(), resume: ResumeModel? = nil, applications: [Application] = []
+            stretch: StretchSettings = StretchSettings(), resume: ResumeModel? = nil, applications: [Application] = [],
+            ai: AISettingsModel? = nil, screening: ScreeningRun.Progress? = nil
         ) {
             self.resume = resume
+            self.ai = ai
+            self.screening = screening
+            isFetching = screening?.phase == .running
             self.jobs = jobs
             self.screenings = screenings
             self.sources = sources
@@ -477,37 +481,27 @@ final class AppModel {
         await reload()
         switch outcome {
         case .verdict: return nil
-        case .failed: return "It's back in Review. The AI couldn't analyse it just now; Re-screen all tries again."
+        case .failed:
+            return "It's back in Review. The AI couldn't analyse it just now; Screen waiting jobs there tries again."
         case .stopped(let reason): return "It's back in Review, waiting: \(reason)"
         }
     }
 
     /// "Re-check filters": your current filters on every job, with no AI calls. A job whose stored
-    /// analysis still applies keeps its verdict; one newly let through waits for the AI.
+    /// analysis still applies gets its verdict from it; one newly let through waits for the AI; the
+    /// rest keep theirs.
     func recheckFilters() {
-        guard let db, !isFetching else { return }
-        isFetching = true
-        screening = nil
-        let run = ScreeningRun(db: db, router: nil)
-        fetchTask = Task { [weak self] in
-            _ = try? await JobRepository(db).clearScreening()
-            for await update in run.start() {
-                self?.screening = update
-                if update.done % 25 == 0 { await self?.reload() }
-            }
-            self?.isFetching = false
-            await self?.reload()
-        }
+        runScreening(.everything, router: nil, reloadEvery: 25)
     }
 
-    /// Jobs that would need the AI on a Re-screen all: those in Review with no analysis from the
-    /// current prompt. Each is one call.
+    /// Jobs that would need the AI on a Re-screen all: those in Review, still posted, with no
+    /// analysis from the current prompt. Each is one call.
     func analysesNeeded() async -> Int {
         guard let db else { return 0 }
         let rows = try? await db.query(
             """
             SELECT COUNT(*) AS n FROM job j WHERE j.deleted = 0 AND j.state IN ('new', 'shortlisted')
-              AND (j.verdict_source IS NULL OR j.verdict_source = 'analysis')
+              AND j.closed_at IS NULL AND (j.verdict_source IS NULL OR j.verdict_source = 'analysis')
               AND NOT EXISTS (SELECT 1 FROM job_analysis a WHERE a.job_id = j.id AND a.deleted = 0
                 AND a.prompt_version = ?)
             """, [.integer(Int64(AnalyzeJobTask.promptVersion))])
@@ -582,8 +576,21 @@ final class AppModel {
         return analysed ? nil : "This job needs an analysis first: Re-evaluate it, with an AI key set."
     }
 
-    /// New jobs that passed the prefilter and still wait for an analysis.
-    var waitingForAI: Int { jobs.count { $0.verdict == nil && $0.state == .new } }
+    /// New jobs, still posted, that passed the prefilter and wait for an analysis: what Screen
+    /// waiting jobs screens. A job no longer posted never reaches the AI, so it isn't counted.
+    var waitingForAI: Int { jobs.count { $0.verdict == nil && $0.state == .new && $0.isOpen } }
+
+    /// Whether a model is set up to analyse jobs: analyzeJob's route names a provider with a key, or
+    /// one that needs none (Ollama on this Mac).
+    var canAnalyse: Bool {
+        guard let ai, let chain = ai.settings.routes[TaskID.analyzeJob.rawValue] else { return false }
+        return chain.contains { ref in
+            ai.settings.provider(ref.provider).map { !$0.preset.needsKey || !$0.keyNames.isEmpty } ?? false
+        }
+    }
+
+    /// The screening running now, as opposed to a fetch's boards.
+    var isScreening: Bool { isFetching && screening?.phase == .running }
 
     func screening(for job: Job) -> ScreeningRecord? { screenings[job.id.rawValue] }
 
@@ -954,19 +961,32 @@ final class AppModel {
         try? await PrivateSettingsRepository(db).save(profile, for: WorkProfile.storageKey)
     }
 
-    /// Screens new jobs again with your current settings. Stored analyses are reused, so only jobs
-    /// never analysed cost an AI call. Your own verdicts stay.
+    /// Screens the jobs waiting for the AI, picking up where a stopped run left off (2026-10-26).
+    /// Jobs with a verdict are left alone, so each waiting job costs at most one AI call.
+    func screenWaiting() {
+        runScreening(.waiting, router: ai?.router())
+    }
+
+    /// Re-screen all: every new job judged again with your current settings, in place, so each keeps
+    /// its verdict until it gets a new one. Stored analyses are reused, so only jobs never analysed
+    /// with the current prompt cost an AI call. Your own verdicts stay.
     func screenAgain() {
+        runScreening(.everything, router: ai?.router())
+    }
+
+    /// One screening run, its progress in `screening`, the lists refreshed now and then. Stop it
+    /// with `stopFetch()`.
+    private func runScreening(_ scope: ScreeningRun.Scope, router: LLMRouter?, reloadEvery: Int = 5) {
         guard let db, !isFetching else { return }
         isFetching = true
         screening = nil
-        let run = ScreeningRun(db: db, router: ai?.router())
+        let run = ScreeningRun(db: db, router: router, scope: scope)
         fetchTask = Task { [weak self] in
-            _ = try? await JobRepository(db).clearScreening()
             for await update in run.start() {
                 self?.screening = update
-                if update.done % 5 == 0 { await self?.reload() }
+                if update.done % reloadEvery == 0 { await self?.reload() }
             }
+            if Task.isCancelled { self?.screening?.phase = .cancelled }
             self?.isFetching = false
             await self?.reload()
         }

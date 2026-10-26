@@ -119,9 +119,16 @@ struct FetchView: View {
                 Text(
                     model.waitingForAI == 0
                         ? "Every job that passed your filters has a verdict."
-                        : "They're analysed on the next run once an AI key is set."
+                        : model.canAnalyse
+                            ? "Find new jobs screens them too, or screen them now."
+                            : "Add an AI key in Settings to screen them."
                 )
                 .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                if model.waitingForAI > 0, model.canAnalyse {
+                    Button("Screen them now") { model.screenWaiting() }
+                        .buttonStyle(.link)
+                        .disabled(model.isFetching)
+                }
             }
         }
     }

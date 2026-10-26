@@ -3,12 +3,23 @@ import LLM
 import Screening
 import Store
 
-/// Screens every new job that has no verdict yet (SPEC §5.2, steps 4–7): the prefilter first, for
-/// all of them; then one analysis per survivor (a stored one is reused while the prompt is the
-/// same), a few at a time; then the verdict and rank. Progress arrives as an `AsyncStream`;
-/// stopping the stream cancels the run. Jobs it can't analyse now keep no verdict and wait for the
-/// next run.
+/// Screens new jobs (SPEC §5.2, steps 4–7): the prefilter first, for all of them; then one
+/// analysis per survivor (a stored one is reused while the prompt is the same), a few at a time;
+/// then the verdict and rank. By default it screens the jobs with no verdict yet; `.everything`
+/// judges every job again in place (Re-screen all). Progress arrives as an `AsyncStream`; stopping
+/// the stream cancels the run. Jobs it can't analyse now keep the verdict they had, or none, and
+/// wait for the next run.
 public struct ScreeningRun: Sendable {
+    /// Which jobs a run screens.
+    public enum Scope: Sendable, Equatable {
+        /// New jobs with no verdict yet: just fetched, or left waiting for the AI.
+        case waiting
+        /// Every new job your filters or the AI judged, judged again with your current settings
+        /// (never one you judged yourself). Each keeps its verdict until it gets a new one, so
+        /// nothing disappears while the run goes, or if it stops (2026-10-26).
+        case everything
+    }
+
     public struct Progress: Sendable, Equatable {
         public enum Phase: Sendable, Equatable { case running, finished, cancelled }
         public var phase: Phase = .running
@@ -24,6 +35,8 @@ public struct ScreeningRun: Sendable {
         public var failed = 0
         /// Left without a verdict because analysis stopped (see `stopped`).
         public var waiting = 0
+        /// Re-screen all only: kept the verdict they had, because the AI couldn't judge them again.
+        public var kept = 0
         public var yes = 0
         public var maybe = 0
         /// Includes the prefiltered.
@@ -57,16 +70,19 @@ public struct ScreeningRun: Sendable {
 
     let db: Database
     let router: LLMRouter?
+    let scope: Scope
     let maxConcurrent: Int
     let now: @Sendable () -> Date
 
-    /// `router` nil means no AI is set up: only the prefilter runs. Two analyses at a time matches
-    /// the client's concurrency cap (SPEC §5.5).
+    /// `router` nil means no AI is set up: only the prefilter runs, and stored analyses still decide.
+    /// Two analyses at a time matches the client's concurrency cap (SPEC §5.5).
     public init(
-        db: Database, router: LLMRouter?, maxConcurrent: Int = 2, now: @escaping @Sendable () -> Date = { Date() }
+        db: Database, router: LLMRouter?, scope: Scope = .waiting, maxConcurrent: Int = 2,
+        now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.db = db
         self.router = router
+        self.scope = scope
         self.maxConcurrent = max(1, maxConcurrent)
         self.now = now
     }
@@ -95,7 +111,7 @@ public struct ScreeningRun: Sendable {
         let context = (try? await ScreeningContext.load(from: db)) ?? ScreeningContext()
         // A job no longer posted anywhere isn't worth an AI call (job collection v2).
         let jobs = ((try? await JobRepository(db).jobs(matching: JobFilter(states: [.new], openOnly: true))) ?? [])
-            .filter { $0.verdict == nil }
+            .filter { scope == .everything ? $0.verdictSource != .user : $0.verdict == nil }
             .sorted { ($0.firstSeenAt, $0.title, $0.id.rawValue) < ($1.firstSeenAt, $1.title, $1.id.rawValue) }
         progress.total = jobs.count
         continuation.yield(progress)
@@ -106,7 +122,17 @@ public struct ScreeningRun: Sendable {
         for job in jobs where !Task.isCancelled {
             // A job you brought back from Filtered out skips the filters for good.
             guard !context.broughtBack.contains(job.id), let rejection = prefilter.rejection(for: job) else {
-                survivors.append(job)
+                // Your filters no longer drop it: it leaves Filtered out and waits for its analysis.
+                if job.verdictSource == .prefilter,
+                    (try? await JobRepository(db).clearPrefilterVerdict(for: job.id)) == true
+                {
+                    var cleared = job
+                    cleared.verdict = nil
+                    cleared.verdictSource = nil
+                    survivors.append(cleared)
+                } else {
+                    survivors.append(job)
+                }
                 continue
             }
             try? await ScreeningRepository(db).record(rejection, for: job.id)
@@ -128,7 +154,7 @@ public struct ScreeningRun: Sendable {
         progress.phase = Task.isCancelled ? .cancelled : .finished
         if let runID {
             var stats = Stats(
-                screened: progress.done + progress.waiting, prefiltered: progress.prefiltered,
+                screened: progress.done + progress.waiting + progress.kept, prefiltered: progress.prefiltered,
                 analyzed: progress.analyzed, failed: progress.failed, yes: progress.yes, maybe: progress.maybe,
                 no: progress.no)
             stats.waiting = progress.waiting
@@ -194,14 +220,14 @@ public struct ScreeningRun: Sendable {
         _ continuation: AsyncStream<Progress>.Continuation
     ) async {
         let engine = context.verdictEngine()
-        await withTaskGroup(of: Outcome.self) { group in
+        await withTaskGroup(of: (Job, Outcome).self) { group in
             var pending = jobs[...]
             func startNext() {
                 guard progress.stopped == nil, let job = pending.popFirst() else { return }
-                group.addTask { await screen(job, with: router, context: context, engine: engine) }
+                group.addTask { (job, await screen(job, with: router, context: context, engine: engine)) }
             }
             for _ in 0..<maxConcurrent { startNext() }
-            for await outcome in group {
+            for await (job, outcome) in group {
                 guard !Task.isCancelled else { break }
                 switch outcome {
                 case .verdict(let verdict):
@@ -217,14 +243,18 @@ public struct ScreeningRun: Sendable {
                     progress.done += 1
                 case .stop(let reason):
                     progress.stopped = progress.stopped ?? reason
-                    progress.waiting += 1
+                    if job.verdict == nil { progress.waiting += 1 } else { progress.kept += 1 }
                 case .waiting:
-                    progress.waiting += 1
+                    if job.verdict == nil { progress.waiting += 1 } else { progress.kept += 1 }
                 }
                 continuation.yield(progress)
                 startNext()
             }
-            if progress.stopped != nil { progress.waiting += pending.count }
+            if progress.stopped != nil {
+                let left = pending.count { $0.verdict == nil }
+                progress.waiting += left
+                progress.kept += pending.count - left
+            }
         }
     }
 

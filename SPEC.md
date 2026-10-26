@@ -243,6 +243,8 @@ flowchart LR
 7. **Rank:** verdict first, then country priority (CA before US), then match. Review's list (Today's until 2026-10-20) and notifications follow this order.
 8. **Notify:** one notification with the counts of new `yes` and `maybe` jobs.
 
+**Screening runs** (changed 2026-10-26). A fetch screens every job still without a verdict, and so does **Screen them**, in the banner above Review's list. It picks up where a stopped run left off and leaves judged jobs alone. **Re-screen all** (Review's More menu, and Settings, Search) judges every job again with your current settings, in place: a job keeps its verdict until it gets a new one, so nothing disappears while it runs or if it stops, and a job the AI can't judge again right now keeps the verdict it had. **Re-check filters** does the same without the AI. None of them changes a verdict you set yourself. Only jobs still posted are screened or counted as waiting.
+
 Job descriptions are **untrusted input** (OWASP LLM01). They sit inside clearly delimited data blocks in prompts. The model never chooses actions, and all of its output goes through schema validation and the verifier before use.
 
 ### 5.3 Tailoring

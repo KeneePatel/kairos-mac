@@ -1034,6 +1034,16 @@ Applications screen couldn't scroll, and applied jobs didn't belong on a board.
       - The board's column headers carry each status's icon next to its word.
       - "Add application" isn't built (applications come from Mark applied, as before).
       - The table has no mockup; it reuses the Review table's type and colours.
+- [x] **A4 · Screening stuck at 462 waiting, and Re-screen all** (M)
+  - **Done 2026-10-26:**
+    - **Cause, from your data:** every job analysis on Oct 26 failed with "invalid output" on all three models in your chain (Gemini Flash-Lite, Ollama Cloud gemma4, local qwen). `--analyze-one` showed why: the reply was cut off at the output limit. analyzeJob allowed 1,500 tokens; long postings need about 4,000 (Kong's 25 requirements took 3,954 tokens, Ontinue's 24 took 3,721). Each failing job then spent a repair call per model, about 4 minutes in all, and stayed waiting, so the count barely moved. Short postings, such as Adzuna snippets, still passed.
+    - **Fix:** the limit is 6,000, enough for the 30 requirements the schema allows at the measured ~160 tokens each with a fifth to spare (a test holds the two together). With it both failing postings analyse on the first model in 7–8 s.
+    - **Why Re-screen all looked like two passes:** it cleared every verdict first, so Review's counts and the sidebar badges dropped to zero and climbed back as the filters, then the stored analyses, judged each job again. Tonight's two runs were stopped part way, which left 24 already-analysed jobs without a verdict. Re-screen all now judges jobs in place (`ScreeningRun.Scope.everything`): each keeps its verdict until it gets a new one, and a stop loses nothing.
+    - **Resume instead of re-screen:** the banner above Review's list says how many jobs wait and what screening them costs today, and **Screen them** screens only those (`Scope.waiting`). While it runs the banner shows progress and Stop (Review had no Stop before). When a run stops early it says why (budget, provider limit, you stopped it). Re-screen all moved into a More menu, since it's for after a settings change. Without an AI key the button opens AI settings. Find jobs' "Waiting for the AI" panel offers the same.
+    - **Banner placement:** it sat in a stack with the list; an empty list's placeholder doesn't fill the height, so the stack centred both. The list area now fills the space below the banner.
+    - **Smaller fixes:** jobs no longer posted aren't counted as waiting (screening never picks them up) or in Re-screen all's call count.
+    - **Debug:** `--screening-report` has a Screening queue section: waiting jobs by posted and analysed, the last screening runs, and two days of job analyses by model and error, with the jobs that failed. `--analyze-one[=words]` runs one analysis on a copy of your database and prints what each model's reply failed.
+    - **Visual differences:** no mockup draws Review's banner. It uses `surface-grouped` while waiting or running and `maybe-bg` when a run stopped early, with `ink` and `ink-secondary` text (at least 5.6:1 in both themes), an SF Symbol, and one plain button, so Review's toolbar keeps no primary button. Snapshots: `review-banner-{no-ai,ready,running,stopped}-{light,dark}`.
 
 ---
 

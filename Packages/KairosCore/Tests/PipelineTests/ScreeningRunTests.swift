@@ -99,9 +99,11 @@ private func job(_ title: String, _ location: String, country: Country = .canada
         descriptionMarkdown: "Build services in Go and PostgreSQL.", firstSeenAt: seenAt.addingTimeInterval(seen))
 }
 
-private func screen(_ db: Database, router: LLMRouter?, maxConcurrent: Int = 2) async -> [ScreeningRun.Progress] {
+private func screen(
+    _ db: Database, router: LLMRouter?, scope: ScreeningRun.Scope = .waiting, maxConcurrent: Int = 2
+) async -> [ScreeningRun.Progress] {
     var updates: [ScreeningRun.Progress] = []
-    for await progress in ScreeningRun(db: db, router: router, maxConcurrent: maxConcurrent).start() {
+    for await progress in ScreeningRun(db: db, router: router, scope: scope, maxConcurrent: maxConcurrent).start() {
         updates.append(progress)
     }
     return updates
@@ -307,6 +309,92 @@ struct ScreeningRunTests {
         #expect(last.failed == 1 && last.yes == 1 && last.phase == .finished && last.stopped == nil)
         let mystery = try await JobRepository(db).jobs().first { $0.title == "Mystery Role" }
         #expect(mystery?.verdict == nil)
+    }
+
+    /// "Screen waiting jobs" (2026-10-26): a run picks up only the jobs still without a verdict, so
+    /// resuming after a stop never spends a call on a job that already has one.
+    @Test func screeningTheWaitingLeavesJudgedJobsAlone() async throws {
+        let db = try await database()
+        let judged = job("Platform Engineer", "Vancouver, BC", region: "BC")
+        let waiting = job("Backend Developer", "Toronto, ON", region: "ON")
+        try await JobRepository(db).upsert([judged, waiting])
+        _ = try await JobRepository(db).setVerdict(.maybe, source: .analysis, rank: 1, for: judged.id)
+        let analyst = FakeAnalyst(["Backend Developer": strong, "Platform Engineer": strong])
+
+        let last = try #require(await screen(db, router: router(db, analyst)).last)
+        #expect(last.total == 1 && last.yes == 1 && analyst.calls == 1)
+        #expect(try await JobRepository(db).job(judged.id)?.verdict == .maybe)
+        #expect(try await JobRepository(db).job(waiting.id)?.verdict == .yes)
+    }
+
+    /// Re-screen all (2026-10-26) judges every job again in place: a job keeps its verdict until it
+    /// gets a new one, so Review's counts never drop to zero mid-run, and one the AI can't judge
+    /// again now (no AI, or a failed call) keeps the verdict it had.
+    @Test func reScreeningKeepsEachVerdictUntilItGetsANewOne() async throws {
+        let db = try await database()
+        let analysed = job("Backend Developer", "Toronto, ON", region: "ON")
+        let older = job("Platform Engineer", "Vancouver, BC", region: "BC")  // judged by an older prompt
+        try await JobRepository(db).upsert([analysed, older])
+        _ = await screen(db, router: router(db, FakeAnalyst(["Backend Developer": strong])))
+        _ = try await JobRepository(db).setVerdict(.maybe, source: .analysis, rank: 1, for: older.id)
+
+        let withoutAI = try #require(await screen(db, router: nil, scope: .everything).last)
+        #expect(withoutAI.total == 2 && withoutAI.analyzed == 1 && withoutAI.yes == 1)
+        #expect(withoutAI.kept == 1 && withoutAI.waiting == 0)
+        #expect(try await JobRepository(db).job(older.id)?.verdict == .maybe)
+
+        let failing = try #require(await screen(db, router: router(db, FakeAnalyst([:])), scope: .everything).last)
+        #expect(failing.failed == 1 && failing.yes == 1)  // the stored analysis still decides the other
+        #expect(try await JobRepository(db).job(older.id)?.verdict == .maybe)
+        #expect(try await JobRepository(db).job(analysed.id)?.verdict == .yes)
+    }
+
+    /// Re-screen all applies changed filters in place: a job they now drop becomes a No, and one
+    /// they used to drop leaves Filtered out and waits for the AI.
+    @Test func reScreeningAppliesChangedFiltersInPlace() async throws {
+        let db = try await database()
+        let backend = job("Backend Developer", "Toronto, ON", region: "ON")
+        let sales = job("Sales Engineer", "Toronto, ON", region: "ON")  // your titles exclude "sales"
+        try await JobRepository(db).upsert([backend, sales])
+        _ = await screen(db, router: router(db, FakeAnalyst(["Backend Developer": strong])))
+        #expect(try await JobRepository(db).job(sales.id)?.verdictSource == .prefilter)
+        var preferences = SearchPreferences()
+        preferences.titleExclude = ["backend"]
+        try await SettingsRepository(db).save(preferences, for: SearchPreferences.storageKey)
+
+        let last = try #require(await screen(db, router: nil, scope: .everything).last)
+        #expect(last.prefiltered == 1 && last.waiting == 1)
+        let dropped = try #require(try await JobRepository(db).job(backend.id))
+        #expect(dropped.verdict == .no && dropped.verdictSource == .prefilter)
+        let letThrough = try #require(try await JobRepository(db).job(sales.id))
+        #expect(letThrough.verdict == nil && letThrough.verdictSource == nil)
+    }
+
+    /// Your own verdict is never screened again, by either scope.
+    @Test func reScreeningNeverTouchesYourVerdict() async throws {
+        let db = try await database()
+        let sales = job("Sales Engineer", "Toronto, ON", region: "ON")
+        try await JobRepository(db).upsert(sales)
+        try await JobRepository(db).setUserVerdict(.yes, rank: 1, for: sales.id)
+
+        let last = try #require(await screen(db, router: nil, scope: .everything).last)
+        #expect(last.total == 0)
+        let yours = try #require(try await JobRepository(db).job(sales.id))
+        #expect(yours.verdict == .yes && yours.verdictSource == .user)
+    }
+
+    /// Stopping a Re-screen all part way leaves every verdict where it was.
+    @Test func stoppingAReScreenLosesNoVerdict() async throws {
+        let db = try await database()
+        let posting = job("Platform Engineer", "Vancouver, BC", region: "BC")
+        try await JobRepository(db).upsert(posting)
+        _ = try await JobRepository(db).setVerdict(.maybe, source: .analysis, rank: 1, for: posting.id)
+        let analyst = FakeAnalyst(["Platform Engineer": strong], delay: .seconds(30))
+        let run = ScreeningRun(db: db, router: router(db, analyst), scope: .everything)
+        for await progress in run.start() where progress.total > 0 {
+            break
+        }
+        #expect(try await JobRepository(db).job(posting.id)?.verdict == .maybe)
     }
 
     @Test func errorsThatHitEveryJobStopAnalysis() {
