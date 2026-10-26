@@ -347,7 +347,8 @@ struct JobPane: View {
     }
 
     private func group(_ title: String, _ items: [JobAnalysis.Requirement]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.space3) {
+        let profile = model.screeningProfile
+        return VStack(alignment: .leading, spacing: Spacing.space3) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title).font(TypeStyle.title2).foregroundStyle(Color(.ink))
                 Spacer()
@@ -355,7 +356,7 @@ struct JobPane: View {
                     .foregroundStyle(Color(.inkSecondary)).monospacedDigit()
             }
             ForEach(Array(items.enumerated()), id: \.offset) { _, requirement in
-                RequirementRow(requirement: requirement) { model.screeningProfile?.describe($0) }
+                RequirementRow(requirement: requirement) { profile?.describe($0) }
             }
         }
     }

@@ -88,6 +88,7 @@ final class AppModel {
             self.jobs = jobs
             self.screenings = screenings
             self.sources = sources
+            sourcesByID = Dictionary(sources.map { ($0.id, $0) }) { first, _ in first }
             self.applications = applications
             searchPreferences = preferences
             workProfile = profile
@@ -136,6 +137,7 @@ final class AppModel {
         guard let db else { return }
         do {
             sources = try await SourceRepository(db).sources()
+            sourcesByID = Dictionary(sources.map { ($0.id, $0) }) { first, _ in first }
             jobs = try await JobRepository(db).jobs()
             applications = try await ApplicationRepository(db).applications()
             lastFetch = try await RunRepository(db).runs(kind: "fetch", limit: 1).first
@@ -292,9 +294,11 @@ final class AppModel {
     /// the company's board.
     func isSnippet(_ job: Job) -> Bool { job.descriptionKind == .snippet || source(job.sourceID)?.kind == .adzuna }
 
-    func source(_ id: UUID) -> Source? {
-        sources.first { $0.id == id }
-    }
+    func source(_ id: UUID) -> Source? { sourcesByID[id] }
+
+    /// Sources by id, for the lookups every row and pane make: a scan of 800 catalog boards per
+    /// job made the Inbox's grouping 13 ms a call (2026-10-26).
+    private(set) var sourcesByID: [UUID: Source] = [:]
 
     /// Each source's last failure in this session's fetch, for the ones that failed.
     var failures: [UUID: String] {
@@ -759,7 +763,17 @@ final class AppModel {
     // MARK: - Builds
 
     /// Your master resume as screening evidence, to quote what showed a requirement.
-    var screeningProfile: ScreeningProfile? { resume.map { ScreeningProfile($0.resume) } }
+    /// Your master resume as the screener reads it, built once per state of the resume: building it
+    /// redacts every line (about 50 ms), and the job pane asked for it once per evidence id, so
+    /// choosing another job held the main thread for 3–4 s (2026-10-26).
+    var screeningProfile: ScreeningProfile? {
+        guard let resume = resume?.resume else { return nil }
+        if let cached = profileCache, cached.resume == resume { return cached.profile }
+        let profile = ScreeningProfile(resume)
+        profileCache = (resume, profile)
+        return profile
+    }
+    @ObservationIgnored private var profileCache: (resume: MasterResume, profile: ScreeningProfile)?
 
     /// Stretch when you've turned it on, otherwise strict.
     var defaultBuildMode: BuildMode { stretch.enabled ? .stretch : .strict }

@@ -20,6 +20,7 @@ struct KairosApp: App {
                 .task { await model.open() }
                 #if DEBUG
                     .task { await DebugLayoutProbe.runIfRequested(model) }
+                    .task { await DebugSelectProbe.runIfRequested(model) }
                 #endif
                 .onOpenURL { url in
                     // kairos:// routes (auth callbacks later, SPEC §5.8) arrive here. Log only the route:
