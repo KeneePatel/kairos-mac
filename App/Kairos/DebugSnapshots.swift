@@ -134,6 +134,9 @@
             ]
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 render(
+                    MenuBarView().environment(today.model).background(Color(.window)),
+                    to: folder.appending(path: "menu-bar-\(name).png"), appearance: appearance)
+                render(
                     JobsView(scope: .inbox).environment(today.model).frame(width: 1_440, height: 640),
                     to: folder.appending(path: "inbox-\(name).png"), appearance: appearance)
                 render(

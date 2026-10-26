@@ -14,7 +14,7 @@ struct KairosApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             RootView()
                 .environment(model)
                 .task { await model.open() }
@@ -70,5 +70,10 @@ struct KairosApp: App {
                     .keyboardShortcut("r", modifiers: [.command, .shift]).disabled(!inList)
             }
         }
+        // The menu bar item (SPEC R2): what waits, what's new, what runs, Find new jobs, Open Kairos.
+        MenuBarExtra("Kairos", image: "MenuBarIcon") {
+            MenuBarView().environment(model)
+        }
+        .menuBarExtraStyle(.window)
     }
 }

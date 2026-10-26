@@ -1094,7 +1094,9 @@ You asked for the whole UI reimagined: every screen rebuilt from the ground up, 
     - **Empty states:** `EmptyState` (a title, one line, at most one button, no icon) replaces the system's placeholder in the job pane, the application pane, the resume page and the reports. The start-up failure keeps the system's.
     - **Checks:** lint, floor guard, deps, design, the app build, `--layout-probe --screens` captures Filtered out and the master resume too (every section fits 960 × 632).
     - **Visual differences from `FilteredOut.dc.html`, `Improve.dc.html` and `MasterResume.dc.html`:** the reasons list and the Improve list are system lists (their selection colour); the Improve detail keeps its grouped boxes; the master resume's sections keep their cards and dividers rather than hairline-only sections.
-- [ ] **V7 · Menu bar item** (S): `MenuBarExtra` window after `MenuBar.dc.html`: to decide, need a read, verdict tiles, new since you looked, a running build, Find new jobs, Open Kairos.
+- [x] **V7 · Menu bar item** (S)
+  - **Done 2026-10-26:** `MenuBarExtra` with the template icon and a window: the app icon and name with Find new jobs (⌘R); "247 to decide" with the full reads, today's new ones and the jobs waiting for the AI, and the three verdicts as tiles with their icons and words; New today (the three best of today's new jobs; a click opens Kairos on that job); the same status line as the sidebar's footer, with Stop and the meter; Open Kairos. The main window has an id so the item can reopen it. Snapshots `menu-bar-{light,dark}`.
+  - **Visual differences from `MenuBar.dc.html`:** no "next check" (there's no scheduler); the counts are the Inbox's rather than the last run's.
 - [ ] **V8 · Docs and design folder** (S): SPEC §4 `app-mac` row and §5.2 screens text, ADR-017 accepted, `design/kairos/README.md` for v2, CLAUDE.md's design rules re-checked, every screen's visual differences from its `.dc.html` listed in this file.
 
 Each slice: Swift Testing for model logic, `--render-snapshots` for its screens, `--layout-probe` at 960 × 600, the full gate, one PR, fast-forward merge.
