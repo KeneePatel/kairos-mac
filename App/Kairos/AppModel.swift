@@ -722,9 +722,19 @@ final class AppModel {
         NSPasteboard.general.setString(job.url, forType: .string)
     }
 
-    /// Applied, for this application (its page selects it from the next slice on).
+    /// The application the Applied table or the Interviews board shows beside the list.
+    var selectedApplication: UUID?
+
+    /// Applied, with this application chosen.
     func openApplication(_ id: UUID) {
+        selectedApplication = id
         section = .applied
+    }
+
+    /// Resumes, with this build chosen.
+    func showResume(_ id: UUID) {
+        selectedBuild = id
+        section = .resumes
     }
 
     enum JobAction { case build, save, skip, openPosting, markApplied, reevaluate }

@@ -204,10 +204,10 @@
                 resume: resume, applications: tracked)
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 render(
-                    AppliedView().environment(tracking).frame(width: 1_200, height: 420),
+                    AppliedView().environment(tracking).frame(width: 1_280, height: 560),
                     to: folder.appending(path: "applied-\(name).png"), appearance: appearance)
                 render(
-                    InterviewsView().environment(tracking).frame(width: 1_000, height: 420),
+                    InterviewsView().environment(tracking).frame(width: 1_280, height: 560),
                     to: folder.appending(path: "interviews-\(name).png"), appearance: appearance)
                 if let first = tracked.first {
                     render(

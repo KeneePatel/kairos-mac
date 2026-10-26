@@ -63,6 +63,7 @@
             let unbuilt = model.reviewJobs(.yes).first { model.latestBuild(for: $0) == nil }
             var shown: [(String, AnyView)] = [
                 ("inbox", AnyView(JobsView(scope: .inbox))), ("resumes", AnyView(ResumesView())),
+                ("applied", AnyView(AppliedView())), ("interviews", AnyView(InterviewsView())),
                 ("improve", AnyView(ImproveView())),
             ]
             if let built {

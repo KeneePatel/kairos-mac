@@ -2,13 +2,14 @@ import AppKit
 import Store
 import SwiftUI
 
-/// Applied (ADR-016): every job you applied to, in a table you sort by any column and search by
-/// company or role. Waiting, In progress and Closed show each stage apart. Select several to move
-/// them together, or open one for its timeline, follow-up and notes. Applications still waiting a
-/// month after they went out can be closed as No reply in one step, after you confirm.
+/// Applied (ADR-016, restyled for UI v2): every job you applied to, in a table you sort by any
+/// column and search by company or role, with the chosen application beside it. Waiting, In
+/// progress and Closed show each stage apart. Select several to move them together. Applications
+/// still waiting a month after they went out can be closed as No reply in one step, after you
+/// confirm.
 struct AppliedView: View {
     @Environment(AppModel.self) private var model
-    @State private var path: [ApplicationRoute] = []
+    @State private var path: [JobID] = []
     @State private var scope = Scope.all
     @State private var search = ""
     @State private var selection: Set<UUID> = []
@@ -57,30 +58,41 @@ struct AppliedView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            content
-                .navigationTitle("Applied")
-                .navigationSubtitle(subtitle)
-                .searchable(text: $search, placement: .toolbar, prompt: "Company or role")
-                .toolbar {
-                    ToolbarItem(placement: .principal) { scopePicker }
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
+            ListPaneLayout(listWidth: 640) {
+                list
+            } pane: {
+                if let id = model.selectedApplication, model.application(id) != nil {
+                    ApplicationPane(id: id) { path.append($0) }
+                } else {
+                    paneEmpty
+                }
+            }
+            .navigationTitle("Applied")
+            .searchable(text: $search, placement: .toolbar, prompt: "Company or role")
+            .toolbar {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    scopePicker
+                    Menu {
+                        Button("Close \(silent.count) silent application\(silent.count == 1 ? "" : "s")…") {
                             closingSilent = true
-                        } label: {
-                            Label("Close silent…", systemImage: "clock.badge.xmark").labelStyle(.titleAndIcon)
                         }
                         .disabled(silent.isEmpty)
-                        .help(
-                            "Moves applications with no reply \(Application.silentAfterDays) days after you sent them to No reply. You can move any of them back."
-                        )
+                    } label: {
+                        Label("More", systemImage: "ellipsis.circle")
                     }
+                    .help("Close applications with no reply for \(Application.silentAfterDays) days")
                 }
-                .navigationDestination(for: ApplicationRoute.self) { route in
-                    switch route {
-                    case .application(let id): ApplicationScreen(id: id)
-                    case .job(let id): JobScreen(id: id)
-                    }
-                }
+            }
+            .navigationDestination(for: JobID.self) { JobScreen(id: $0) }
+        }
+        .onChange(of: selection) { _, ids in
+            if ids.count == 1, let id = ids.first { model.selectedApplication = id }
+        }
+        .task(id: model.applications.map(\.id)) {
+            if model.selectedApplication.map({ model.application($0) == nil }) ?? true {
+                model.selectedApplication = rows.first?.id
+            }
+            if let id = model.selectedApplication, selection != [id] { selection = [id] }
         }
         .confirmationDialog(
             "Close \(silent.count) silent application\(silent.count == 1 ? "" : "s")?", isPresented: $closingSilent,
@@ -96,48 +108,47 @@ struct AppliedView: View {
         }
     }
 
-    @ViewBuilder private var content: some View {
-        if model.applications.isEmpty {
-            ContentUnavailableView {
-                Label("No applications yet", systemImage: "paperplane")
-            } description: {
-                Text("When you apply to a job, choose Mark applied on its page or its resume. It shows up here.")
-                    .foregroundStyle(Color(.inkSecondary))
+    // MARK: - The table
+
+    private var list: some View {
+        VStack(spacing: 0) {
+            ColumnTitle(title: "Applied", line: countLine)
+            if model.applications.isEmpty {
+                empty("No applications yet", "Press A on a resume, or Mark applied on a job, and it shows up here.")
+            } else if rows.isEmpty {
+                empty(
+                    search.isEmpty ? "Nothing \(scope.title.lowercased())" : "No matches",
+                    search.isEmpty ? "Choose another scope above." : "Nothing here matches the search.")
+            } else {
+                table
             }
-        } else if rows.isEmpty, !search.isEmpty {
-            ContentUnavailableView.search(text: search)
-        } else {
-            table
+            Divider()
+            Text("↑↓ move · ↩ open the job · O posting · select several, then Move to in the menu")
+                .font(TypeStyle.caption).foregroundStyle(Color(.inkSecondary)).lineLimit(1)
+                .padding(.horizontal, Spacing.space6).padding(.vertical, Spacing.space3)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
     private var table: some View {
         Table(rows, selection: $selection, sortOrder: $sortOrder) {
             TableColumn("Company", value: \.company) { row in
-                Text(row.company).font(TypeStyle.headline).foregroundStyle(Color(.ink)).lineLimit(1)
+                Text(row.company).font(TypeStyle.headline).foregroundStyle(ink(row)).lineLimit(1)
             }
-            .width(min: 140, ideal: 200)
+            .width(min: 120, ideal: 160)
             TableColumn("Role", value: \.title) { row in
-                Text(row.title).foregroundStyle(Color(.ink2)).lineLimit(1)
+                Text(row.title).foregroundStyle(ink2(row)).lineLimit(1)
             }
-            .width(min: 180, ideal: 320)
+            .width(min: 140, ideal: 220)
             TableColumn("Applied", value: \.appliedAt) { row in
-                Text(row.appliedAt.formatted(date: .abbreviated, time: .omitted)).monospacedDigit()
-                    .foregroundStyle(Color(.ink2))
+                Text(row.appliedAt.formatted(.dateTime.month(.abbreviated).day())).monospacedDigit()
+                    .foregroundStyle(ink2(row))
             }
-            .width(min: 90, ideal: 110)
+            .width(min: 56, ideal: 64)
             TableColumn("Status", value: \.statusOrder) { row in
-                Label(row.status.title, systemImage: row.status.symbol).foregroundStyle(Color(.ink))
+                Label(row.status.title, systemImage: row.status.symbol).foregroundStyle(ink(row)).lineLimit(1)
             }
-            .width(min: 110, ideal: 130)
-            TableColumn("Last change", value: \.statusAt) { row in
-                if row.silent {
-                    Label("\(row.days) days, no reply", systemImage: "clock").foregroundStyle(Color(.maybe))
-                } else {
-                    Text(row.lastChange).foregroundStyle(Color(.inkSecondary))
-                }
-            }
-            .width(min: 110, ideal: 140)
+            .width(min: 96, ideal: 112)
             TableColumn("Follow-up", value: \.followUpOrder) { row in
                 if let due = row.followUp {
                     let today = Calendar.current.isDateInToday(due) || due < Date()
@@ -145,35 +156,40 @@ struct AppliedView: View {
                         today ? "Today" : due.formatted(.dateTime.weekday(.abbreviated).month().day()),
                         systemImage: "bell"
                     )
-                    .foregroundStyle(today ? Color(.maybe) : Color(.inkSecondary))
+                    .foregroundStyle(today ? Color(.maybe) : Color(.inkSecondary)).lineLimit(1)
+                } else if row.silent {
+                    Label("\(row.days) days, no reply", systemImage: "clock").foregroundStyle(Color(.maybe))
+                        .lineLimit(1)
                 } else {
                     Text("—").foregroundStyle(Color(.inkSecondary))
                 }
             }
-            .width(min: 90, ideal: 110)
-            TableColumn("Via", value: \.channel) { row in
-                Text(row.channel).foregroundStyle(Color(.inkSecondary)).lineLimit(1)
-            }
-            .width(min: 80, ideal: 110)
+            .width(min: 88, ideal: 112)
         }
         .contextMenu(forSelectionType: UUID.self) { ids in
             menu(for: ids)
         } primaryAction: { ids in
-            if ids.count == 1, let id = ids.first { path.append(.application(id)) }
+            if ids.count == 1, let id = ids.first, let job = model.application(id).flatMap({ model.job($0.jobID) }) {
+                path.append(job.id)
+            }
+        }
+        .onKeyPress(characters: CharacterSet(charactersIn: "oO")) { _ in
+            guard let id = model.selectedApplication, let job = model.application(id).flatMap({ model.job($0.jobID) })
+            else { return .ignored }
+            model.openPosting(job)
+            return .handled
         }
     }
+
+    private func ink(_ row: AppliedRow) -> Color { row.status.isClosed ? Color(.inkDimmed) : Color(.ink) }
+    private func ink2(_ row: AppliedRow) -> Color { row.status.isClosed ? Color(.inkDimmed) : Color(.ink2) }
 
     /// Open one, its job or its posting; move every chosen row to a status.
     @ViewBuilder private func menu(for ids: Set<UUID>) -> some View {
         let chosen = model.applications.filter { ids.contains($0.id) }
-        if chosen.count == 1, let application = chosen.first {
-            Button("Open") { path.append(.application(application.id)) }
-            if let job = model.job(application.jobID) {
-                Button("Open the job") { path.append(.job(job.id)) }
-                if let url = URL(string: job.url) {
-                    Button("Open posting") { NSWorkspace.shared.open(url) }
-                }
-            }
+        if chosen.count == 1, let application = chosen.first, let job = model.job(application.jobID) {
+            Button("Open the job") { path.append(job.id) }
+            Button("Open posting") { model.openPosting(job) }
             Divider()
         }
         if !chosen.isEmpty {
@@ -201,12 +217,36 @@ struct AppliedView: View {
         .fixedSize()
     }
 
-    /// "13 sent today · 36 this week · 36 in all".
-    private var subtitle: String {
-        let calendar = Calendar.current
-        let today = model.applications.count { calendar.isDateInToday($0.appliedAt) }
-        let week = model.applications.count { $0.appliedAt > Date().addingTimeInterval(-7 * 86_400) }
-        return "\(today) sent today · \(week) this week · \(model.applications.count) in all"
+    /// "38 applications · 32 waiting · 3 in progress · 3 closed".
+    private var countLine: String {
+        let all = model.applications
+        let waiting = all.count { $0.status.stage == .waiting }
+        let progress = all.count { $0.status.stage == .inProgress }
+        let closed = all.count { $0.status.stage == .closed }
+        let today = all.count { Calendar.current.isDateInToday($0.appliedAt) }
+        var parts = ["\(all.count) application\(all.count == 1 ? "" : "s")"]
+        if today > 0 { parts.append("\(today) today") }
+        parts.append("\(waiting) waiting")
+        if progress > 0 { parts.append("\(progress) in progress") }
+        if closed > 0 { parts.append("\(closed) closed") }
+        return parts.joined(separator: " · ")
+    }
+
+    private func empty(_ title: String, _ line: String) -> some View {
+        VStack(spacing: Spacing.space2) {
+            Text(title).font(TypeStyle.title2).foregroundStyle(Color(.ink))
+            Text(line).font(TypeStyle.body).foregroundStyle(Color(.inkSecondary)).multilineTextAlignment(.center)
+        }
+        .padding(Spacing.space7)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var paneEmpty: some View {
+        VStack(spacing: Spacing.space1) {
+            Text("Nothing selected").font(TypeStyle.title2).foregroundStyle(Color(.ink))
+            Text("Choose an application in the table.").font(TypeStyle.body).foregroundStyle(Color(.inkSecondary))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
