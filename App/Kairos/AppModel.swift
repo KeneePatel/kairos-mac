@@ -823,6 +823,9 @@ final class AppModel {
     /// The job's newest build, if it has one.
     func latestBuild(for job: Job) -> BuildRecord? { latestBuilds[job.id.rawValue] }
 
+    /// The job a build was made for, if it's still around.
+    func job(for build: BuildRecord) -> Job? { jobs.first { $0.id.rawValue == build.jobID } }
+
     /// A build's model calls: live while it runs, else replayed from the call log (kept 30 days).
     func activity(for build: UUID) async -> BuildActivity? {
         if let live = buildActivity[build] { return live }

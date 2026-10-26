@@ -18,52 +18,40 @@ struct BulletTraceView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Lines").font(TypeStyle.headline).foregroundStyle(Color(.ink)).padding(.bottom, Spacing.space1)
-                    ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                        Button {
-                            selected = index
-                        } label: {
-                            HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
-                                Text(line.bullet.text).font(TypeStyle.callout).lineLimit(2)
-                                    .multilineTextAlignment(.leading)
-                                    .foregroundStyle(Color(selected == index ? .ink : .ink2))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                if line.bullet.gap {
-                                    Text("Stretch").font(TypeStyle.caption).foregroundStyle(Color(.inkSecondary))
-                                }
+        VStack(alignment: .leading, spacing: Spacing.space5) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Lines").font(TypeStyle.headline).foregroundStyle(Color(.ink)).padding(.bottom, Spacing.space1)
+                ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                    Button {
+                        selected = index
+                    } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
+                            Text(line.bullet.text).font(TypeStyle.callout).lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                                .foregroundStyle(Color(selected == index ? .ink : .ink2))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            if line.bullet.gap {
+                                Text("Stretch").font(TypeStyle.caption).foregroundStyle(Color(.inkSecondary))
                             }
-                            .padding(.horizontal, Spacing.space2).padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: Radius.card)
-                                    .fill(selected == index ? Color(.accentTint) : .clear)
-                            )
-                            .overlay { if line.bullet.gap { GapOutline() } }
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, Spacing.space2).padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: Radius.card)
+                                .fill(selected == index ? Color(.accentTint) : .clear)
+                        )
+                        .overlay { if line.bullet.gap { GapOutline() } }
                     }
+                    .buttonStyle(.plain)
                 }
-                .padding(Spacing.space4)
             }
-            .frame(maxHeight: 260)
-            Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.space5) {
-                    if let index = selected, lines.indices.contains(index) {
-                        trace(lines[index].entry, lines[index].bullet)
-                    } else {
-                        Text("Choose a line, or select text in the resume, to see where it came from.")
-                            .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
-                    }
-                    ReadyToDiscussView(build: build, lines: lines.map(\.bullet), master: master, selected: $selected)
-                }
-                .padding(Spacing.space4)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if let index = selected, lines.indices.contains(index) {
+                trace(lines[index].entry, lines[index].bullet)
+            } else {
+                Text("Choose a line, or select text in the resume, to see where it came from.")
+                    .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
             }
+            ReadyToDiscussView(build: build, lines: lines.map(\.bullet), master: master, selected: $selected)
         }
-        .background(Color(.surface))
     }
 
     @ViewBuilder private func trace(_ entry: TailoredResume.Entry, _ bullet: TailoredBullet) -> some View {

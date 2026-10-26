@@ -129,7 +129,7 @@ struct RootView: View {
         case (.ready, .filtered):
             FilteredOutView()
         case (.ready, .resumes):
-            BuildsView()
+            ResumesView()
         case (.ready, .applied):
             AppliedView()
         case (.ready, .interviews):
