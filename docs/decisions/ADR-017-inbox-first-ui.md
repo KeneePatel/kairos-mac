@@ -1,7 +1,7 @@
 # ADR-017: The Mac app is organised around an inbox of jobs to decide
 
 ## Status
-Proposed 2026-10-26, for the owner's approval with the v2 design draft.
+Accepted 2026-10-26: the owner approved the v2 design draft ("Approve, build it") and the eight slices followed (`tasks/todo.md`, UI v2).
 
 ## Date
 2026-10-26

@@ -1097,7 +1097,8 @@ You asked for the whole UI reimagined: every screen rebuilt from the ground up, 
 - [x] **V7 · Menu bar item** (S)
   - **Done 2026-10-26:** `MenuBarExtra` with the template icon and a window: the app icon and name with Find new jobs (⌘R); "247 to decide" with the full reads, today's new ones and the jobs waiting for the AI, and the three verdicts as tiles with their icons and words; New today (the three best of today's new jobs; a click opens Kairos on that job); the same status line as the sidebar's footer, with Stop and the meter; Open Kairos. The main window has an id so the item can reopen it. Snapshots `menu-bar-{light,dark}`.
   - **Visual differences from `MenuBar.dc.html`:** no "next check" (there's no scheduler); the counts are the Inbox's rather than the last run's.
-- [ ] **V8 · Docs and design folder** (S): SPEC §4 `app-mac` row and §5.2 screens text, ADR-017 accepted, `design/kairos/README.md` for v2, CLAUDE.md's design rules re-checked, every screen's visual differences from its `.dc.html` listed in this file.
+- [x] **V8 · Docs and design folder** (S)
+  - **Done 2026-10-26:** SPEC §4's `app-mac` row and §5.2's screening-runs and rank text say what the app does now; ADR-017 is Accepted; `design/kairos/README.md` (v2, written in V1) and CLAUDE.md's rules hold; each slice above lists its visual differences from its `.dc.html`. Left for later, as the design folder's Known gaps say: dark screens beyond the Inbox, the Settings pages beyond Search, the phone screens.
 
 Each slice: Swift Testing for model logic, `--render-snapshots` for its screens, `--layout-probe` at 960 × 600, the full gate, one PR, fast-forward merge.
 
