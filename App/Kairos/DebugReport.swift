@@ -82,6 +82,17 @@
                 }
                 exit(0)
             }
+            if CommandLine.arguments.contains(where: { $0.hasPrefix("--analyze-one") }) {
+                let done = DispatchSemaphore(value: 0)
+                Task { @MainActor in
+                    await analyzeOne()
+                    done.signal()
+                }
+                while done.wait(timeout: .now()) == .timedOut {
+                    RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+                }
+                exit(0)
+            }
             if CommandLine.arguments.contains("--doctor") {
                 let done = DispatchSemaphore(value: 0)
                 Task.detached {
@@ -207,6 +218,7 @@
             for (day, sent) in byDay.sorted(by: { $0.key > $1.key }).prefix(14) {
                 out += "- applied \(day.formatted(date: .abbreviated, time: .omitted)): \(sent.count)\n"
             }
+            out += try await screeningQueue(db)
             if CommandLine.arguments.contains("--builds") {
                 out += "\n## Builds\n"
                 let repository = BuildRepository(db)
@@ -242,6 +254,136 @@
             }
             if CommandLine.arguments.contains("--details") {
                 out += try await details(jobs, screenings, db)
+            }
+            return out
+        }
+
+        /// `--analyze-one[=<words>]`: one fresh job analysis, as screening asks for it, on a copy of
+        /// your database, for the first job waiting for the AI (or the first whose "title · company"
+        /// has those words). Prints each model the chain asks and, when a reply fails its checks,
+        /// what the check found. Spends up to two calls per model in the chain. Never a key.
+        @MainActor private static func analyzeOne() async {
+            func say(_ text: String) { print("analyze-one: \(text)") }
+            do {
+                let fm = FileManager.default
+                let original = try AccountStore.applicationSupport().databaseURL(for: .local)
+                let copy = fm.temporaryDirectory.appending(path: "kairos-analyze-one-\(UUID().uuidString)")
+                try fm.createDirectory(at: copy, withIntermediateDirectories: true)
+                for suffix in ["", "-wal", "-shm"] where fm.fileExists(atPath: original.path + suffix) {
+                    try fm.copyItem(
+                        atPath: original.path + suffix, toPath: copy.appending(path: "kairos.sqlite").path + suffix)
+                }
+                let db = try Database(path: copy.appending(path: "kairos.sqlite").path)
+                let words = CommandLine.arguments.first { $0.hasPrefix("--analyze-one=") }.map {
+                    String($0.dropFirst(14))
+                }
+                let jobs = try await JobRepository(db).jobs()
+                let job =
+                    if let words {
+                        jobs.first { "\($0.title) · \($0.company)".localizedCaseInsensitiveContains(words) }
+                    } else {
+                        jobs.first { $0.verdict == nil && $0.state == .new && $0.isOpen }
+                    }
+                guard let job else {
+                    say("no job to analyse")
+                    return
+                }
+                let context = try await ScreeningContext.load(from: db)
+                let input = context.analysisInput(for: job)
+                say(
+                    "job: \(job.title) · \(job.company) · \(job.descriptionKind.rawValue) · posting \(job.descriptionMarkdown?.count ?? 0) characters"
+                )
+                let ai = AISettingsModel(db: db, secrets: AppSecrets.store())
+                await ai.load()
+                let router = ai.router()
+                let chain = (ai.settings.routes[TaskID.analyzeJob.rawValue] ?? []).map { "\($0.provider)/\($0.model)" }
+                say("route: \(chain.joined(separator: " > "))")
+                let events: @Sendable (CallEvent) -> Void = { event in
+                    switch event {
+                    case .asking(_, let model, _): print("analyze-one: asking \(model.provider)/\(model.model)")
+                    case .retrying(_, let model, let reason): print("analyze-one: retrying \(model.model): \(reason)")
+                    case .failed(_, let model, let reason, let detail):
+                        print("analyze-one: \(model.model) failed: \(reason)\(detail.map { "\n  check: \($0)" } ?? "")")
+                    case .answered(_, let model, let seconds, _):
+                        print("analyze-one: \(model.model) answered in \(Int(seconds)) s")
+                    }
+                }
+                do {
+                    let result = try await router.run(
+                        AnalyzeJobTask(), input: input,
+                        context: CallContext(jobID: job.id.rawValue, fresh: true, events: events))
+                    say(
+                        "ok: \(result.output.requirements.count) requirements from \(result.model) · \(result.outputTokens.map(String.init) ?? "?") output tokens · \(result.inputTokens.map(String.init) ?? "?") input tokens"
+                    )
+                } catch {
+                    say("gave up: \(error.reason)")
+                }
+            } catch {
+                say("couldn't run (\(error))")
+            }
+        }
+
+        /// What waits for the AI and why it isn't moving: new jobs with no verdict, split by whether
+        /// they're still posted and already analysed; the last screening runs; and how the last two
+        /// days' job analyses ended, by model and error.
+        private static func screeningQueue(_ db: Database) async throws -> String {
+            var out = "\n## Screening queue\n"
+            for row in try await db.query(
+                """
+                SELECT j.closed_at IS NULL AS open,
+                  EXISTS (SELECT 1 FROM job_analysis a WHERE a.job_id = j.id AND a.deleted = 0
+                    AND a.prompt_version = ?) AS analysed,
+                  COUNT(*) AS n
+                FROM job j WHERE j.deleted = 0 AND j.state = 'new' AND j.verdict IS NULL
+                GROUP BY 1, 2 ORDER BY 1 DESC, 2 DESC
+                """, [.integer(Int64(AnalyzeJobTask.promptVersion))])
+            {
+                out +=
+                    "- no verdict · \(row.int("open") == 1 ? "still posted" : "no longer posted")"
+                    + " · \(row.int("analysed") == 1 ? "analysed" : "not analysed"): \(row.int("n") ?? 0)\n"
+            }
+            out += "\nLast screening runs:\n"
+            for row in try await db.query(
+                "SELECT started_at, finished_at, stats, error FROM run WHERE kind = 'screen' AND deleted = 0 ORDER BY started_at DESC LIMIT 6"
+            ) {
+                let started = row.int64("started_at").map { Date(timeIntervalSince1970: Double($0) / 1_000) }
+                let took = row.int64("finished_at").flatMap { end in row.int64("started_at").map { (end - $0) / 1_000 }
+                }
+                out +=
+                    "- \(started?.formatted(date: .abbreviated, time: .standard) ?? "?")"
+                    + " · \(took.map { "\($0) s" } ?? "never finished") · \(row.string("stats") ?? "{}")"
+                    + "\(row.string("error").map { " · \($0)" } ?? "")\n"
+            }
+            out += "\nJob analyses in the last 48 hours, by outcome:\n"
+            let since = Int64((Date().timeIntervalSince1970 - 48 * 3_600) * 1_000)
+            for row in try await db.query(
+                """
+                SELECT date(at / 1000, 'unixepoch', 'localtime') AS day, provider, model, outcome, error_code,
+                  COUNT(*) AS n, MAX(at) AS last
+                FROM llm_call WHERE task_id = 'analyzeJob' AND at >= ?
+                GROUP BY 1, 2, 3, 4, 5 ORDER BY 1 DESC, n DESC
+                """, [.integer(since)])
+            {
+                let last = row.int64("last").map { Date(timeIntervalSince1970: Double($0) / 1_000) }
+                out +=
+                    "- \(row.string("day") ?? "?") · \(row.string("provider") ?? "?")/\(row.string("model") ?? "?")"
+                    + " · \(row.string("outcome") ?? "?")\(row.string("error_code").map { " (\($0))" } ?? "")"
+                    + ": \(row.int("n") ?? 0), last \(last?.formatted(date: .omitted, time: .standard) ?? "?")\n"
+            }
+            out += "\nJobs whose analysis failed in the last 48 hours:\n"
+            for row in try await db.query(
+                """
+                SELECT j.title, j.company, j.description_kind AS kind, length(j.description) AS chars,
+                  COUNT(*) AS n, group_concat(DISTINCT c.error_code) AS errors
+                FROM llm_call c JOIN job j ON j.id = c.job_id
+                WHERE c.task_id = 'analyzeJob' AND c.outcome = 'failed' AND c.at >= ?
+                GROUP BY j.id ORDER BY MAX(c.at) DESC LIMIT 20
+                """, [.integer(since)])
+            {
+                out +=
+                    "- \(row.string("title") ?? "?") · \(row.string("company") ?? "?") · \(row.string("kind") ?? "?")"
+                    + " · \(row.int("chars") ?? 0) characters · \(row.int("n") ?? 0) failed calls"
+                    + " (\(row.string("errors") ?? ""))\n"
             }
             return out
         }
