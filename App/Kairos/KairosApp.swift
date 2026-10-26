@@ -51,6 +51,24 @@ struct KairosApp: App {
                     .keyboardShortcut(".", modifiers: .command)
                     .disabled(!model.isFetching)
             }
+            // One key per decision in the lists; here with ⌘ so the menu teaches them.
+            CommandMenu("Job") {
+                let job = model.job(model.selectedJob)
+                let inList = [AppSection.inbox, .saved, .skipped].contains(model.section) && job != nil
+                Button("Build Resume") { model.perform(.build) }
+                    .keyboardShortcut("b", modifiers: .command).disabled(!inList)
+                Button(job?.state == .shortlisted ? "Unsave" : "Save") { model.perform(.save) }
+                    .keyboardShortcut("d", modifiers: .command).disabled(!inList)
+                Button(job?.state == .skipped ? "Bring Back" : "Skip") { model.perform(.skip) }
+                    .keyboardShortcut(.delete, modifiers: .command).disabled(!inList)
+                Button("Open Posting") { model.perform(.openPosting) }
+                    .keyboardShortcut("o", modifiers: .command).disabled(!inList)
+                Divider()
+                Button("Mark Applied") { model.perform(.markApplied) }
+                    .keyboardShortcut("a", modifiers: [.command, .shift]).disabled(!inList)
+                Button("Re-evaluate") { model.perform(.reevaluate) }
+                    .keyboardShortcut("r", modifiers: [.command, .shift]).disabled(!inList)
+            }
         }
     }
 }

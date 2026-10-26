@@ -47,6 +47,18 @@ struct StatusFooter: View {
         case .building:
             EmptyView()
         case .idle, .never:
+            if model.waitingForAI > 0, model.canAnalyse, !model.isFetching {
+                Button("Screen now") { model.screenWaiting() }
+                    .buttonStyle(.plain).foregroundStyle(Color(.accentText)).font(TypeStyle.caption)
+                    .help("Screen the jobs waiting for the AI, one call each, without fetching.")
+            } else {
+                findNow
+            }
+        }
+    }
+
+    private var findNow: some View {
+        Group {
             Button("Find now") { model.fetchNow() }
                 .buttonStyle(.plain).foregroundStyle(Color(.accentText)).font(TypeStyle.caption)
                 .disabled(model.sources.allSatisfy { !$0.enabled })

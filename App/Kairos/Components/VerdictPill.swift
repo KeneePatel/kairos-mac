@@ -10,8 +10,8 @@ struct VerdictPill: View {
         Label(verdict.title, systemImage: verdict.symbol)
             .font(large ? TypeStyle.headline : TypeStyle.callout.weight(.semibold))
             .foregroundStyle(foreground)
-            .padding(.horizontal, large ? Spacing.space3 : Spacing.space2)
-            .frame(height: large ? 28 : 22)
+            .padding(.horizontal, large ? Spacing.space3 : 6)
+            .frame(height: large ? 28 : 20)
             .background(Capsule().fill(background))
     }
 

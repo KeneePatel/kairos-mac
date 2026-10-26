@@ -119,7 +119,11 @@ struct RootView: View {
                 "Kairos couldn't start", systemImage: "exclamationmark.triangle",
                 description: Text(message).foregroundStyle(Color(.inkSecondary)))
         case (.ready, .inbox):
-            ReviewView()
+            JobsView(scope: .inbox)
+        case (.ready, .saved):
+            JobsView(scope: .saved)
+        case (.ready, .skipped):
+            JobsView(scope: .skipped)
         case (.ready, .improve):
             ImproveView()
         case (.ready, .filtered):
@@ -156,7 +160,7 @@ extension RootView {
     /// the applications in progress.
     func badge(_ section: AppSection) -> Int {
         switch section {
-        case .inbox: model.reviewCount(.yes) + model.reviewCount(.maybe)
+        case .inbox: model.inboxCount
         case .resumes: model.buildsUnderWay
         case .interviews: model.applications.count { $0.status.stage == .inProgress }
         default: 0

@@ -104,6 +104,8 @@ import Testing
         let status = RunStatus.current(input, time: at)
         #expect(status.title == "Checked 7:58 AM · nothing new")
         #expect(status.detail == "40 waiting for the AI")
+        input.canAnalyse = false
+        #expect(RunStatus.current(input, time: at).detail == "40 waiting · add an AI key in Settings")
     }
 
     @Test func beforeAnyCheckItPointsAtTheNextStep() {

@@ -61,7 +61,9 @@
         @MainActor private static func screens(_ model: AppModel) async {
             let built = model.reviewJobs(.all).first { model.latestBuild(for: $0)?.status == .done }
             let unbuilt = model.reviewJobs(.yes).first { model.latestBuild(for: $0) == nil }
-            var shown: [(String, AnyView)] = [("review", AnyView(ReviewView())), ("improve", AnyView(ImproveView()))]
+            var shown: [(String, AnyView)] = [
+                ("inbox", AnyView(JobsView(scope: .inbox))), ("improve", AnyView(ImproveView())),
+            ]
             if let built {
                 shown.append(("job-built", AnyView(NavigationStack { JobScreen(id: built.id) })))
                 shown.append(("job-resume", AnyView(NavigationStack { BuildsView(job: built.id) })))

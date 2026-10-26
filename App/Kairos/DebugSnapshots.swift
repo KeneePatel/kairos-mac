@@ -134,8 +134,8 @@
             ]
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 render(
-                    ReviewView().environment(today.model).frame(width: 1_440, height: 560),
-                    to: folder.appending(path: "review-\(name).png"), appearance: appearance)
+                    JobsView(scope: .inbox).environment(today.model).frame(width: 1_440, height: 640),
+                    to: folder.appending(path: "inbox-\(name).png"), appearance: appearance)
                 render(
                     FilteredOutView().environment(today.model).frame(width: 1_440, height: 420),
                     to: folder.appending(path: "filtered-out-\(name).png"), appearance: appearance)
@@ -193,9 +193,8 @@
                     ai: withAI ? ai : nil, screening: progress)
                 for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                     render(
-                        ReviewView(filter: .yes).environment(model).frame(width: 1_200, height: 420)
-                            .background(Color(.surface)),
-                        to: folder.appending(path: "review-banner-\(state)-\(name).png"), appearance: appearance)
+                        StatusFooter().environment(model).frame(width: 232).background(Color(.window)),
+                        to: folder.appending(path: "status-footer-\(state)-\(name).png"), appearance: appearance)
                 }
             }
             // T45 and ADR-016: applications at every stage, one with a follow-up due today.

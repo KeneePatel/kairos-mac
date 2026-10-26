@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import JobSources
 import LLM
@@ -620,11 +621,129 @@ final class AppModel {
         await reload()
     }
 
-    /// "Not for me": off Today, verdict kept.
+    // MARK: - Decisions (UI v2)
+
+    /// The job the focused list shows; the Job menu and the keys act on it.
+    var selectedJob: JobID?
+    /// The jobs the focused list shows, in order, so a decision can move the selection on and a
+    /// full-width job has Previous and Next.
+    var visibleJobs: [JobID] = []
+    /// The window's undo manager, so a Save or Skip is undone with ⌘Z.
+    @ObservationIgnored weak var undoManager: UndoManager?
+
+    /// Jobs waiting for your decision (the Inbox), kept for later, and skipped or gone.
+    var inboxJobs: [Job] { Inbox.waiting(jobs) }
+    var inboxCount: Int { inboxJobs.count }
+    var savedJobs: [Job] { Inbox.saved(jobs) }
+    var skippedJobs: [Job] { Inbox.skipped(jobs) }
+
+    /// A list's jobs in the Inbox's three groups, narrowed and ordered by `query`.
+    func groups(_ scope: JobsScope, query: Inbox.Query) -> [Inbox.Group] {
+        let source =
+            switch scope {
+            case .inbox: inboxJobs
+            case .saved: savedJobs
+            case .skipped: skippedJobs
+            }
+        return Inbox.groups(source, query: query, countries: searchPreferences.countries) { isSnippet($0) }
+    }
+
+    /// Skip (X): to Skipped, verdict kept; ⌘Z brings it back.
     func skip(_ job: Job) async {
-        guard let db else { return }
-        try? await JobRepository(db).setState(.skipped, for: job.id)
+        advanceSelection(past: job.id)
+        await setState(.skipped, for: job, actionName: "Skip")
+    }
+
+    /// Save (S): kept in Saved for later.
+    func save(_ job: Job) async {
+        advanceSelection(past: job.id)
+        await setState(.shortlisted, for: job, actionName: "Save")
+    }
+
+    func unsave(_ job: Job) async {
+        advanceSelection(past: job.id)
+        await setState(.new, for: job, actionName: "Unsave")
+    }
+
+    /// Bring back from Skipped: new again, so the Inbox shows it.
+    func unskip(_ job: Job) async {
+        advanceSelection(past: job.id)
+        await setState(.new, for: job, actionName: "Bring back")
+    }
+
+    /// Moves `job` to `state` and registers the way back with the window's undo manager.
+    func setState(_ state: JobState, for job: Job, actionName: String) async {
+        guard let db, job.state != state else { return }
+        let previous = job.state
+        do {
+            try await JobRepository(db).setState(state, for: job.id)
+        } catch {
+            log.error("Changing a job's state failed: \(String(describing: error), privacy: .public)")
+            return
+        }
         await reload()
+        undoManager?.registerUndo(withTarget: self) { model in
+            Task { @MainActor in
+                if let current = model.job(job.id) {
+                    await model.setState(previous, for: current, actionName: actionName)
+                }
+            }
+        }
+        undoManager?.setActionName(actionName)
+    }
+
+    /// When the selected job leaves its list, the next one takes its place, or the one before at
+    /// the end.
+    private func advanceSelection(past id: JobID) {
+        guard selectedJob == id, let index = visibleJobs.firstIndex(of: id) else { return }
+        let rest = visibleJobs.filter { $0 != id }
+        selectedJob = rest.indices.contains(index) ? rest[index] : rest.last
+    }
+
+    /// Previous (-1) or Next (1) in the list the selection came from.
+    func selectNeighbour(_ step: Int) {
+        guard let current = selectedJob, let index = visibleJobs.firstIndex(of: current) else {
+            selectedJob = visibleJobs.first
+            return
+        }
+        let next = index + step
+        guard visibleJobs.indices.contains(next) else { return }
+        selectedJob = visibleJobs[next]
+    }
+
+    /// Opens the posting in your browser (O). For a snippet that's Adzuna's advert page.
+    func openPosting(_ job: Job) {
+        guard let url = URL(string: job.url) else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    func copyLink(_ job: Job) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(job.url, forType: .string)
+    }
+
+    /// Applied, for this application (its page selects it from the next slice on).
+    func openApplication(_ id: UUID) {
+        section = .applied
+    }
+
+    enum JobAction { case build, save, skip, openPosting, markApplied, reevaluate }
+
+    /// The Job menu's actions on the selected job.
+    func perform(_ action: JobAction) {
+        guard let job = job(selectedJob) else { return }
+        Task { @MainActor in
+            switch action {
+            case .build:
+                _ = await startBuild(
+                    for: job, coverLetter: UserDefaults.standard.bool(forKey: "buildCoverLetter"), show: false)
+            case .save: job.state == .shortlisted ? await unsave(job) : await save(job)
+            case .skip: job.state == .skipped ? await unskip(job) : await skip(job)
+            case .openPosting: openPosting(job)
+            case .markApplied: await markApplied(job)
+            case .reevaluate: _ = await reevaluate(job)
+            }
+        }
     }
 
     // MARK: - Builds
@@ -1004,6 +1123,7 @@ final class AppModel {
         input.newLastTime = lastFetch.flatMap { FetchRun.Stats.decode($0.stats)?.added } ?? 0
         input.waiting = waitingForAI
         input.hasSources = !sources.isEmpty
+        input.canAnalyse = canAnalyse
         return RunStatus.current(input)
     }
 

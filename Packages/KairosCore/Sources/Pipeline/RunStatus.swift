@@ -30,6 +30,8 @@ public struct RunStatus: Equatable, Sendable {
         /// Jobs that passed the filters and still wait for a verdict.
         public var waiting = 0
         public var hasSources = true
+        /// An AI model is set up to screen the waiting jobs.
+        public var canAnalyse = true
 
         public init() {}
     }
@@ -83,7 +85,10 @@ public struct RunStatus: Equatable, Sendable {
             let new = input.newLastTime > 0 ? "\(input.newLastTime.formatted()) new" : "nothing new"
             return RunStatus(
                 kind: .idle, title: "Checked \(time(checked)) · \(new)",
-                detail: input.waiting > 0 ? "\(input.waiting) waiting for the AI" : nil)
+                detail: input.waiting > 0
+                    ? input.canAnalyse
+                        ? "\(input.waiting) waiting for the AI" : "\(input.waiting) waiting · add an AI key in Settings"
+                    : nil)
         }
         return input.hasSources
             ? RunStatus(kind: .never, title: "Not checked yet", detail: "Find new jobs checks every board")
