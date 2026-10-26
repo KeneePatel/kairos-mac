@@ -1,0 +1,30 @@
+<!-- @dsCard group="Navigation" height=150 subtitle="The app's one status line, in the sidebar's footer" -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:var(--surface);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.wrap{padding:16px}
+.cap{letter-spacing:.2px;color:var(--ink-secondary)}
+.tab{font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--radius-capsule);font-size:12px;line-height:16px;font-weight:600}
+.pill svg{width:12px;height:12px;flex:none}
+.pill.yes{color:var(--yes);background:var(--yes-bg)}
+.pill.maybe{color:var(--maybe);background:var(--maybe-bg)}
+.pill.no{color:var(--no);background:var(--no-bg)}
+.key{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border:1px solid var(--outline);border-radius:var(--radius-keycap);background:var(--surface-raised);color:var(--ink-secondary);font-size:11px;line-height:14px;font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:var(--radius-capsule);font-size:13px;line-height:18px;font-weight:600;border:0;background:var(--control-fill);color:var(--ink)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary .key{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45);color:#fff}
+.btn.plain{background:transparent;color:var(--accent-text);padding:0 4px}
+.side{width:240px;background:var(--window);border-radius:var(--radius-nav);padding:12px}
+.foot{border-top:1px solid var(--separator);padding-top:10px;display:flex;flex-direction:column;gap:6px}
+.line{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.meter{height:6px;border-radius:999px;background:var(--separator);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);width:42%}
+.meter.stopped i{background:var(--maybe);width:60%}
+.stop{color:var(--accent-text);font-weight:600;font-size:12px;background:none;border:0;padding:0}
+</style></head>
+<body><div class="wrap" style="display:flex;gap:16px;align-items:flex-start">
+<div class="side"><div class="foot"><div class="line"><span class="callout">Finding jobs · 212 of 821 boards</span><button class="stop">Stop</button></div><div class="meter"><i></i></div><div class="caption cap">3 new so far · screening as they arrive</div></div></div>
+<div class="side"><div class="foot"><div class="line"><span class="callout">Checked 7:58 AM · 14 new</span><button class="stop">Find now</button></div><div class="caption cap">Next check 1:00 PM</div></div></div>
+<div class="side"><div class="foot"><div class="line"><span class="callout">Screening stopped · 40 waiting</span><button class="stop">Resume</button></div><div class="meter stopped"><i></i></div><div class="caption cap">Daily AI budget reached · resets at 4:00 AM</div></div></div>
+</div></body></html>

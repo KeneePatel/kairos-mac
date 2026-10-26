@@ -1,0 +1,22 @@
+<!-- @dsCard group="Actions" height=120 subtitle="The label and its key, so the shortcut teaches itself" -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:var(--surface);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.wrap{padding:16px}
+.cap{letter-spacing:.2px;color:var(--ink-secondary)}
+.tab{font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--radius-capsule);font-size:12px;line-height:16px;font-weight:600}
+.pill svg{width:12px;height:12px;flex:none}
+.pill.yes{color:var(--yes);background:var(--yes-bg)}
+.pill.maybe{color:var(--maybe);background:var(--maybe-bg)}
+.pill.no{color:var(--no);background:var(--no-bg)}
+.key{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border:1px solid var(--outline);border-radius:var(--radius-keycap);background:var(--surface-raised);color:var(--ink-secondary);font-size:11px;line-height:14px;font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:var(--radius-capsule);font-size:13px;line-height:18px;font-weight:600;border:0;background:var(--control-fill);color:var(--ink)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary .key{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45);color:#fff}
+.btn.plain{background:transparent;color:var(--accent-text);padding:0 4px}
+</style></head>
+<body><div class="wrap" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:8px;align-items:center"><button class="btn primary">Build resume <span class="key">B</span></button><button class="btn">Save <span class="key">S</span></button><button class="btn">Skip <span class="key">X</span></button><button class="btn">Open posting <span class="key">O</span></button><button class="btn" aria-label="More">···</button></div>
+<div style="display:flex;gap:16px;align-items:center"><button class="btn plain">Change in Settings</button><button class="btn plain">Bring back <span class="key">⌘Z</span></button><span class="callout cap">Plain buttons for links and undo; one primary per view</span></div>
+</div></body></html>

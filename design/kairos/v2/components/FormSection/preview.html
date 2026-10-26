@@ -1,0 +1,30 @@
+<!-- @dsCard group="Forms" height=220 subtitle="Title, caption, controls, a hairline after" -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:var(--surface);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.wrap{padding:16px}
+.cap{letter-spacing:.2px;color:var(--ink-secondary)}
+.tab{font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--radius-capsule);font-size:12px;line-height:16px;font-weight:600}
+.pill svg{width:12px;height:12px;flex:none}
+.pill.yes{color:var(--yes);background:var(--yes-bg)}
+.pill.maybe{color:var(--maybe);background:var(--maybe-bg)}
+.pill.no{color:var(--no);background:var(--no-bg)}
+.key{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border:1px solid var(--outline);border-radius:var(--radius-keycap);background:var(--surface-raised);color:var(--ink-secondary);font-size:11px;line-height:14px;font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:var(--radius-capsule);font-size:13px;line-height:18px;font-weight:600;border:0;background:var(--control-fill);color:var(--ink)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary .key{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45);color:#fff}
+.btn.plain{background:transparent;color:var(--accent-text);padding:0 4px}
+.form{width:560px}
+.sec{padding:16px 0;border-bottom:1px solid var(--separator)}
+.field{display:flex;flex-direction:column;gap:4px;margin-top:10px}
+input,select{font:inherit;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--outline);border-radius:var(--radius-field);height:26px;padding:0 8px}
+.chk{display:flex;align-items:center;gap:6px;margin-top:8px}
+.chk i{width:14px;height:14px;border:1px solid var(--outline);border-radius:4px;background:var(--surface)}
+.chk i.on{background:var(--accent);border-color:var(--accent)}
+</style></head>
+<body><div class="wrap"><div class="form">
+<div class="sec"><div class="title2">Levels</div><div class="callout cap" style="margin-top:2px">A title naming a level you've turned off is skipped before any AI runs.</div>
+<div style="display:flex;gap:16px;flex-wrap:wrap"><label class="chk"><i class="on"></i><span class="body">Intern and co-op</span></label><label class="chk"><i class="on"></i><span class="body">Junior</span></label><label class="chk"><i class="on"></i><span class="body">Intermediate</span></label><label class="chk"><i></i><span class="body">Senior</span></label><label class="chk"><i></i><span class="body">Staff</span></label></div></div>
+<div class="sec"><div class="title2">Limits</div><div class="field"><label class="headline">Skip jobs asking for more than</label><div style="display:flex;gap:8px;align-items:center"><input value="8" style="width:48px"><span class="body">years</span></div></div></div>
+</div></div></body></html>

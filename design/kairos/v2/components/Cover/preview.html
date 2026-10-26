@@ -1,0 +1,32 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:var(--window);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.cover{position:relative;width:960px;height:288px;overflow:hidden}
+.cover svg{position:absolute;inset:0}
+.accent{fill:var(--accent)}.yes{fill:var(--yes)}.maybe{fill:var(--maybe)}.ink{fill:var(--ink)}.tint{fill:var(--accent-tint)}
+.cut{fill:none;stroke:var(--window);stroke-width:12;stroke-linecap:round}
+.dot{fill:var(--window)}
+.name{position:absolute;left:32px;bottom:44px;max-width:440px;font-size:120px;line-height:.92;font-weight:700;letter-spacing:-2.4px;color:var(--ink);margin:0}
+.tag{position:absolute;left:34px;bottom:22px;font-size:13px;line-height:16px;color:var(--ink-secondary);margin:0}
+</style></head>
+<body><div class="cover">
+<!-- Derivation
+blocks: accent 168x288 (21x8, bleeds top and bottom) · yes 136x136 · maybe 136x136 · ink 144x192 (bleeds right) · accent-tint 144x80; gaps space-4 (16), corners radius-group (12)
+arrangement: one tall accent slab with four satellites stacked in two columns, flush to the right edge, the way the app composes: one accent beside quiet neutrals and two verdict hues
+pattern: the brand's literal motif, the Moment dial: the ring, its hand and the dot cut out of the accent slab in the ground colour, the ring broken around the dot; chosen because the dial is the one picture Kairos owns
+scales: ring radius 88 (11x8), stroke 12 (space-3), dot radius 12, gap at the top right where the hand lands; text block 440 wide, name 120px, tagline 13px
+-->
+<svg viewBox="0 0 960 288" width="960" height="288" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <rect class="accent" x="480" y="-12" width="168" height="312" rx="12"/>
+  <rect class="yes" x="664" y="0" width="136" height="136" rx="12"/>
+  <rect class="maybe" x="664" y="152" width="136" height="136" rx="12"/>
+  <rect class="ink" x="816" y="0" width="156" height="192" rx="12"/>
+  <rect class="tint" x="816" y="208" width="156" height="80" rx="12"/>
+  <path class="cut" d="M 632.6 97.4 A 88 88 0 1 1 597 70.3"/>
+  <path class="cut" d="M 564 144 L 614 94"/>
+  <circle class="dot" cx="626.2" cy="81.8" r="12"/>
+</svg>
+<h1 class="name">Kairos</h1>
+<p class="tag">The right moment for each job.</p>
+</div></body></html>

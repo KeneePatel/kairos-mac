@@ -1047,6 +1047,25 @@ Applications screen couldn't scroll, and applied jobs didn't belong on a board.
 
 ---
 
+## UI v2 (2026-10-26)
+
+You asked for the whole UI reimagined: every screen rebuilt from the ground up, each design choice checked, the app more natural and intuitive. The audit, the interview and the draft are in `docs/design/ui-v2/` (brief, structure), ADR-017 (proposed), the "Kairos" design system and the "Kairos v2 screens" canvas on claude.ai, and `design/kairos/v2/` (tokens, brand book, components, the thirteen screens as `.dc.html`).
+
+- [x] **V0 · Audit, interview and design draft** (L)
+  - **Done 2026-10-26:** read every screen and mockup, rendered the real app (`--render-snapshots`, `--layout-probe --screens`), pulled the real numbers (`--screening-report`): Review's Yes tab empty because all 38 Yes jobs were applied to, 383 Maybe of which 283 are Adzuna snippets, ten sidebar sections, icon-only job actions, no shortcuts. Interview answers: inbox home, job beside the list, keyboard first with keys shown, calm Things-like look with compact rows, build then apply. Visual draft rendered locally for layout before publishing. Awaiting your approval on the canvas.
+- [ ] **V1 · Tokens and shell** (M): `design/kairos/v2/tokens.json` becomes `design/kairos/tokens.json` (v1 to `design/kairos/v1/`), `scripts/gen-tokens.swift` regenerates the catalog and `DesignTokens.swift` (page-title, score-small, mono, row heights, radius-keycap, shadows); `AppSection` = Inbox · Saved · Resumes · Applied · Interviews · Improve · Filtered out · Skipped · Master resume · Sources · Settings; three-column `NavigationSplitView`; sidebar groups, badges and the status footer (`StatusFooter`, one line, meter, Stop); Job and View menus with every shortcut; Find new jobs as ⌘R and a toolbar button; Find jobs and Activity sections removed; `--layout-probe` and snapshots updated. Tests: `AppSection` order and badges, the footer's phrasing from `FetchRun.Progress` and `ScreeningRun.Progress`.
+- [ ] **V2 · Inbox, job pane, Saved, Skipped** (L): `InboxView` (groups Decide, Needs a full read, No from the AI; filter and sort menus; search), `JobRow` (36 pt), `JobPane` from `JobScreen` with the action row and key caps, full width on Return, Saved (`shortlisted`) and Skipped lists with Bring back, ⌘Z for the last Save or Skip, selection moves on after a decision. Model: `inbox(filter:sort:)`, `save`, `unsave`, `skip` reversible, `undoLastDecision`. Tests: grouping and ordering, decision moves and undo.
+- [ ] **V3 · Resumes** (M): builds list (Building · Today · Yesterday) and the resume pane (PDF, match bars, build summary, selected line, checks, Be ready to discuss) from `BuildView`; Mark applied (A), Open posting (O), Save PDF (⌘S), Build again menu.
+- [ ] **V4 · Applied and Interviews** (M): the table with the scope segmented control and the application pane from `ApplicationScreen`; the board with the same pane; Close silent in More; follow-up due in `maybe`.
+- [ ] **V5 · Sources and Settings** (M): Sources table (Yours · Catalog · All, search, Add menu) and source pane (status, open roles for you, what the filters dropped, history); Settings with a left list (General · Search · AI · Account) and 640 pt forms; Re-screen as a link with its call count.
+- [ ] **V6 · Master resume and reports** (M): the form restyled (hairline sections, readiness inspector, chips), Improve and Filtered out as list · pane in the new type, empty states everywhere (title, one line, one button).
+- [ ] **V7 · Menu bar item** (S): `MenuBarExtra` window after `MenuBar.dc.html`: to decide, need a read, verdict tiles, new since you looked, a running build, Find new jobs, Open Kairos.
+- [ ] **V8 · Docs and design folder** (S): SPEC §4 `app-mac` row and §5.2 screens text, ADR-017 accepted, `design/kairos/README.md` for v2, CLAUDE.md's design rules re-checked, every screen's visual differences from its `.dc.html` listed in this file.
+
+Each slice: Swift Testing for model logic, `--render-snapshots` for its screens, `--layout-probe` at 960 × 600, the full gate, one PR, fast-forward merge.
+
+---
+
 ## Phase 3: R3 Accounts and sync (refined at Checkpoint F)
 
 - [ ] **T47 · Backend migrations on staging** (M) · your step: create the staging project in Canada Central and link the CLI

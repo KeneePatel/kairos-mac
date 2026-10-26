@@ -1,0 +1,29 @@
+<!-- @dsCard group="Panes" height=170 subtitle="Shown, partly shown and not shown, each with its evidence" -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:var(--surface);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.wrap{padding:16px}
+.cap{letter-spacing:.2px;color:var(--ink-secondary)}
+.tab{font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--radius-capsule);font-size:12px;line-height:16px;font-weight:600}
+.pill svg{width:12px;height:12px;flex:none}
+.pill.yes{color:var(--yes);background:var(--yes-bg)}
+.pill.maybe{color:var(--maybe);background:var(--maybe-bg)}
+.pill.no{color:var(--no);background:var(--no-bg)}
+.key{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border:1px solid var(--outline);border-radius:var(--radius-keycap);background:var(--surface-raised);color:var(--ink-secondary);font-size:11px;line-height:14px;font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:var(--radius-capsule);font-size:13px;line-height:18px;font-weight:600;border:0;background:var(--control-fill);color:var(--ink)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary .key{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45);color:#fff}
+.btn.plain{background:transparent;color:var(--accent-text);padding:0 4px}
+.req{width:520px;display:flex;flex-direction:column;gap:10px}
+.r{display:flex;gap:8px;align-items:flex-start}
+.r svg{width:16px;height:16px;flex:none;margin-top:1px}
+.r .e{color:var(--ink-secondary)}
+.hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+</style></head>
+<body><div class="wrap"><div class="req"><div class="hd"><span class="title2">Must-haves</span><span class="callout cap tab">3.5 of 4 shown</span></div>
+<div class="r"><svg viewBox="0 0 16 16" style="color:var(--yes)"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M5 8.2l2 2 4-4.4" fill="none" stroke="#fff" stroke-width="1.6"/></svg><div><div class="body">3+ years building services in Go or Java</div><div class="callout e">Shown · Go; Built an event pipeline handling 4.2M events a day</div></div></div>
+<div class="r"><svg viewBox="0 0 16 16" style="color:var(--maybe)"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg><div><div class="body">Designing REST or gRPC APIs</div><div class="callout e">Partly shown · gRPC</div></div></div>
+<div class="r"><svg viewBox="0 0 16 16" style="color:var(--ink-secondary)"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2.4 2.2"/></svg><div><div class="body">French</div><div class="callout e">Not in your master resume</div></div></div>
+<div class="r"><svg viewBox="0 0 16 16" style="color:var(--ink-secondary)"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 8h6" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="body">Clear written communication</div><div class="callout e">Not judged · a personal quality</div></div></div>
+</div></div></body></html>

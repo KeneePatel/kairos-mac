@@ -1,0 +1,35 @@
+<!-- @dsCard group="Navigation" height=230 subtitle="Sections with counts; the selected item on the glass" -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:var(--surface);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.wrap{padding:16px}
+.cap{letter-spacing:.2px;color:var(--ink-secondary)}
+.tab{font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--radius-capsule);font-size:12px;line-height:16px;font-weight:600}
+.pill svg{width:12px;height:12px;flex:none}
+.pill.yes{color:var(--yes);background:var(--yes-bg)}
+.pill.maybe{color:var(--maybe);background:var(--maybe-bg)}
+.pill.no{color:var(--no);background:var(--no-bg)}
+.key{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border:1px solid var(--outline);border-radius:var(--radius-keycap);background:var(--surface-raised);color:var(--ink-secondary);font-size:11px;line-height:14px;font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:var(--radius-capsule);font-size:13px;line-height:18px;font-weight:600;border:0;background:var(--control-fill);color:var(--ink)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary .key{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45);color:#fff}
+.btn.plain{background:transparent;color:var(--accent-text);padding:0 4px}
+.side{width:220px;background:var(--window);border-radius:var(--radius-nav);padding:10px 8px}
+.item{height:28px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:var(--radius-field);font-size:13px;line-height:18px}
+.item.sel{background:var(--accent-selection-nav)}
+.item.sel svg{color:var(--accent-text)}
+.item svg{width:15px;height:15px;color:var(--ink-secondary)}
+.item .n{margin-left:auto;color:var(--ink-secondary);font-variant-numeric:tabular-nums;font-size:12px}
+.hdr{height:22px;display:flex;align-items:flex-end;padding:0 8px 4px;margin-top:6px}
+</style></head>
+<body><div class="wrap"><div class="side">
+<div class="item sel"><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13"/></svg><span>Inbox</span><span class="n">247</span></div>
+<div class="item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.5 2h9v12l-4.5-3-4.5 3z"/></svg><span>Saved</span><span class="n">6</span></div>
+<div class="item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13"/></svg><span>Resumes</span><span class="n">2</span></div>
+<div class="item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 8l13-6-4 12-3-5z"/></svg><span>Applied</span></div>
+<div class="item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="2.5"/><circle cx="11" cy="7" r="2"/><path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/></svg><span>Interviews</span><span class="n">1</span></div>
+<div class="hdr caption cap">Reports</div>
+<div class="item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 3 5-6"/></svg><span>Improve</span></div>
+<div class="item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M4 8h8M6 12h4"/></svg><span>Filtered out</span></div>
+</div></div></body></html>

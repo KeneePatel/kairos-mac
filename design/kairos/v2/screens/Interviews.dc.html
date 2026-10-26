@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kairos · Interviews</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0b5fc4}a:hover{color:#0b63ce}
+.win{width:1440px;height:900px;background:#f4f3f0;color:#1e1d1a;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;font-size:13px;line-height:18px;display:flex;overflow:hidden;position:relative;-webkit-font-smoothing:antialiased;box-sizing:border-box}
+.sb{width:232px;flex:none;display:flex;flex-direction:column;padding:56px 12px 12px;box-sizing:border-box}
+.si{height:28px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:8px;color:#1e1d1a}
+.si.sel{background:rgba(11,99,206,.12)}
+.si svg{width:15px;height:15px;color:#6b6862;flex:none}
+.si.sel svg{color:#0b5fc4}
+.si .n{margin-left:auto;color:#6b6862;font-size:12px;font-variant-numeric:tabular-nums}
+.sh{height:22px;display:flex;align-items:flex-end;padding:0 8px 4px;margin-top:10px;font-size:11px;line-height:14px;font-weight:500;letter-spacing:.2px;color:#6b6862}
+.foot{margin-top:auto;border-top:1px solid #e4e2dc;padding-top:10px;display:flex;flex-direction:column;gap:6px}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.tb{height:52px;display:flex;align-items:center;gap:8px;padding:0 16px 0 8px;flex:none}
+.cap{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;background:#ffffff;border:1px solid #e4e2dc;color:#1e1d1a;font-weight:500;box-sizing:border-box}
+.cap svg{width:14px;height:14px;color:#6b6862}
+.content{flex:1;display:flex;min-height:0;background:#ffffff;border-top-left-radius:10px;border-top:1px solid #e4e2dc;border-left:1px solid #e4e2dc}
+.list{width:380px;flex:none;display:flex;flex-direction:column;border-right:1px solid #e4e2dc;min-height:0}
+.gh{height:26px;display:flex;align-items:flex-end;padding:0 24px 5px;font-size:11px;line-height:14px;font-weight:500;letter-spacing:.2px;color:#6b6862;font-variant-numeric:tabular-nums}
+.row{height:36px;display:flex;align-items:center;gap:10px;padding:0 12px;margin:0 8px;border-radius:8px;flex:none}
+.row.sel{background:#e8f0fb}
+.row .t{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.row .t1{font-weight:600;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .t2{font-size:12px;line-height:14px;color:#6b6862;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .s{font-size:15px;line-height:20px;font-weight:700;font-variant-numeric:tabular-nums;color:#1e1d1a;width:28px;text-align:right}
+.row.dim .t1,.row.dim .t2,.row.dim .s{color:#67645d}
+.row .d{width:13px;height:13px;color:#0b5fc4}
+.p{display:inline-flex;align-items:center;justify-content:center;gap:4px;height:20px;width:68px;padding:0 8px;border-radius:999px;font-size:12px;line-height:16px;font-weight:600;flex:none;box-sizing:border-box}
+.p svg{width:12px;height:12px}
+.p.yes{color:#1b7a3b;background:#e6f3ea}.p.maybe{color:#8f5200;background:#fbefd8}.p.no{color:#5b5952;background:#edebe6}
+.p.lg{height:28px;width:auto;padding:0 12px;font-size:13px;align-self:flex-start}.p.lg svg{width:14px;height:14px}
+.k{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border:1px solid #88857d;border-radius:4px;background:#f7f6f3;color:#6b6862;font-size:11px;line-height:14px;font-weight:500;box-sizing:border-box}
+.btn{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:999px;font-size:13px;line-height:18px;font-weight:600;border:0;background:#ecebe6;color:#1e1d1a;font-family:inherit}
+.btn.pri{background:#0b63ce;color:#ffffff}
+.btn.pri .k{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45);color:#ffffff}
+.pane{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.pane .body{padding:32px 36px;display:flex;flex-direction:column;gap:24px;overflow:hidden}
+.card{background:#f7f6f3;border:1px solid #e4e2dc;border-radius:10px;padding:12px 16px}
+.req{display:flex;gap:8px;align-items:flex-start}
+.req svg{width:16px;height:16px;flex:none;margin-top:1px}
+.req .e{font-size:12px;line-height:16px;color:#6b6862}
+.h2{font-size:17px;line-height:22px;font-weight:600;margin:0}
+.meta{font-size:12px;line-height:16px;color:#6b6862}
+.hint{font-size:11px;line-height:14px;color:#6b6862;letter-spacing:.2px}
+</style>
+</helmet>
+<div class="win">
+  <div style="position:absolute;left:20px;top:18px;display:flex;gap:8px" aria-hidden="true"><span style="width:12px;height:12px;border-radius:6px;background:#e4e2dc"></span><span style="width:12px;height:12px;border-radius:6px;background:#e4e2dc"></span><span style="width:12px;height:12px;border-radius:6px;background:#e4e2dc"></span></div>
+  <nav class="sb" aria-label="Sections">
+    <a class="si" href="Main.dc.html" style="text-decoration:none"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 9l2-6h8l2 6v4H2z"/><path d="M2 9h4l1 2h2l1-2h4"/></svg><span>Inbox</span><span class="n">247</span></a>
+    <div class="si"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3.5 2h9v12l-4.5-3-4.5 3z"/></svg><span>Saved</span><span class="n">6</span></div>
+    <a class="si" href="Resumes.dc.html" style="text-decoration:none"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13"/></svg><span>Resumes</span><span class="n">2</span></a>
+    <a class="si" href="Applied.dc.html" style="text-decoration:none"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1.5 8l13-6-4 12-3-5z"/></svg><span>Applied</span></a>
+    <a class="si sel" href="Interviews.dc.html" style="text-decoration:none"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="11" cy="7" r="2"/><path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/></svg><span>Interviews</span><span class="n">1</span></a>
+    <div class="sh">Reports</div>
+    <a class="si" href="Improve.dc.html" style="text-decoration:none"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 12l4-4 3 3 5-6"/></svg><span>Improve</span></a>
+    <a class="si" href="FilteredOut.dc.html" style="text-decoration:none"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 4h12M4 8h8M6 12h4"/></svg><span>Filtered out</span></a>
+    <div class="si"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M5 8h6"/></svg><span>Skipped</span></div>
+    <div class="sh">Setup</div>
+    <a class="si" href="MasterResume.dc.html" style="text-decoration:none"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="3" width="13" height="10" rx="1.5"/><circle cx="5.5" cy="7.5" r="1.5"/><path d="M9 6.5h3M9 9.5h3"/></svg><span>Master resume</span></a>
+    <a class="si" href="Sources.dc.html" style="text-decoration:none"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="1.5"/><path d="M5 5a4.2 4.2 0 0 0 0 6M11 5a4.2 4.2 0 0 1 0 6M3 3a7 7 0 0 0 0 10M13 3a7 7 0 0 1 0 10"/></svg><span>Sources</span></a>
+    <a class="si" href="Settings.dc.html" style="text-decoration:none"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg><span>Settings</span></a>
+    <div class="foot">
+      <div style="font-size:12px;line-height:16px;white-space:nowrap">Checked 7:58 AM · 14 new</div>
+      <div class="hint" style="display:flex;justify-content:space-between;white-space:nowrap"><span>Next check 1:00 PM</span><a href="#find" style="text-decoration:none;font-weight:500">Find now</a></div>
+    </div>
+  </nav>
+  <div class="main">
+    <div class="tb">
+      <label class="cap" style="width:240px;color:#6b6862;font-weight:400;margin-left:4px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg><input type="search" aria-label="Company or role" placeholder="Company or role" style="border:0;outline:0;background:transparent;font:inherit;color:inherit;flex:1;min-width:0;padding:0"><span class="k">⌘F</span></label>
+      <span style="flex:1"></span>
+      <button class="cap" style="font-family:inherit"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M13 8A5 5 0 1 1 11.5 4.5"/><path d="M11.5 1.5v3h-3"/></svg>Find new jobs<span class="k">⌘R</span></button>
+    </div>
+    <div class="content">
+      <section class="list" style="width:680px;border-right:1px solid #e4e2dc;background:#ffffff" aria-label="Interviews board">
+        <div style="padding:28px 24px 10px"><h1 style="margin:0;font-size:24px;line-height:30px;font-weight:700">Interviews</h1><div class="meta" style="margin-top:4px">5 in progress · 1 follow-up due today · Applied holds the 32 waiting</div></div>
+        <div style="flex:1;background:#efede8;margin:8px 24px 24px;border-radius:12px;padding:16px;display:flex;gap:12px;overflow:hidden">
+          <div style="width:192px;flex:none;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:6px;height:24px"><span style="width:15px;height:15px;display:inline-flex;color:#6b6862"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 2.5h3l1.5 3.5-2 1.2a8 8 0 0 0 3.3 3.3l1.2-2 3.5 1.5v3a1 1 0 0 1-1 1A11.5 11.5 0 0 1 2 3.5a1 1 0 0 1 1-1z"/></svg></span><span style="font-weight:600">Screen</span><span class="meta" style="margin-left:auto;font-variant-numeric:tabular-nums">2</span></div><div style="background:#ffffff;border-radius:10px;box-shadow:0 1px 2px rgba(30,29,26,.06);padding:10px 12px;display:flex;flex-direction:column;gap:2px;"><div style="font-weight:600;line-height:16px">Lumen Rail</div><div class="meta">Backend Developer</div><div class="meta" style="color:#6b6862;display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;display:inline-flex"></span>Recruiter call Mon, Oct 27 · 2:00 PM</div></div><div style="background:#ffffff;border-radius:10px;box-shadow:0 1px 2px rgba(30,29,26,.06);padding:10px 12px;display:flex;flex-direction:column;gap:2px;"><div style="font-weight:600;line-height:16px">Westbay Insurance</div><div class="meta">Python Developer</div><div class="meta" style="color:#6b6862;display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;display:inline-flex"></span>Screen done Oct 15 · waiting</div></div></div>
+          <div style="width:192px;flex:none;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:6px;height:24px"><span style="width:15px;height:15px;display:inline-flex;color:#6b6862"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="11" cy="7" r="2"/><path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/></svg></span><span style="font-weight:600">Interview</span><span class="meta" style="margin-left:auto;font-variant-numeric:tabular-nums">2</span></div><div style="background:#ffffff;border-radius:10px;box-shadow:0 1px 2px rgba(30,29,26,.06);padding:10px 12px;display:flex;flex-direction:column;gap:2px;outline:2px solid #0b63ce;outline-offset:-2px;"><div style="font-weight:600;line-height:16px">Bramblewood Health</div><div class="meta">Backend Engineer, Patient Records</div><div class="meta" style="color:#8f5200;display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;display:inline-flex"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1.5H3z"/><path d="M6.5 13.5a1.5 1.5 0 0 0 3 0"/></svg></span>Follow up today</div></div><div style="background:#ffffff;border-radius:10px;box-shadow:0 1px 2px rgba(30,29,26,.06);padding:10px 12px;display:flex;flex-direction:column;gap:2px;"><div style="font-weight:600;line-height:16px">Cinder Analytics</div><div class="meta">Software Engineer, Data Platform</div><div class="meta" style="color:#6b6862;display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;display:inline-flex"></span>Take-home due Wed, Oct 22</div></div></div>
+          <div style="width:192px;flex:none;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:6px;height:24px"><span style="width:15px;height:15px;display:inline-flex;color:#6b6862"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="6" width="12" height="8" rx="1"/><path d="M2 9h12M8 6v8M5 6a1.8 1.8 0 1 1 3-1.8A1.8 1.8 0 1 1 11 6"/></svg></span><span style="font-weight:600">Offer</span><span class="meta" style="margin-left:auto;font-variant-numeric:tabular-nums">1</span></div><div style="background:#ffffff;border-radius:10px;box-shadow:0 1px 2px rgba(30,29,26,.06);padding:10px 12px;display:flex;flex-direction:column;gap:2px;"><div style="font-weight:600;line-height:16px">Driftwood Mobility</div><div class="meta">Software Developer II</div><div class="meta" style="color:#8f5200;display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;display:inline-flex"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1.5H3z"/><path d="M6.5 13.5a1.5 1.5 0 0 0 3 0"/></svg></span>Reply by Sat, Oct 25</div></div></div>
+        </div>
+      </section>
+      <section class="pane" aria-label="Selected application">
+        <div class="body" style="padding:24px 28px;gap:20px">
+          <header style="display:flex;flex-direction:column;gap:4px">
+            <div class="meta">Bramblewood Health · via Greenhouse</div>
+            <h1 style="margin:0;font-size:20px;line-height:25px;font-weight:700">Backend Engineer, Patient Records</h1>
+            <div class="meta" style="color:#3f3d38">Toronto, ON · Remote, Canada · Applied Oct 1 with the Full resume</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+              <button class="btn pri"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="11" cy="7" r="2"/><path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/></svg>Interview<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg></button>
+              <button class="btn">Open job <span class="k">↩</span></button>
+              <button class="btn">Open posting <span class="k">O</span></button>
+              <button class="btn" aria-label="More actions" style="padding:0 10px">···</button>
+            </div>
+          </header>
+          <div class="card" style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">Next: system design, Tue, Oct 21 · 10:00 AM ET, 45 min</span><span class="meta" style="white-space:nowrap">Interview since Oct 14</span></div>
+            <div class="meta" style="display:flex;align-items:center;gap:6px;color:#8f5200"><span style="width:12px;height:12px;display:inline-flex;flex:none"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1.5H3z"/><path d="M6.5 13.5a1.5 1.5 0 0 0 3 0"/></svg></span><span>Follow-up due today: send a thank-you note to Priya</span><a href="#done" style="margin-left:auto;text-decoration:none;color:#0b5fc4">Done</a><a href="#change" style="text-decoration:none;color:#0b5fc4">Change</a></div>
+          </div>
+          <section style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 class="h2">Timeline</h2><a href="#add" class="meta" style="text-decoration:none;color:#0b5fc4">Add a note</a></div>
+            <div class="req"><span style="width:16px;height:16px;color:#6b6862;flex:none;display:inline-flex"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1.5 8l13-6-4 12-3-5z"/></svg></span><div><div>Applied · Wed, Oct 1</div><div class="e">Sent the Full resume, built 9:40 AM, match 88</div></div></div>
+            <div class="req"><span style="width:16px;height:16px;color:#6b6862;flex:none;display:inline-flex"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 2.5h3l1.5 3.5-2 1.2a8 8 0 0 0 3.3 3.3l1.2-2 3.5 1.5v3a1 1 0 0 1-1 1A11.5 11.5 0 0 1 2 3.5a1 1 0 0 1 1-1z"/></svg></span><div><div>Recruiter screen · Mon, Oct 6</div><div class="e">30 min with Priya Natarajan</div></div></div>
+            <div class="req"><span style="width:16px;height:16px;color:#6b6862;flex:none;display:inline-flex"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="11" cy="7" r="2"/><path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/></svg></span><div><div>Technical interview · Tue, Oct 14</div><div class="e">Go and SQL pair-coding, 60 min</div></div></div>
+            <div class="req"><span style="width:16px;height:16px;color:#6b6862;flex:none;display:inline-flex"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M5 6h6M5 8.5h6M5 11h3"/></svg></span><div><div>Note · Fri, Oct 24</div><div class="e">System design next week</div></div></div>
+            <div class="req"><span style="width:16px;height:16px;color:#0b5fc4;flex:none;display:inline-flex"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="11" cy="7" r="2"/><path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/></svg></span><div><div style="color:#0b5fc4">System design · Tue, Oct 21 · upcoming</div><div class="e">10:00 AM ET, 45 min</div></div></div>
+          </section>
+          <section style="display:flex;flex-direction:column;gap:8px">
+            <h2 class="h2">Notes</h2>
+            <textarea aria-label="Notes" style="font:inherit;color:#1e1d1a;background:#f7f6f3;border:1px solid #e4e2dc;border-radius:10px;padding:10px 12px;min-height:76px;resize:vertical">Team is splitting a patient-records monolith into event-driven services. On-call is one week in six. Ask about the FHIR migration timeline and who owns the message bus.</textarea>
+          </section>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

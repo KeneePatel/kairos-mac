@@ -1,0 +1,41 @@
+<!-- @dsCard group="Lists" height=300 subtitle="36 px rows, three groups, the selected and hover states" -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:var(--surface);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.wrap{padding:16px}
+.cap{letter-spacing:.2px;color:var(--ink-secondary)}
+.tab{font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--radius-capsule);font-size:12px;line-height:16px;font-weight:600}
+.pill svg{width:12px;height:12px;flex:none}
+.pill.yes{color:var(--yes);background:var(--yes-bg)}
+.pill.maybe{color:var(--maybe);background:var(--maybe-bg)}
+.pill.no{color:var(--no);background:var(--no-bg)}
+.key{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border:1px solid var(--outline);border-radius:var(--radius-keycap);background:var(--surface-raised);color:var(--ink-secondary);font-size:11px;line-height:14px;font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:var(--radius-capsule);font-size:13px;line-height:18px;font-weight:600;border:0;background:var(--control-fill);color:var(--ink)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary .key{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45);color:#fff}
+.btn.plain{background:transparent;color:var(--accent-text);padding:0 4px}
+.list{width:380px}
+.group{height:24px;display:flex;align-items:flex-end;padding:0 16px 4px}
+.row{height:36px;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:var(--radius-field);margin:0 4px}
+.row + .row{box-shadow:inset 0 1px 0 var(--separator-row)}
+.row.selected{background:var(--accent-tint);box-shadow:none}
+.row.hover{background:var(--surface-raised)}
+.txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:16px}
+.m{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-secondary);line-height:14px}
+.dim .t,.dim .m,.dim .score-small{color:var(--ink-dimmed)}
+.doc{width:14px;height:14px;color:var(--accent-text);display:inline-flex}
+.acts{display:inline-flex}
+</style></head>
+<body>
+<div class="list">
+ <div class="group caption cap">Decide · 247</div>
+ <div class="row selected"><span class="pill yes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M5 8.2l2 2 4-4.4"/></svg>Yes</span><div class="txt"><div class="headline t">Backend Developer II</div><div class="callout m">Northline Freight · Toronto, ON · Hybrid</div></div><span class="doc" title="Resume built"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13"/></svg></span><span class="score-small tab">92</span></div>
+ <div class="row"><span class="pill maybe"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor" stroke="none"/></svg>Maybe</span><div class="txt"><div class="headline t">Software Developer, Platform</div><div class="callout m">Cobalt Ledger · Waterloo, ON · Wants Java, you list Go</div></div><span class="score-small tab">76</span></div>
+ <div class="row hover"><span class="pill yes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M5 8.2l2 2 4-4.4"/></svg>Yes</span><div class="txt"><div class="headline t">Backend Engineer, Data Ingestion</div><div class="callout m">Tidewater Health · Halifax, NS · Remote</div></div><span class="acts"><button class="btn" style="height:22px;padding:0 8px;font-size:12px">Open <span class="key">O</span></button></span><span class="score-small tab">84</span></div>
+ <div class="group caption cap">Needs a full read · 283</div>
+ <div class="row"><span class="pill maybe"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor" stroke="none"/></svg>Maybe</span><div class="txt"><div class="headline t">Java Developer</div><div class="callout m">Caresoft · Toronto, ON · Snippet from Adzuna</div></div><span class="score-small tab">—</span></div>
+ <div class="group caption cap">No from the AI · 179 ▸</div>
+ <div class="row dim"><span class="pill no"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M5 8h6"/></svg>No</span><div class="txt"><div class="headline t">Staff Engineer, Infrastructure</div><div class="callout m">Pinecrest Logistics · Vancouver, BC · Asks for 10+ years</div></div><span class="score-small tab">39</span></div>
+</div></body></html>
