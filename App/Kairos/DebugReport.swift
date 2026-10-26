@@ -42,6 +42,20 @@
                 done.wait()
                 exit(0)
             }
+            if CommandLine.arguments.contains("--sources-report") {
+                let done = DispatchSemaphore(value: 0)
+                Task.detached {
+                    do {
+                        let db = try Database(path: try AccountStore.applicationSupport().databaseURL(for: .local).path)
+                        print(try await sourcesReport(db))
+                    } catch {
+                        print("sources-report: \(error)")
+                    }
+                    done.signal()
+                }
+                done.wait()
+                exit(0)
+            }
             if CommandLine.arguments.contains("--fetch-dry") {
                 let done = DispatchSemaphore(value: 0)
                 Task.detached {
@@ -55,6 +69,15 @@
                 let done = DispatchSemaphore(value: 0)
                 Task.detached {
                     await adzunaProbe()
+                    done.signal()
+                }
+                done.wait()
+                exit(0)
+            }
+            if CommandLine.arguments.contains(where: { $0.hasPrefix("--serpapi-probe") }) {
+                let done = DispatchSemaphore(value: 0)
+                Task.detached {
+                    await serpApiProbe()
                     done.signal()
                 }
                 done.wait()
@@ -123,6 +146,120 @@
             }
             done.wait()
             exit(0)
+        }
+
+        /// `--sources-report`: what each kind of source yields on this Mac (no contact details, no
+        /// keys): jobs, snippets, verdicts, what you acted on, link hosts, posting ages, and how the
+        /// company lookups and the catalog's boards fared. Research for the collection redesign.
+        private static func sourcesReport(_ db: Database) async throws -> String {
+            var out = "# Kairos sources report\n"
+            out += "\n## By kind (open and closed jobs still stored)\n"
+            out +=
+                "kind | jobs | snippets | yes | maybe | no | filtered | waiting | applied | saved | skipped | closed | avg chars | ≤7d | ≤30d\n"
+            let now = Int64(Date().timeIntervalSince1970 * 1_000)
+            for row in try await db.query(
+                """
+                SELECT s.kind AS kind, COUNT(*) AS n, SUM(j.description_kind = 'snippet') AS snippets,
+                    SUM(j.verdict = 'yes') AS yes, SUM(j.verdict = 'maybe') AS maybe,
+                    SUM(j.verdict = 'no' AND j.verdict_source != 'prefilter') AS no,
+                    SUM(j.verdict_source = 'prefilter') AS filtered, SUM(j.verdict IS NULL) AS waiting,
+                    SUM(j.state = 'applied') AS applied, SUM(j.state = 'shortlisted') AS saved,
+                    SUM(j.state = 'skipped') AS skipped, SUM(j.closed_at IS NOT NULL) AS closed,
+                    CAST(AVG(LENGTH(j.description)) AS INTEGER) AS avg_len,
+                    SUM(j.posted_at > ?) AS week, SUM(j.posted_at > ?) AS month
+                FROM job j JOIN source s ON s.id = j.source_id WHERE j.deleted = 0 GROUP BY s.kind ORDER BY n DESC
+                """, [.integer(now - 7 * 86_400_000), .integer(now - 30 * 86_400_000)])
+            {
+                let cols = [
+                    "n", "snippets", "yes", "maybe", "no", "filtered", "waiting", "applied", "saved", "skipped",
+                    "closed",
+                    "avg_len", "week", "month",
+                ]
+                out +=
+                    (row.string("kind") ?? "?") + " | " + cols.map { "\(row.int($0) ?? 0)" }.joined(separator: " | ")
+                    + "\n"
+            }
+            out += "\n## Inbox now (judged, open, not acted on)\n"
+            for row in try await db.query(
+                """
+                SELECT verdict, COUNT(*) AS n, SUM(description_kind = 'snippet') AS snippets FROM job
+                WHERE deleted = 0 AND state = 'new' AND verdict IS NOT NULL AND verdict_source != 'prefilter'
+                    AND closed_at IS NULL GROUP BY verdict
+                """)
+            {
+                out +=
+                    "\(row.string("verdict") ?? "?"): \(row.int("n") ?? 0), of which snippets \(row.int("snippets") ?? 0)\n"
+            }
+            out += "\n## Link hosts by kind (top 6 each)\n"
+            var hosts: [String: [String: Int]] = [:]
+            var lengths: [String: [Int]] = [:]
+            for row in try await db.query(
+                "SELECT s.kind AS kind, j.url AS url, LENGTH(j.description) AS len FROM job j JOIN source s ON s.id = j.source_id WHERE j.deleted = 0"
+            ) {
+                let kind = row.string("kind") ?? "?"
+                let host = row.string("url").flatMap(URL.init(string:))?.host() ?? "(none)"
+                hosts[kind, default: [:]][host, default: 0] += 1
+                lengths[kind, default: []].append(row.int("len") ?? 0)
+            }
+            for (kind, counts) in hosts.sorted(by: { $0.value.values.reduce(0, +) > $1.value.values.reduce(0, +) }) {
+                let top = counts.sorted { $0.value > $1.value }.prefix(6).map { "\($0.key) \($0.value)" }
+                let sorted = (lengths[kind] ?? []).sorted()
+                func q(_ f: Double) -> Int {
+                    sorted.isEmpty ? 0 : sorted[min(sorted.count - 1, Int(Double(sorted.count) * f))]
+                }
+                out +=
+                    "\(kind): \(top.joined(separator: ", ")) · description chars p10 \(q(0.1)) p50 \(q(0.5)) p90 \(q(0.9))\n"
+            }
+            out += "\n## Adzuna's companies (top 15, with how many of their jobs you filtered or judged)\n"
+            for row in try await db.query(
+                """
+                SELECT j.company AS company, COUNT(*) AS n, SUM(j.verdict_source = 'prefilter') AS filtered,
+                    SUM(j.verdict IN ('yes', 'maybe')) AS good
+                FROM job j JOIN source s ON s.id = j.source_id WHERE j.deleted = 0 AND s.kind = 'adzuna'
+                GROUP BY j.company ORDER BY n DESC LIMIT 15
+                """)
+            {
+                out +=
+                    "\(row.string("company") ?? "?"): \(row.int("n") ?? 0) (filtered \(row.int("filtered") ?? 0), yes or maybe \(row.int("good") ?? 0))\n"
+            }
+            out += "\n## Company lookups (snippet companies looked up on public boards)\n"
+            if let row = try await db.query("SELECT COUNT(*) AS n, SUM(kind IS NOT NULL) AS found FROM company_lookup")
+                .first
+            {
+                out += "looked up \(row.int("n") ?? 0), board found \(row.int("found") ?? 0)\n"
+            }
+            if let row = try await db.query(
+                "SELECT COUNT(*) AS n FROM (SELECT job_id FROM listing WHERE deleted = 0 GROUP BY job_id HAVING COUNT(*) > 1)"
+            ).first {
+                out += "jobs with more than one listing: \(row.int("n") ?? 0)\n"
+            }
+            out += "\n## Boards by origin: how many have open jobs for you\n"
+            var byOrigin: [String: (boards: Int, withJobs: Int, withGood: Int, jobs: Int)] = [:]
+            for row in try await db.query(
+                """
+                SELECT s.kind AS kind, s.config AS config, s.enabled AS enabled, s.health AS health,
+                    COUNT(j.id) AS n, SUM(j.verdict IN ('yes', 'maybe')) AS good
+                FROM source s LEFT JOIN job j ON j.source_id = s.id AND j.deleted = 0 AND j.closed_at IS NULL
+                WHERE s.deleted = 0 GROUP BY s.id
+                """)
+            {
+                guard let kind = row.string("kind").flatMap(SourceKind.init(rawValue:)),
+                    SourceKind.boards.contains(kind)
+                else { continue }
+                let origin = row.string("config").flatMap(BoardConfig.decode)?.origin ?? "you"
+                var entry = byOrigin[origin] ?? (0, 0, 0, 0)
+                entry.boards += 1
+                let n = row.int("n") ?? 0
+                if n > 0 { entry.withJobs += 1 }
+                if (row.int("good") ?? 0) > 0 { entry.withGood += 1 }
+                entry.jobs += n
+                byOrigin[origin] = entry
+            }
+            for (origin, entry) in byOrigin.sorted(by: { $0.value.boards > $1.value.boards }) {
+                out +=
+                    "\(origin): \(entry.boards) boards, \(entry.withJobs) with open jobs for you (\(entry.jobs) jobs), \(entry.withGood) with a Yes or Maybe\n"
+            }
+            return out
         }
 
         private static func report() async throws -> String {
@@ -707,6 +844,65 @@
 
         /// `--adzuna-probe`: how many Canadian postings a few Adzuna searches find, for sizing a
         /// fetch (2026-10-23 research). About 10 calls of the free 250 a day. Never the key.
+        /// `--serpapi-probe[=<query>]`: one Google Jobs search through SerpApi with your key (one of
+        /// the plan's searches) for a city-level query, printing each result's shape: where Google
+        /// took it from, its apply links' hosts, its dates, and the response's filters. Research
+        /// for the collection redesign (2026-10-26). The key is never printed.
+        private static func serpApiProbe() async {
+            let secrets = AppSecrets.store()
+            guard let key = (try? secrets.read(SecretKey("serpapi.key"))) ?? nil, !key.isEmpty else {
+                return print("serpapi-probe: no SerpApi key saved")
+            }
+            let query =
+                CommandLine.arguments.first { $0.hasPrefix("--serpapi-probe=") }.map { String($0.dropFirst(16)) }
+                ?? "software developer"
+            let place =
+                CommandLine.arguments.first { $0.hasPrefix("--place=") }.map { String($0.dropFirst(8)) }
+                ?? "Toronto, Ontario, Canada"
+            var components = URLComponents(string: "https://serpapi.com/search.json")
+            components?.queryItems = [
+                URLQueryItem(name: "engine", value: "google_jobs"), URLQueryItem(name: "q", value: query),
+                URLQueryItem(name: "location", value: place), URLQueryItem(name: "gl", value: "ca"),
+                URLQueryItem(name: "hl", value: "en"), URLQueryItem(name: "api_key", value: key),
+            ]
+            guard let url = components?.url else { return print("serpapi-probe: bad URL") }
+            do {
+                let (data, response) = try await URLSessionHTTPClient().data(for: URLRequest(url: url))
+                print("serpapi-probe: \(query) in \(place): HTTP \(response.statusCode), \(data.count) bytes")
+                // The sandbox can't write outside its container: `--raw` sends the raw answer out as
+                // base64, as snapshots do.
+                if CommandLine.arguments.contains("--raw") { print("SERPAPI-RAW \(data.base64EncodedString())") }
+                guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+                print("keys: \(object.keys.sorted().joined(separator: ", "))")
+                if let pagination = object["serpapi_pagination"] as? [String: Any] {
+                    print("pagination keys: \(pagination.keys.sorted().joined(separator: ", "))")
+                }
+                for filter in object["filters"] as? [[String: Any]] ?? [] {
+                    let options = (filter["options"] as? [[String: Any]] ?? []).map { option in
+                        "\(option["name"] ?? "?")=\((option["parameters"] as? [String: Any])?["uds"] ?? "-")"
+                    }
+                    print("filter \(filter["name"] ?? "?"): \(options.joined(separator: " | "))")
+                }
+                for job in object["jobs_results"] as? [[String: Any]] ?? [] {
+                    let detected = job["detected_extensions"] as? [String: Any] ?? [:]
+                    let options = (job["apply_options"] as? [[String: Any]] ?? []).map { option in
+                        "\(option["title"] ?? "?")→\((option["link"] as? String).flatMap(URL.init(string:))?.host() ?? "?")"
+                    }
+                    let description = job["description"] as? String ?? ""
+                    print(
+                        "- \(job["title"] ?? "?") · \(job["company_name"] ?? "?") · via \(job["via"] ?? "?") · \(job["location"] ?? "?")"
+                            + " · detected \(detected.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","))"
+                            + " · extensions \((job["extensions"] as? [String] ?? []).joined(separator: ","))"
+                            + " · apply \(options.joined(separator: ", "))"
+                            + " · share \((job["share_link"] as? String).flatMap(URL.init(string:))?.host() ?? "-")"
+                            + " · source_link \((job["source_link"] as? String).flatMap(URL.init(string:)).map { ($0.host() ?? "?") + $0.path() } ?? "-")"
+                            + " · \(description.count) chars · keys \(job.keys.sorted().joined(separator: ","))")
+                }
+            } catch {
+                print("serpapi-probe: \(error)")
+            }
+        }
+
         private static func adzunaProbe() async {
             let secrets = AppSecrets.store()
             guard let id = (try? secrets.read(SecretKey("adzuna.app_id"))) ?? nil,

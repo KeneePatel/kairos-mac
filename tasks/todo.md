@@ -1105,6 +1105,18 @@ You asked for the whole UI reimagined: every screen rebuilt from the ground up, 
 
 Each slice: Swift Testing for model logic, `--render-snapshots` for its screens, `--layout-probe` at 960 × 600, the full gate, one PR, fast-forward merge.
 
+## Job collection v3 (2026-10-26)
+
+You asked for the job collection reimagined: full descriptions every time, correct links, better quality, more real jobs, and a Sources page that doesn't split "yours" from "the catalog". Research: `docs/research/job-collection/07-v3-findings.md` (your data through `--sources-report`, one `--serpapi-probe` search, every source's docs again). Design: `docs/design/job-collection-v3.md`; decision: ADR-018. Your decisions (2026-10-26): snippets never become jobs and Adzuna finds companies only; Google Jobs on SerpApi's free plan, about 8 searches a day in rotation; places Toronto, Vancouver, Montreal, Ottawa, Calgary, Waterloo, Halifax and remote in Canada; Sources as channels, then one companies list.
+
+- [ ] **C1 · Google Jobs done right** (S): migration 015 (`apply_url`, `via`); `source_link` as the job's page, an apply option only when `source_link` is a job board's and the option names the company, never `share_link`; dates from `extensions`; boards found from Google's links; a recorded SerpApi fixture; the pane's "posted on · seen on" line; stored google.com links fixed by the next fetch through the ledger.
+- [ ] **C2 · Full postings only** (M): Adzuna answers become leads (table `lead`, 30 days); every lead's company looked up over time (catalog, then `BoardProbe`, 60 a fetch, cached 30 days); open snippet-only jobs archived with an event; `snippet_only`, "Needs a full read", `isSnippet` and the snippet note removed; Himalayas Apply on `applicationLink` with its credit and boards found from it; Remotive with its credit and four fetches a day.
+- [ ] **C3 · Quality and the plan** (M): the "Staffing agency" prefilter rule and "Show staffing-agency postings" (off); Places in Settings, Search; the Google Jobs rotation (about 40 role-and-place pairs, 8 a day, least recent first) with its budget; Filtered out's new reason.
+- [ ] **C4 · Sources page v3** (M): channels page with this week's yield per channel; the companies list filtered Hiring for you · Watching · Found by Kairos · Muted · All, with the company pane; the Google Jobs, Himalayas, Remotive and Adzuna leads pages; the catalog invisible until a board hires for you.
+- [ ] **C5 · Docs** (S): SPEC §5.2 and §5.4, ADR-018 accepted, the research README, memory; `--sources-report` before and after in this file.
+
+Each slice: tests first with recorded fixtures (no network in tests), the migration on a copy of your database, `--sources-report` before and after, snapshots and the layout probe for every changed screen, one live run, the full gate, one PR, fast-forward merge.
+
 ---
 
 ## Phase 3: R3 Accounts and sync (refined at Checkpoint F)
