@@ -47,7 +47,7 @@ Every row names the command that produces its verdict. Gitleaks is the external 
 
 | ID | Rule | Path | Reason | Owner | Expires |
 |----|------|------|--------|-------|---------|
-| — | — | — | None | — | — |
+| E2 | Floor guard: assertion-removed (1 line) | `Packages/KairosCore/Tests/LLMTests/RouterBudgetTests.swift` | Approved by you 2026-10-26 (PR #17). The router test pinned `analyzeJob`'s request at `maxOutputTokens == 1_500`, the limit that cut off long postings' replies on every model. The expected value moves to `6_000` with the spec; the assertion stays an exact equality. | Kenee Patel | When `screening-resume` merges into `main` |
 
 ## Where each check runs
 
