@@ -71,6 +71,24 @@ private let options = RunOptions(
 
 @Suite("Job analysis task")
 struct AnalyzeJobTaskTests {
+    /// 2026-10-26: long postings filled every model's reply past a 1,500-token limit (Kong's 25
+    /// requirements took 3,954 tokens on Flash-Lite, Ontinue's 24 took 3,721), so the reply was cut
+    /// off, its repair too, and the job waited for the AI on every run. The limit must hold the
+    /// most requirements the schema allows at that measured cost, with a fifth to spare.
+    @Test func theOutputLimitHoldsTheLongestAnswerTheSchemaAllows() throws {
+        let measuredPerRequirement = 160
+        let output = try #require(TaskDefaults.catalog[.analyzeJob]).budget.output
+        #expect(output >= AnalyzeJobTask.maxRequirements * measuredPerRequirement * 6 / 5)
+        guard case .object(let fields) = AnalyzeJobTask.outputSchema,
+            let requirements = fields.first(where: { $0.name == "requirements" }),
+            case .array(_, let maxItems) = requirements.schema
+        else {
+            Issue.record("the schema has no requirements array")
+            return
+        }
+        #expect(maxItems == AnalyzeJobTask.maxRequirements)
+    }
+
     @Test func thePromptIsAVersionedResourceWithTheT20Rules() throws {
         #expect(AnalyzeJobTask.promptVersion == 2)
         let instructions = try #require(PromptLibrary.instructions(for: .analyzeJob, version: 1))

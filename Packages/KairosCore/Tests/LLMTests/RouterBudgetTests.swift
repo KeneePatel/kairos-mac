@@ -81,7 +81,7 @@ struct LLMRouterTests {
             .run(RequirementsTask(), input: posting, context: CallContext(jobID: "job-1"))
         #expect(result.output.yearsRequired == 3 && result.outcome == .ok)
         let sent = try #require(fake.requests.first)
-        #expect(sent.model == "gemini-flash-lite-latest" && sent.temperature == 0 && sent.maxOutputTokens == 1_500)
+        #expect(sent.model == "gemini-flash-lite-latest" && sent.temperature == 0 && sent.maxOutputTokens == 6_000)
         #expect(sent.timeoutSeconds == 60)  // extraction
 
         let rows = try await db.query("SELECT * FROM llm_call")
@@ -277,7 +277,7 @@ struct ProviderSetupTests {
         #expect(
             TaskDefaults.catalog[.analyzeJob]
                 == TaskDefaults(
-                    budget: TokenBudget(input: 7_000, output: 1_500), temperature: 0, modelClass: .flashLite))
+                    budget: TokenBudget(input: 7_000, output: 6_000), temperature: 0, modelClass: .flashLite))
         #expect(TaskDefaults.catalog[.coverLetter]?.temperature == 0.6)
     }
 

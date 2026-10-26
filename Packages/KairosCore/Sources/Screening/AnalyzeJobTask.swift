@@ -208,6 +208,8 @@ public struct AnalyzeJobTask: LLMTask {
 
     public static let id = TaskID.analyzeJob
     public static let promptVersion = 2
+    /// The most requirements a reply may list; the task's output limit is sized to hold them.
+    public static let maxRequirements = 30
     public static let outputSchema = JSONSchema.object([
         .required(
             "requirements",
@@ -218,7 +220,7 @@ public struct AnalyzeJobTask: LLMTask {
                     .required("category", .enumeration(JobAnalysis.Requirement.Category.allCases.map(\.rawValue))),
                     .required("match", .enumeration(JobAnalysis.Requirement.Match.allCases.map(\.rawValue))),
                     .optional("evidence", .array(of: .string(maxLength: 12), maxItems: 4)),
-                ]), maxItems: 30)),
+                ]), maxItems: maxRequirements)),
         .optional("years_required", .integer(minimum: 0, maximum: 30)),
         .required("seniority", .enumeration(Seniority.allCases.map(\.rawValue) + ["unspecified"])),
         .required("domains", .array(of: .string(maxLength: 40), maxItems: 6)),

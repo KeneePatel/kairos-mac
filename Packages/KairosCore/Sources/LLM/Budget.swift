@@ -45,8 +45,10 @@ public struct TaskDefaults: Sendable, Equatable {
         .importGitHubRepo: TaskDefaults(
             budget: TokenBudget(input: 3_000, output: 600), temperature: 0.2, modelClass: .flashLite),
         .triage: TaskDefaults(budget: TokenBudget(input: 3_000, output: 500), temperature: 0, modelClass: nil),
+        // 6,000 out (was 1,500 until 2026-10-26): a long posting's 25 requirements took 3,954
+        // tokens, so every model's reply was cut off and the job never got a verdict.
         .analyzeJob: TaskDefaults(
-            budget: TokenBudget(input: 7_000, output: 1_500), temperature: 0, modelClass: .flashLite),
+            budget: TokenBudget(input: 7_000, output: 6_000), temperature: 0, modelClass: .flashLite),
         .select: TaskDefaults(budget: TokenBudget(input: 4_000, output: 500), temperature: 0, modelClass: .flashLite),
         .writeSummary: writer, .writeSkills: writer, .writeExperience: writer, .writeProjects: writer,
         .rewriteSection: TaskDefaults(
