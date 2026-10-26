@@ -14,6 +14,8 @@ public enum PrefilterRule: String, Sendable, CaseIterable, Codable {
     case clearance
     case french
     case blacklist
+    /// A staffing agency, recruiter or contractor marketplace (job collection v3, C3).
+    case agency
     case postingAge = "posting_age"
     case alreadyApplied = "already_applied"
 }
@@ -87,6 +89,11 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
     public var remoteAllowed = true
     /// Companies you never want to see, matched on whole words ("Amazon" also blocks Amazon Web Services).
     public var blacklist: [String] = []
+    /// Keep postings from staffing agencies, recruiters and contractor marketplaces (job collection
+    /// v3, C3). Off: the prefilter leaves them out, with Bring back in Filtered out.
+    public var showAgencies = false
+    /// The cities Google Jobs searches in (v3, C3); nil means the usual cities of your countries.
+    public var places: [Place]?
     /// Postings older than this many days are out: never stored by a fetch (the Fetch screen's
     /// "Posted" menu; Adzuna asks for it in its search), and rejected by the prefilter when a job
     /// stored earlier is screened again.
@@ -101,11 +108,14 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
     /// Your roles and other titles, as one matcher for searches, the title rule and fetches.
     public var roleMatcher: RoleMatcher { RoleMatcher(families: roles, extra: titleInclude) }
 
+    /// Your places, or the usual cities of your countries when you haven't set any.
+    public var effectivePlaces: [Place] { places ?? countries.flatMap(Place.defaults(for:)) }
+
     private enum CodingKeys: String, CodingKey {
         case roles, watchCatalog, titleInclude, titleExclude, seniority, maxYearsRequired, countries, regions,
             remoteAllowed,
             blacklist
-        case maxAgeDays, thresholds
+        case maxAgeDays, thresholds, showAgencies, places
     }
 
     /// Missing fields keep their defaults, so older settings still load after a field is added.
@@ -123,6 +133,8 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
         regions = try container.decodeIfPresent([String: [String]].self, forKey: .regions) ?? defaults.regions
         remoteAllowed = try container.decodeIfPresent(Bool.self, forKey: .remoteAllowed) ?? defaults.remoteAllowed
         blacklist = try container.decodeIfPresent([String].self, forKey: .blacklist) ?? defaults.blacklist
+        showAgencies = try container.decodeIfPresent(Bool.self, forKey: .showAgencies) ?? defaults.showAgencies
+        places = try container.decodeIfPresent([Place].self, forKey: .places)
         maxAgeDays = try container.decodeIfPresent(Int.self, forKey: .maxAgeDays)
         thresholds = try container.decodeIfPresent(VerdictThresholds.self, forKey: .thresholds) ?? defaults.thresholds
     }

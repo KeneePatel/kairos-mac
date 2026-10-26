@@ -344,6 +344,7 @@ final class AppModel {
                 watch: preferences.watchCatalog
                     ? CatalogWatch(catalog: .bundled, countries: preferences.countries) : nil,
                 finder: LeadFinder(db: db, probe: BoardProbe(http: http), catalog: .bundled),
+                googlePhrases: roles.googlePhrases, places: preferences.effectivePlaces,
                 makeSource: { try SourceFactory.make($0, http: http, search: search) }),
             screening: ScreeningRun(db: db, router: ai?.router()))
         fetchTask = Task { [weak self] in

@@ -100,6 +100,9 @@ public struct FetchRun: Sendable {
     let roles: RoleMatcher?
     let watch: CatalogWatch?
     let finder: LeadFinder?
+    /// Google Jobs's phrases and the places it searches (v3, C3).
+    let googlePhrases: [String]
+    let places: [Place]
 
     /// A catalog board with nothing open for you is asked every this often, not every fetch.
     public static let quietEvery: TimeInterval = 3 * 86_400
@@ -112,10 +115,13 @@ public struct FetchRun: Sendable {
     public init(
         db: Database, maxConcurrent: Int = 4, now: @escaping @Sendable () -> Date = { Date() },
         postedWithinDays: Int? = nil, roles: RoleMatcher? = nil, watch: CatalogWatch? = nil,
-        finder: LeadFinder? = nil, makeSource: @escaping MakeSource
+        finder: LeadFinder? = nil, googlePhrases: [String] = [], places: [Place] = [],
+        makeSource: @escaping MakeSource
     ) {
         self.watch = watch
         self.finder = finder
+        self.googlePhrases = googlePhrases
+        self.places = places
         self.db = db
         self.makeSource = makeSource
         self.maxConcurrent = max(1, maxConcurrent)
@@ -260,6 +266,8 @@ public struct FetchRun: Sendable {
     /// took; nil when it wasn't asked (its plan's share was spent).
     struct Fetched: Sendable {
         let answer: Result<FetchAnswer, any Error>?
+        /// Google Jobs: the searches planned this run, in order (v3, C3).
+        var turns: [SearchTurn] = []
         let listsEverything: Bool
         let milliseconds: Int
     }
@@ -298,13 +306,26 @@ public struct FetchRun: Sendable {
             let open = (try? await ListingRepository(db).openListings(of: source.id)) ?? []
             query.knownURLs = Set(open.map(\.canonicalURL))
             if query.roles == nil { query.roles = roles }
+            var turns: [SearchTurn] = []
             if let budget = await callBudget(for: source) {
                 guard budget > 0 else { return Fetched(answer: nil, listsEverything: false, milliseconds: took()) }
                 query.callBudget = budget
                 query.since = lastGood
+                // Google Jobs: the least recently searched role-and-place pairs, the share's worth.
+                if source.kind == .googleJobs, !googlePhrases.isEmpty {
+                    let all = GoogleJobsPlan.turns(phrases: googlePhrases, places: places, countries: query.countries)
+                    turns = (try? await GoogleJobsPlan(db).due(for: source.id, among: all, count: budget)) ?? []
+                    query.turns = turns
+                }
             }
-            let answer = try await jobSource.fetch(query, since: memo)
-            return Fetched(answer: .success(answer), listsEverything: jobSource.listsEverything, milliseconds: took())
+            do {
+                let answer = try await jobSource.fetch(query, since: memo)
+                return Fetched(
+                    answer: .success(answer), turns: turns, listsEverything: jobSource.listsEverything,
+                    milliseconds: took())
+            } catch {
+                return Fetched(answer: .failure(error), turns: turns, listsEverything: false, milliseconds: took())
+            }
         } catch {
             return Fetched(answer: .failure(error), listsEverything: false, milliseconds: took())
         }
@@ -377,6 +398,11 @@ public struct FetchRun: Sendable {
             progress.found += postings.count
             entry.items = postings.count
             entry.requests = memo?.requests ?? 1
+            // The turns searched come round again last (v3, C3).
+            if !fetched.turns.isEmpty {
+                try? await GoogleJobsPlan(db).mark(
+                    Array(fetched.turns.prefix(memo?.requests ?? fetched.turns.count)), for: source.id, at: at)
+            }
             do {
                 let cutoff = postedWithinDays.map { at.addingTimeInterval(-Double($0) * 86_400) }
                 let outcome = try await ListingLedger(db).record(

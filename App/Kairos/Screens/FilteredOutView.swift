@@ -197,6 +197,9 @@ struct FilteredOutView: View {
         case .clearance?: return "Jobs that need a security clearance you don't hold"
         case .french?: return "Jobs that need French, which isn't among your languages"
         case .blacklist?: return "Companies you've blocked: " + list(preferences.blacklist, none: "none")
+        case .agency?:
+            return
+                "Staffing agencies, recruiters and contractor marketplaces are left out; keep them with \"Show staffing-agency postings\" in Settings, Search"
         case .postingAge?: return "Older than your Posted limit, from before the limit applied while fetching"
         case .alreadyApplied?: return "Close matches to jobs you've applied to"
         }
@@ -217,6 +220,7 @@ extension PrefilterRule {
         case .clearance: "Needs a security clearance"
         case .french: "Needs French"
         case .blacklist: "Company you've blocked"
+        case .agency: "Staffing agency"
         case .postingAge: "Older than your limit"
         case .alreadyApplied: "Already applied"
         }

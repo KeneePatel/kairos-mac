@@ -153,7 +153,7 @@
                         .frame(width: 1_200, height: 700),
                     to: folder.appending(path: "job-blocked-\(name).png"), appearance: appearance)
                 render(
-                    SearchPreferencesView().environment(today.model).frame(width: 820, height: 1_500)
+                    SearchPreferencesView().environment(today.model).frame(width: 820, height: 2_000)
                         .background(Color(.surface)),
                     to: folder.appending(path: "search-settings-\(name).png"), appearance: appearance)
                 render(

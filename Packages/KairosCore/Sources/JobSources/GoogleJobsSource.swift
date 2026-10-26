@@ -9,7 +9,7 @@ import Store
 /// address and, behind a job board's copy, the employer's own page to apply on (v3, C1).
 public struct GoogleJobsSource: JobSource {
     /// What Kairos spends of SerpApi's free plan (250 searches a month).
-    public static let budget = AdzunaSource.Budget(day: 12, week: 70, month: 240, run: 12)
+    public static let budget = AdzunaSource.Budget(day: 8, week: 56, month: 240, run: 8)
 
     public let id: SourceID
     let key: String
@@ -28,31 +28,36 @@ public struct GoogleJobsSource: JobSource {
         return postings
     }
 
-    /// One page (10 jobs) per search, your roles' searches in order, until the run's share is spent.
+    /// One page (10 jobs) per search: the turns the fetch planned (a role in a place, or remote in
+    /// a country), else your roles' searches in each country, until the run's share is spent.
     public func fetch(_ query: SourceQuery, since memo: FetchMemo?) async throws -> FetchAnswer {
-        let titles = query.titles.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-        guard !titles.isEmpty else {
-            throw SourceError.invalidConfiguration(
-                "Google Jobs searches by your roles; choose some in Settings, Search")
+        var turns = query.turns
+        if turns.isEmpty {
+            let titles = query.titles.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            guard !titles.isEmpty else {
+                throw SourceError.invalidConfiguration(
+                    "Google Jobs searches by your roles; choose some in Settings, Search")
+            }
+            turns = query.countries.flatMap { country in
+                titles.map { SearchTurn(phrase: $0, place: nil, country: country) }
+            }
         }
         let budget = query.callBudget ?? Self.budget.run
         var calls = 0
         var seen: Set<String> = []
         var postings: [Posting] = []
-        searches: for country in query.countries {
-            for title in titles {
-                guard calls < budget else { break searches }
-                calls += 1
-                let page: SerpApiJobs
-                do {
-                    page = try await search(title, in: country)
-                } catch {
-                    guard calls > 1, error != .cancelled else { throw error }
-                    break searches
-                }
-                for job in page.jobsResults ?? [] where seen.insert(job.jobId).inserted {
-                    if let posting = posting(job, country: country) { postings.append(posting) }
-                }
+        for turn in turns {
+            guard calls < budget else { break }
+            calls += 1
+            let page: SerpApiJobs
+            do {
+                page = try await search(turn)
+            } catch {
+                guard calls > 1, error != .cancelled else { throw error }
+                break
+            }
+            for job in page.jobsResults ?? [] where seen.insert(job.jobId).inserted {
+                if let posting = posting(job, country: turn.country) { postings.append(posting) }
             }
         }
         return .postings(postings, memo: FetchMemo(etag: nil, requests: calls))
@@ -60,12 +65,13 @@ public struct GoogleJobsSource: JobSource {
 
     /// Typed like Adzuna's: Swift 6.3's compiler crashed on this `catch` pattern in an untyped
     /// throwing function (CI, 2026-10-24).
-    private func search(_ title: String, in country: Country) async throws(SourceError) -> SerpApiJobs {
+    private func search(_ turn: SearchTurn) async throws(SourceError) -> SerpApiJobs {
         var components = URLComponents(string: "https://serpapi.com/search.json")
         components?.queryItems = [
-            URLQueryItem(name: "engine", value: "google_jobs"), URLQueryItem(name: "q", value: title),
-            URLQueryItem(name: "location", value: country == .canada ? "Canada" : "United States"),
-            URLQueryItem(name: "gl", value: country.rawValue.lowercased()), URLQueryItem(name: "hl", value: "en"),
+            URLQueryItem(name: "engine", value: "google_jobs"),
+            URLQueryItem(name: "q", value: turn.remote ? "\(turn.phrase) remote" : turn.phrase),
+            URLQueryItem(name: "location", value: turn.place?.googleLocation ?? turn.country.googleName),
+            URLQueryItem(name: "gl", value: turn.country.rawValue.lowercased()), URLQueryItem(name: "hl", value: "en"),
             URLQueryItem(name: "api_key", value: key),
         ]
         guard let url = components?.url else { throw .invalidConfiguration("Google Jobs search") }

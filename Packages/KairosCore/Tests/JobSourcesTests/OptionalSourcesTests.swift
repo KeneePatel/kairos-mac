@@ -150,6 +150,33 @@ struct OptionalSourcesTests {
         }
     }
 
+    /// Given turns (v3, C3), Google Jobs searches each one: a role in a city, or "<role> remote" in
+    /// a country, the share's worth, and says how many it asked.
+    @Test func googleJobsSearchesTheTurnsItsGiven() async throws {
+        let recorded = try ScriptedURLProtocol.fixture("serpapi_google_jobs.json")
+        func url(_ q: String, _ location: String) -> String {
+            "https://serpapi.com/search.json?engine=google_jobs&q=\(q.replacing(" ", with: "%20"))&location=\(location.replacing(" ", with: "%20"))&gl=ca&hl=en&api_key=serp-key"
+        }
+        let (http, script) = ScriptedURLProtocol.client([
+            url("software developer", "Toronto, Ontario, Canada"): .http(status: 200, body: recorded),
+            url("software developer remote", "Canada"): .http(status: 200, body: recorded),
+        ])
+        let source = GoogleJobsSource(id: sourceID, key: "serp-key", http: http, now: { now })
+        let toronto = Place(city: "Toronto", region: "Ontario", country: .canada)
+        let turns = [
+            SearchTurn(phrase: "software developer", place: toronto, country: .canada),
+            SearchTurn(phrase: "software developer", place: nil, country: .canada, remote: true),
+            SearchTurn(phrase: "qa engineer", place: toronto, country: .canada),
+        ]
+        var query = SourceQuery(countries: [.canada], callBudget: 2)
+        query.turns = turns
+        guard case .postings(let postings, let memo) = try await source.fetch(query, since: nil) else {
+            Issue.record("expected postings")
+            return
+        }
+        #expect(memo?.requests == 2 && script.requests.count == 2 && postings.count == 5)
+    }
+
     /// Where to apply: the page itself unless it's a job board's copy and an option names the
     /// employer; an option that names neither the company nor the source belongs to another
     /// posting (Google lists some by mistake) and is never chosen. Google's search page never is.

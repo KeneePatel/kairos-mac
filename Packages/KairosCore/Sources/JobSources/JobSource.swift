@@ -41,6 +41,27 @@ public enum FetchAnswer: Sendable, Equatable {
     case unchanged
 }
 
+/// One Google Jobs search (job collection v3, C3): a role phrase in a place, or remote in a country.
+public struct SearchTurn: Sendable, Equatable, Hashable {
+    public var phrase: String
+    /// Nil with `remote`: "<phrase> remote" in the country.
+    public var place: Place?
+    public var country: Country
+    public var remote: Bool
+
+    public init(phrase: String, place: Place?, country: Country, remote: Bool = false) {
+        self.phrase = phrase
+        self.place = place
+        self.country = country
+        self.remote = remote
+    }
+
+    /// One key per turn, for remembering when it was last searched.
+    public var key: String {
+        "\(phrase.lowercased())|\(place?.key ?? (remote ? "remote" : "country"))|\(country.rawValue)"
+    }
+}
+
 /// What a fetch asks for. ATS boards list one company's jobs, so they only need its display name;
 /// a search source (Adzuna) asks by your job titles, countries and posting age.
 public struct SourceQuery: Sendable, Equatable {
@@ -62,6 +83,9 @@ public struct SourceQuery: Sendable, Equatable {
     public var since: Date?
     /// Requests this source may make this run (a search's share of its plan); nil is its default.
     public var callBudget: Int?
+    /// Google Jobs: the searches to make this run, in order (v3, C3). Empty: every title in every
+    /// country, as before.
+    public var turns: [SearchTurn] = []
 
     public init(
         companyName: String? = nil, titles: [String] = [], countries: [Country] = [.canada, .unitedStates],

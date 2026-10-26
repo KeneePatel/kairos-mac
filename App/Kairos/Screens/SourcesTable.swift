@@ -394,7 +394,7 @@ struct SearchSourceSheet: View {
                 Color(.ink))
             Text(
                 isGoogle
-                    ? "Google for Jobs gathers postings from LinkedIn, Indeed, Workday career sites and more, which Kairos can't read itself. SerpApi asks Google for you with your key: its free plan allows 250 searches a month, and Kairos uses at most 12 a day."
+                    ? "Google for Jobs gathers postings from LinkedIn, Indeed, Workday career sites and more, which Kairos can't read itself. SerpApi asks Google for you with your key: its free plan allows 250 searches a month, and Kairos uses 8 a day, each of your roles in each of your places in turn (Settings, Search)."
                     : "Himalayas lists remote jobs and says which countries can apply. Kairos searches it for your roles in your countries, with each job's full text. A free key lifts its limits; it works without one."
             )
             .font(TypeStyle.body).foregroundStyle(Color(.ink2)).fixedSize(horizontal: false, vertical: true)
@@ -410,7 +410,7 @@ struct SearchSourceSheet: View {
             }
             Label(
                 isGoogle
-                    ? "SerpApi queries Google on your behalf. Its jobs name the site they came from; Kairos opens Google's page for each."
+                    ? "SerpApi queries Google on your behalf. Each job keeps the page Google took it from; Apply goes to the employer's own page when Google lists one."
                     : "Its jobs say \"via Himalayas\" and open on Himalayas, with its apply link, as its terms ask.",
                 systemImage: "info.circle"
             )

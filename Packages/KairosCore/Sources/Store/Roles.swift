@@ -75,6 +75,17 @@ public enum RoleFamily: String, Codable, Sendable, CaseIterable, Identifiable {
         }
     }
 
+    /// What Google Jobs asks for, one or two phrases a family (job collection v3, C3): its
+    /// free plan allows few searches, and Google's matching is broad.
+    public var googlePhrases: [String] {
+        switch self {
+        case .software: ["software developer", "software engineer"]
+        case .devops: ["devops engineer"]
+        case .data: ["data engineer", "machine learning engineer"]
+        case .qa: ["qa engineer"]
+        }
+    }
+
     /// What a search asks for, broadest first: each a title-only search (Adzuna's `title_only`).
     public var searches: [String] {
         switch self {
@@ -120,6 +131,12 @@ public struct RoleMatcher: Sendable, Equatable {
     public var searches: [String] {
         let all = RoleFamily.allCases.filter(families.contains).flatMap(\.searches) + extra.map { $0.lowercased() }
         return all.reduce(into: []) { kept, search in if !kept.contains(search) { kept.append(search) } }
+    }
+
+    /// Google Jobs's phrases: one or two a family you look for, then your own phrases.
+    public var googlePhrases: [String] {
+        let all = RoleFamily.allCases.filter(families.contains).flatMap(\.googlePhrases) + extra.map { $0.lowercased() }
+        return all.reduce(into: []) { kept, phrase in if !kept.contains(phrase) { kept.append(phrase) } }
     }
 
     /// Settings fingerprint: changes when what's kept changes.

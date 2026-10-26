@@ -37,7 +37,7 @@ public struct Prefilter: Sendable {
         let posting = Posting(job)
         let rules: [(Posting) -> Rejection?] = [
             titleInclude, titleExclude, seniority, yearsRequired, location, remoteScope, workAuthorization, clearance,
-            french, blacklist, postingAge, alreadyApplied,
+            french, blacklist, agency, postingAge, alreadyApplied,
         ]
         for rule in rules {
             if let rejection = rule(posting) { return rejection }
@@ -172,6 +172,14 @@ public struct Prefilter: Sendable {
             })
         else { return nil }
         return Rejection(rule: .blacklist, reason: "You've blocked \(blocked).")
+    }
+
+    /// Staffing agencies, recruiters and contractor marketplaces (v3, C3), unless you keep them.
+    private func agency(_ posting: Posting) -> Rejection? {
+        guard !preferences.showAgencies,
+            Agencies.isAgency(company: posting.job.company, text: posting.job.descriptionMarkdown)
+        else { return nil }
+        return Rejection(rule: .agency, reason: "Posted by a staffing agency (\(posting.job.company)).")
     }
 
     private func postingAge(_ posting: Posting) -> Rejection? {

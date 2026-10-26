@@ -291,6 +291,31 @@ struct PrefilterTests {
             ])
     }
 
+    /// Staffing agencies, recruiters and contractor marketplaces are out (v3, C3): by name, by
+    /// what their names say, or because the posting is written for "our client". Unless you keep them.
+    @Test func staffingAgenciesAreOutUnlessYouKeepThem() {
+        let filter = prefilter()
+        check(
+            filter,
+            [
+                (job(company: "Randstad Canada"), .agency), (job(company: "Procom"), .agency),
+                (job(company: "Northline Staffing Inc."), .agency),
+                (job(company: "Maple Recruitment Partners"), .agency),
+                (
+                    job(
+                        company: "Harbourline Logistics",
+                        description: "Our client, a Toronto bank, needs a Go developer."), .agency
+                ),
+                (job(company: "Harbourline Logistics"), nil), (job(company: "Talentify Software"), nil),
+                (job(company: "Robert Half"), .agency),
+            ])
+        let kept = prefilter { preferences, _ in preferences.showAgencies = true }
+        check(kept, [(job(company: "Randstad Canada"), nil), (job(company: "Procom"), nil)])
+        // Your blocked companies still come first.
+        let blocked = prefilter { preferences, _ in preferences.blacklist = ["Procom"] }
+        check(blocked, [(job(company: "Procom"), .blacklist)])
+    }
+
     @Test func postingsOlderThanYourLimitAreOut() {
         let filter = prefilter { preferences, _ in preferences.maxAgeDays = 30 }
         check(
@@ -331,7 +356,7 @@ struct PrefilterTests {
         #expect(
             PrefilterRule.allCases.map(\.rawValue) == [
                 "title_include", "title_exclude", "seniority", "years_required", "location", "remote_scope",
-                "work_authorization", "clearance", "french", "blacklist", "posting_age", "already_applied",
+                "work_authorization", "clearance", "french", "blacklist", "agency", "posting_age", "already_applied",
             ])
     }
 

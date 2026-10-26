@@ -66,6 +66,11 @@ struct SearchPreferencesView: View {
                     }
                 }
                 FormSection(title: "Countries", caption: "Order sets how Today groups and ranks jobs.") { countries }
+                FormSection(
+                    title: "Places",
+                    caption:
+                        "Google Jobs searches each of your roles in each place in turn, and remote in each country. Board jobs anywhere in your countries still count."
+                ) { places }
                 FormSection(title: "Limits") { limits }
                 FormSection(title: "Blocked companies", caption: "Never shown, whatever the role.") {
                     PhraseList(items: $preferences.blacklist, prompt: "Add a company")
@@ -178,8 +183,65 @@ struct SearchPreferencesView: View {
             optionalStepper(
                 "Skip jobs asking for more than", unit: "years", value: $preferences.maxYearsRequired, start: 8,
                 range: 1...30, step: 1)
+            Toggle("Show staffing-agency postings", isOn: $preferences.showAgencies).toggleStyle(.checkbox)
+                .help(
+                    "Off: postings from staffing agencies, recruiters and contractor marketplaces are left out, with Bring back in Filtered out."
+                )
             // How recent a posting must be is on the Fetch screen ("Posted"), since it acts while fetching.
         }
+    }
+
+    // MARK: - Places
+
+    @State private var placeDraft = ""
+    @State private var placeProblem: String?
+
+    /// Your places as rows with Remove, a field to add one ("Halifax, Nova Scotia" or "Halifax,
+    /// NS"), and a way back to the usual cities.
+    private var places: some View {
+        VStack(alignment: .leading, spacing: Spacing.space3) {
+            VStack(spacing: 0) {
+                ForEach(Array(preferences.effectivePlaces.enumerated()), id: \.element) { index, place in
+                    if index > 0 { Divider().overlay(Color(.separatorRow)) }
+                    HStack(spacing: Spacing.space3) {
+                        Text(place.displayName).font(TypeStyle.body).foregroundStyle(Color(.ink))
+                        Text(place.country.displayName).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                        Spacer()
+                        Button("Remove") { removePlace(place) }.buttonStyle(.plain).font(TypeStyle.callout)
+                            .foregroundStyle(Color(.accentText))
+                    }
+                    .padding(.horizontal, Spacing.space3).padding(.vertical, Spacing.space2)
+                }
+            }
+            .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
+            HStack(spacing: Spacing.space2) {
+                TextField("Add a place", text: $placeDraft, prompt: Text("City, province or state: Halifax, NS"))
+                    .onSubmit(addPlace)
+                Button("Add", action: addPlace).disabled(placeDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+                if preferences.places != nil {
+                    Button("Use the usual cities") { preferences.places = nil }
+                }
+            }
+            if let placeProblem {
+                Text(placeProblem).font(TypeStyle.callout).foregroundStyle(Color(.error))
+            }
+        }
+    }
+
+    private func addPlace() {
+        guard let place = Place.parse(placeDraft) else {
+            placeProblem = "Write the city and its province or state, like \"Halifax, Nova Scotia\" or \"Halifax, NS\"."
+            return
+        }
+        var list = preferences.effectivePlaces
+        if !list.contains(place) { list.append(place) }
+        preferences.places = list
+        placeDraft = ""
+        placeProblem = nil
+    }
+
+    private func removePlace(_ place: Place) {
+        preferences.places = preferences.effectivePlaces.filter { $0 != place }
     }
 
     private func optionalStepper(
