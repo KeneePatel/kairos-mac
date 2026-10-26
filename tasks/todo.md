@@ -1099,6 +1099,9 @@ You asked for the whole UI reimagined: every screen rebuilt from the ground up, 
   - **Visual differences from `MenuBar.dc.html`:** no "next check" (there's no scheduler); the counts are the Inbox's rather than the last run's.
 - [x] **V8 · Docs and design folder** (S)
   - **Done 2026-10-26:** SPEC §4's `app-mac` row and §5.2's screening-runs and rank text say what the app does now; ADR-017 is Accepted; `design/kairos/README.md` (v2, written in V1) and CLAUDE.md's rules hold; each slice above lists its visual differences from its `.dc.html`. Left for later, as the design folder's Known gaps say: dark screens beyond the Inbox, the Settings pages beyond Search, the phone screens.
+- [x] **Switching jobs took 3–4 s** (fix, 2026-10-26)
+  - **Cause:** the job pane built your screening profile (`ScreeningProfile(resume)`, about 50 ms: it redacts every line) once per evidence id it described, 13–45 times per job and twice over for `ViewThatFits`; on real data (382 jobs in the Inbox) each switch held the main thread 2.5–4.7 s.
+  - **Done:** `AppModel.screeningProfile` is built once per state of the master resume and the pane asks for it once per group; sources are indexed by id for the lookups every row makes. Each switch now holds the main thread under 100 ms. Debug `Kairos --select-probe` (launch with `open -n -W --stdout <file> Kairos.app --args --select-probe`) moves the selection down six Inbox jobs on your data, prints what each switch and each piece costs, and exits 1 if a switch holds the main thread over 250 ms.
 
 Each slice: Swift Testing for model logic, `--render-snapshots` for its screens, `--layout-probe` at 960 × 600, the full gate, one PR, fast-forward merge.
 
