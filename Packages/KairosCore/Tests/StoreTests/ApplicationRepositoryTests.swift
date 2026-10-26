@@ -105,4 +105,41 @@ struct ApplicationRepositoryTests {
         #expect(again.id != id)
         try await repo.delete(UUID())  // an unknown id is fine
     }
+
+    /// Applied's scopes and the Interviews board (ADR-016): sent and waiting, moving, or closed.
+    @Test func everyStatusHasOneStage() {
+        #expect(ApplicationStatus.allCases.filter { $0.stage == .waiting } == [.applied])
+        #expect(ApplicationStatus.allCases.filter { $0.stage == .inProgress } == [.screen, .interview, .offer])
+        #expect(ApplicationStatus.allCases.allSatisfy { ($0.stage == .closed) == $0.isClosed })
+    }
+
+    /// Silent: still Applied a month after its last change. Anything that moved isn't.
+    @Test func silenceStartsAtThirtyDaysAtApplied() {
+        let waiting = Application(id: UUID(), jobID: sampleJob(1).id, appliedAt: applied, statusAt: applied)
+        #expect(!waiting.isSilent(at: applied.addingTimeInterval(29 * day)))
+        #expect(waiting.isSilent(at: applied.addingTimeInterval(30 * day)))
+        var screened = waiting
+        screened.status = .screen
+        #expect(!screened.isSilent(at: applied.addingTimeInterval(60 * day)))
+    }
+
+    /// Several applications move in one write, each with its own timeline line; none is fine.
+    @Test func severalMoveTogether() async throws {
+        let db = try await migratedDatabase()
+        let repo = ApplicationRepository(db)
+        let ids = [
+            try await repo.apply(job: sampleJob(1).id, at: applied).id,
+            try await repo.apply(job: sampleJob(2).id, at: applied).id,
+        ]
+        let kept = try await repo.apply(job: sampleJob(3).id, at: applied).id
+        let later = applied.addingTimeInterval(31 * day)
+        try await repo.setStatus(.ghosted, for: ids, at: later)
+        try await repo.setStatus(.ghosted, for: [], at: later)
+        for id in ids {
+            let application = try #require(try await repo.application(id))
+            #expect(application.status == .ghosted && application.statusAt == later)
+            #expect(try await repo.events(for: id).map(\.kind) == [.status(.applied), .status(.ghosted)])
+        }
+        #expect(try await repo.application(kept)?.status == .applied)
+    }
 }

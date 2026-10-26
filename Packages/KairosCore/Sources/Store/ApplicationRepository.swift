@@ -5,8 +5,22 @@ public enum ApplicationStatus: String, Sendable, CaseIterable, Codable {
     case applied, screen, interview, offer
     case accepted, rejected, ghosted, withdrawn
 
-    /// The board's columns: Applied, Screen, Interview, Offer, then Closed for the rest.
     public var isClosed: Bool { [.accepted, .rejected, .ghosted, .withdrawn].contains(self) }
+
+    /// Where it sits on Applied and the Interviews board (ADR-016).
+    public var stage: ApplicationStage {
+        switch self {
+        case .applied: .waiting
+        case .screen, .interview, .offer: .inProgress
+        case .accepted, .rejected, .ghosted, .withdrawn: .closed
+        }
+    }
+}
+
+/// Sent and waiting for a reply, moving (a screen, an interview, an offer), or closed. Applied's
+/// table shows each apart; the Interviews board holds only the moving ones (ADR-016).
+public enum ApplicationStage: String, Sendable, CaseIterable {
+    case waiting, inProgress, closed
 }
 
 /// A job you applied to, in `application`.
@@ -39,6 +53,15 @@ public struct Application: Sendable, Equatable, Identifiable {
         self.nextActionAt = nextActionAt
         self.nextAction = nextAction
         self.notes = notes
+    }
+
+    /// Days at Applied before Kairos offers to close an application as No reply: twice the two weeks
+    /// after which replies are rare (`docs/research/application-tracking.md`).
+    public static let silentAfterDays = 30
+
+    /// Still Applied, `silentAfterDays` or more after its last change.
+    public func isSilent(at now: Date) -> Bool {
+        status == .applied && now.timeIntervalSince(statusAt) >= Double(Self.silentAfterDays) * 86_400
     }
 }
 
@@ -120,11 +143,23 @@ public struct ApplicationRepository: Sendable {
     public func setStatus(_ status: ApplicationStatus, for id: UUID, at date: Date, note: String? = nil)
         async throws
     {
+        try await setStatus(status, for: [id], at: date, note: note)
+    }
+
+    /// Moves several at once, in one write, each with its own timeline line: the silent ones to No
+    /// reply, or a selection in Applied (ADR-016).
+    public func setStatus(_ status: ApplicationStatus, for ids: [UUID], at date: Date, note: String? = nil)
+        async throws
+    {
+        guard !ids.isEmpty else { return }
         try await db.write { connection, stamp in
-            try connection.execute(
-                "UPDATE application SET status = ?, status_at = ?, updated_hlc = ? WHERE id = ?",
-                [.text(status.rawValue), SQLValue(date), .text(stamp.hlc.description), .text(id.lowercased)])
-            try Self.append(.status(status), to: id, at: date, note: Self.trimmed(note), in: connection, stamp: stamp)
+            for id in ids {
+                try connection.execute(
+                    "UPDATE application SET status = ?, status_at = ?, updated_hlc = ? WHERE id = ?",
+                    [.text(status.rawValue), SQLValue(date), .text(stamp.hlc.description), .text(id.lowercased)])
+                try Self.append(
+                    .status(status), to: id, at: date, note: Self.trimmed(note), in: connection, stamp: stamp)
+            }
         }
     }
 

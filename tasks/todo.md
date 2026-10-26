@@ -1002,6 +1002,39 @@ Plan: `docs/design/job-collection.md`. Research: `docs/research/job-collection/`
     - **Dedup fix found while testing it:** copies on different sources need the same company, the same city when both say, and similar titles compared alone; on whole keys a shared company and city made "QA Engineer" and "Data Engineer" (0.91) and "Payments" and "Payouts" one job.
     - **Docs:** ADR-015; SPEC §5.2 (catalog, cadence, gone boards, snippet finder), §5.4 (sources), §6.2 (`listing`, `job_event`, `source_fetch_state`, `fetch_log`, `company_lookup`); `docs/design/job-collection.md` marked built; the research index lists the tools.
 
+## After two days of applying (2026-10-26)
+
+You reported three problems from real use: the resume pane broke when a banner appeared, the
+Applications screen couldn't scroll, and applied jobs didn't belong on a board.
+
+- [x] **A1 · Resume banner** (S)
+  - **Done 2026-10-26:**
+    - **Cause:** the fallback banner above the PDF wrapped each note with fixed-size text. SwiftUI measures a window's minimum height at its narrowest width, where one note wraps a word or two a line. A single note asked for a window 1,393 points tall and three notes for 4,131, so macOS stretched the window past the screen and the bottom half of the resume went off it. P9 found the same mechanism on Find jobs.
+    - **Fix:** the banner is one line ("A fallback model helped: Cover letter"), and the notes open in a Details popover (also on hover). The window's minimum is now 30 points whatever the number of notes.
+    - **Check:** `Kairos --layout-probe` now also lays out the Build screen with three fallback notes, for a finished and a failed build. It failed on the old banner (4,041) and passes on the new one (30).
+- [x] **A2 · Crash leaving Find jobs for Review** (S, found by the probe)
+  - **Done 2026-10-26:** the probe crashed every time it switched from Find jobs to Review: SwiftUI's table code aborted in AttributeGraph. Taking parts out one at a time pinned it to the companies table's cells, which read the model (every row counted your jobs for Open roles and Quiet). The counts and failures are now worked out once for the table and passed to the rows. That's also cheaper: it was every row times every job on each redraw. Three probe runs in a row came back clean. You hadn't hit the crash in your session, but nothing in the app's code prevented it.
+- [x] **A3 · Applied page and Interviews board** (M) · ADR-016, `docs/research/application-tracking.md`
+  - **Done 2026-10-26:**
+    - **The scrolling bug:** the board's Applied column held all 36 of your applications (23 on Oct 24, 13 on Oct 25). The board scrolled only sideways, so the column set the window's minimum at 3,409 points.
+    - **Decision (research):**
+      - At volume, well over 90% of applications never move past Applied. In one log of 1,085, 44.5% got no reply and about 1% reached an interview, and replies after two weeks are rare.
+      - Trackers built for volume (Simplify, Teal) add a sortable list with search and an archive, and Kanban keeps boards for work in progress.
+    - **Applied** (new, after Resumes): a table of every application.
+      - Columns: company, role, applied, status (icon and word), last change, follow-up, via.
+      - Sort by any column, newest first by default; search company or role.
+      - Scopes: All, Waiting, In progress, Closed.
+      - Double-click or Return opens the application. The context menu moves every selected row to a status, or opens the job or the posting.
+      - "Close silent…" moves applications still at Applied 30 days after they went out to No reply, after you confirm. The 30 days is twice the two weeks after which replies are rare.
+    - **Interviews** (the board, renamed): Screen, Interview and Offer only. It scrolls both ways; with 40 cards in a column the window minimum is 0. With nothing in progress, it points you to Applied.
+    - **Core:** `ApplicationStatus.stage` (waiting, in progress, closed), `Application.isSilent(at:)`, and `ApplicationRepository.setStatus(_:for: [UUID]:at:)` in one write. Three tests. No schema change.
+    - **Debug:** `--screening-report` lists applications by status and by day applied.
+    - **Visual differences from `Applications.dc.html`:**
+      - Its Applied and Closed columns are now Applied's table. A board of hundreds of cards can't be scanned or searched.
+      - The board's column headers carry each status's icon next to its word.
+      - "Add application" isn't built (applications come from Mark applied, as before).
+      - The table has no mockup; it reuses the Review table's type and colours.
+
 ---
 
 ## Phase 3: R3 Accounts and sync (refined at Checkpoint F)

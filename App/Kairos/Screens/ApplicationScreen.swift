@@ -1,146 +1,10 @@
 import Store
 import SwiftUI
 
-/// Applications (T45, story 6): a board of the jobs you applied to, Applied, Screen, Interview,
-/// Offer and Closed, after `Applications.dc.html`. Choosing one opens it full width (no side panel,
-/// as you asked for jobs in polish P3): its status, timeline, follow-up and notes.
-struct ApplicationsView: View {
-    @Environment(AppModel.self) private var model
-    @State private var path: [Route] = []
-
-    enum Route: Hashable {
-        case application(UUID)
-        case job(JobID)
-    }
-
-    /// The board's columns: the four open steps, then everything closed.
-    enum Column: CaseIterable {
-        case applied, screen, interview, offer, closed
-
-        var title: String {
-            switch self {
-            case .applied: "Applied"
-            case .screen: "Screen"
-            case .interview: "Interview"
-            case .offer: "Offer"
-            case .closed: "Closed"
-            }
-        }
-
-        func holds(_ status: ApplicationStatus) -> Bool {
-            switch self {
-            case .applied: status == .applied
-            case .screen: status == .screen
-            case .interview: status == .interview
-            case .offer: status == .offer
-            case .closed: status.isClosed
-            }
-        }
-    }
-
-    var body: some View {
-        NavigationStack(path: $path) {
-            content
-                .navigationTitle("Applications")
-                .navigationSubtitle(subtitle)
-                .navigationDestination(for: Route.self) { route in
-                    switch route {
-                    case .application(let id): ApplicationScreen(id: id)
-                    case .job(let id): JobScreen(id: id)
-                    }
-                }
-        }
-    }
-
-    @ViewBuilder private var content: some View {
-        if model.applications.isEmpty {
-            ContentUnavailableView {
-                Label("No applications yet", systemImage: "paperplane")
-            } description: {
-                Text("When you apply to a job, choose Mark applied on its page or its build. It shows up here.")
-                    .foregroundStyle(Color(.inkSecondary))
-            }
-        } else {
-            ScrollView(.horizontal) {
-                HStack(alignment: .top, spacing: Spacing.space4) {
-                    ForEach(Column.allCases, id: \.self) { column in
-                        self.column(column)
-                    }
-                }
-                .padding(Spacing.space5)
-                .frame(maxHeight: .infinity, alignment: .top)
-            }
-            .background(Color(.surface))
-        }
-    }
-
-    /// "9 active · 3 closed · 2 follow-ups due this week".
-    private var subtitle: String {
-        let closed = model.applications.filter(\.status.isClosed).count
-        let week = Date().addingTimeInterval(7 * 86_400)
-        let due = model.applications.filter { !$0.status.isClosed && ($0.nextActionAt.map { $0 <= week } ?? false) }
-        var parts = ["\(model.applications.count - closed) active", "\(closed) closed"]
-        if !due.isEmpty { parts.append("\(due.count) follow-up\(due.count == 1 ? "" : "s") due this week") }
-        return parts.joined(separator: " · ")
-    }
-
-    private func column(_ column: Column) -> some View {
-        let applications = model.applications.filter { column.holds($0.status) }
-        return VStack(alignment: .leading, spacing: Spacing.space3) {
-            HStack {
-                Text(column.title).font(TypeStyle.headline).foregroundStyle(Color(.ink))
-                Spacer()
-                Text("\(applications.count)").font(TypeStyle.callout).monospacedDigit()
-                    .foregroundStyle(Color(.inkSecondary))
-            }
-            ForEach(applications) { application in
-                Button {
-                    path.append(.application(application.id))
-                } label: {
-                    ApplicationCard(application: application, job: model.job(application.jobID))
-                }
-                .buttonStyle(.plain)
-            }
-            if applications.isEmpty {
-                Text("None").font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
-            }
-        }
-        .frame(width: 250, alignment: .topLeading)
-    }
-}
-
-/// One application on the board: company, role, and where it stands or what's due.
-private struct ApplicationCard: View {
-    let application: Application
-    let job: Job?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.space1) {
-            Text(job?.company ?? "A job no longer listed").font(TypeStyle.headline).foregroundStyle(Color(.ink))
-                .lineLimit(1)
-            Text(job?.title ?? "").font(TypeStyle.callout).foregroundStyle(Color(.ink2)).lineLimit(2)
-            line
-        }
-        .padding(Spacing.space3)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Radius.row).fill(Color(.surfaceGrouped)))
-        .contentShape(Rectangle())
-    }
-
-    /// A due follow-up first, with its icon and word, never colour alone; otherwise the status.
-    @ViewBuilder private var line: some View {
-        if let due = application.nextActionAt, !application.status.isClosed {
-            let today = Calendar.current.isDateInToday(due) || due < Date()
-            Label(
-                today ? "Follow up today" : "Follow up \(due.formatted(.dateTime.weekday(.abbreviated).month().day()))",
-                systemImage: "bell"
-            )
-            .font(TypeStyle.callout).foregroundStyle(today ? Color(.maybe) : Color(.inkSecondary))
-        } else {
-            Text("\(application.status.title) · \(application.statusAt.formatted(.dateTime.month().day()))")
-                .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
-        }
-    }
+/// Where Applied and the Interviews board go from a row or a card.
+enum ApplicationRoute: Hashable {
+    case application(UUID)
+    case job(JobID)
 }
 
 /// One application, full width: where it stands, its timeline, a follow-up and your notes.
@@ -232,7 +96,7 @@ struct ApplicationScreen: View {
                 )
                 .font(TypeStyle.callout).foregroundStyle(Color(.ink2))
                 if let job {
-                    NavigationLink(value: ApplicationsView.Route.job(job.id)) {
+                    NavigationLink(value: ApplicationRoute.job(job.id)) {
                         Label("Open the job", systemImage: "doc.text.magnifyingglass")
                     }
                     .buttonStyle(.link)

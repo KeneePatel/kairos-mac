@@ -195,6 +195,18 @@
                         + "\(job.remoteScope.rawValue)] — \(record.reasons.first ?? "")\n"
                 }
             }
+            // How many applications, where they stand and when they went out: the Applied page's
+            // volume (ADR-016).
+            let applications = try await ApplicationRepository(db).applications()
+            out += "\n## Applications: \(applications.count)\n"
+            for status in ApplicationStatus.allCases {
+                let count = applications.count { $0.status == status }
+                if count > 0 { out += "- \(status.rawValue): \(count)\n" }
+            }
+            let byDay = Dictionary(grouping: applications) { Calendar.current.startOfDay(for: $0.appliedAt) }
+            for (day, sent) in byDay.sorted(by: { $0.key > $1.key }).prefix(14) {
+                out += "- applied \(day.formatted(date: .abbreviated, time: .omitted)): \(sent.count)\n"
+            }
             if CommandLine.arguments.contains("--builds") {
                 out += "\n## Builds\n"
                 let repository = BuildRepository(db)

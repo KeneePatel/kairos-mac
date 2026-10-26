@@ -2,15 +2,15 @@ import SwiftUI
 
 /// The app's sections in sidebar order (polish P3; reworked 2026-10-22): the workflow, from finding
 /// jobs to reviewing the ones that passed your filters, what would widen your reach (Improve), the
-/// filtered-out ones apart, resumes and applications, then your profile. Names say what a job
-/// seeker recognizes.
+/// filtered-out ones apart, resumes, everything you applied to, and the few that reached an
+/// interview (ADR-016), then your profile. Names say what a job seeker recognizes.
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case fetch, review, improve, filtered, builds, applications
+    case fetch, review, improve, filtered, builds, applied, interviews
     case masterResume, settings, activity
 
     var id: Self { self }
 
-    static let workflow: [AppSection] = [.fetch, .review, .improve, .filtered, .builds, .applications]
+    static let workflow: [AppSection] = [.fetch, .review, .improve, .filtered, .builds, .applied, .interviews]
     static let profile: [AppSection] = [.masterResume, .settings, .activity]
 
     var title: String {
@@ -20,7 +20,8 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .improve: "Improve"
         case .filtered: "Filtered out"
         case .builds: "Resumes"
-        case .applications: "Applications"
+        case .applied: "Applied"
+        case .interviews: "Interviews"
         case .masterResume: "Master resume"
         case .settings: "Settings"
         case .activity: "Activity"
@@ -34,7 +35,8 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .improve: "chart.line.uptrend.xyaxis"
         case .filtered: "line.3.horizontal.decrease.circle"
         case .builds: "doc.text"
-        case .applications: "paperplane"
+        case .applied: "paperplane"
+        case .interviews: "person.2"
         case .masterResume: "person.text.rectangle"
         case .settings: "gearshape"
         case .activity: "clock.arrow.circlepath"
@@ -81,8 +83,10 @@ struct RootView: View {
                 FilteredOutView()
             case (.ready, .builds):
                 BuildsView()
-            case (.ready, .applications):
-                ApplicationsView()
+            case (.ready, .applied):
+                AppliedView()
+            case (.ready, .interviews):
+                InterviewsView()
             case (.ready, .masterResume):
                 if let resume = model.resume, let ai = model.ai {
                     MasterResumeView().environment(resume).environment(ai)

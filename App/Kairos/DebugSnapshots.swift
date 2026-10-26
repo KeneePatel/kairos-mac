@@ -168,15 +168,18 @@
                         .frame(width: 1_200, height: 700),
                     to: folder.appending(path: "job-adzuna-\(name).png"), appearance: appearance)
             }
-            // T45: applications across the board, one with a follow-up due today.
+            // T45 and ADR-016: applications at every stage, one with a follow-up due today.
             let (tracked, timeline) = sampleApplications(jobs: today.model.jobs)
             let tracking = AppModel(
                 preview: today.model.jobs, screenings: today.model.screenings, sources: today.model.sources,
                 resume: resume, applications: tracked)
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 render(
-                    ApplicationsView().environment(tracking).frame(width: 1_440, height: 520),
-                    to: folder.appending(path: "applications-\(name).png"), appearance: appearance)
+                    AppliedView().environment(tracking).frame(width: 1_200, height: 420),
+                    to: folder.appending(path: "applied-\(name).png"), appearance: appearance)
+                render(
+                    InterviewsView().environment(tracking).frame(width: 1_000, height: 420),
+                    to: folder.appending(path: "interviews-\(name).png"), appearance: appearance)
                 if let first = tracked.first {
                     render(
                         NavigationStack { ApplicationScreen(id: first.id, preview: timeline) }.environment(tracking)
