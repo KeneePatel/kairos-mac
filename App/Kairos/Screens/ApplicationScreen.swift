@@ -51,7 +51,7 @@ struct ApplicationPane: View {
                     .frame(maxWidth: .infinity)
                 }
             } else {
-                ContentUnavailableView("This application is gone", systemImage: "questionmark.folder")
+                EmptyState("This application is gone", "It was deleted.")
             }
         }
         .background(Color(.surface))

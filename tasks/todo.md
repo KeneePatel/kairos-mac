@@ -1086,7 +1086,14 @@ You asked for the whole UI reimagined: every screen rebuilt from the ground up, 
     - **Settings:** a list of pages on the left (General, Search, AI, Account; Schedule is gone with the scheduler) and the chosen page on the right under its title and caption. The General page sits in the 640 pt form width; Account says accounts come with R3. The layout probe visits Search, not AI, so it stays off the network.
     - **Checks:** lint, floor guard, deps, design, the app build, `--layout-probe --screens` now captures Sources and Settings (every section fits 960 × 632).
     - **Visual differences from `Sources.dc.html` and `Settings.dc.html`:** the table is the system's; the segmented scope sits in the toolbar; the Search form keeps its grouped sections (hairlines between them wait for a form restyle); the AI page keeps its provider cards.
-- [ ] **V6 · Master resume and reports** (M): the form restyled (hairline sections, readiness inspector, chips), Improve and Filtered out as list · pane in the new type, empty states everywhere (title, one line, one button).
+- [x] **V6 · Master resume and reports** (M)
+  - **Done 2026-10-26:**
+    - **Filtered out:** the reasons on the left under the column title (All, then each rule with its count), the chosen reason's jobs on the right under "Level you've turned off · 1,275" with its setting in one line and Change in Settings (or in Sources for the Posted limit), the table with Bring back, the Re-check filters button in the toolbar with "no AI calls" in its label.
+    - **Improve:** the fixes list under the column title with its count line, the detail in a pane with the page margins; the same content as before.
+    - **Master resume:** the page title and the version line inside the page, with the page margins; the readiness inspector stays.
+    - **Empty states:** `EmptyState` (a title, one line, at most one button, no icon) replaces the system's placeholder in the job pane, the application pane, the resume page and the reports. The start-up failure keeps the system's.
+    - **Checks:** lint, floor guard, deps, design, the app build, `--layout-probe --screens` captures Filtered out and the master resume too (every section fits 960 × 632).
+    - **Visual differences from `FilteredOut.dc.html`, `Improve.dc.html` and `MasterResume.dc.html`:** the reasons list and the Improve list are system lists (their selection colour); the Improve detail keeps its grouped boxes; the master resume's sections keep their cards and dividers rather than hairline-only sections.
 - [ ] **V7 · Menu bar item** (S): `MenuBarExtra` window after `MenuBar.dc.html`: to decide, need a read, verdict tiles, new since you looked, a running build, Find new jobs, Open Kairos.
 - [ ] **V8 · Docs and design folder** (S): SPEC §4 `app-mac` row and §5.2 screens text, ADR-017 accepted, `design/kairos/README.md` for v2, CLAUDE.md's design rules re-checked, every screen's visual differences from its `.dc.html` listed in this file.
 

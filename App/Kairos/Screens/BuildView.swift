@@ -36,11 +36,7 @@ struct BuildsView: View {
             if let build {
                 ResumePage(build: build, job: job) { chosen = nil }
             } else {
-                ContentUnavailableView {
-                    Label("No resume for this job yet", systemImage: "doc.text")
-                } description: {
-                    Text("Press B on the job to build one.").foregroundStyle(Color(.inkSecondary))
-                }
+                EmptyState("No resume for this job yet", "Press B on the job to build one.")
             }
         }
         .navigationTitle(job.map { "\($0.title) · \($0.company)" } ?? "Resume")
@@ -345,13 +341,9 @@ struct BuildView: View {
             if let pdf {
                 PDFPreview(url: pdf) { text in if showing == .resume { select(text) } }
             } else if build.status == .failed {
-                ContentUnavailableView(
-                    "This build didn't finish", systemImage: "exclamationmark.triangle",
-                    description: Text(build.error ?? "Something went wrong."))
+                EmptyState("This build didn't finish", build.error ?? "Something went wrong.")
             } else if pdfMissing {
-                ContentUnavailableView(
-                    "The PDF isn't there", systemImage: "doc.questionmark",
-                    description: Text("It was moved or deleted. Build again to make a new one."))
+                EmptyState("The PDF isn't there", "It was moved or deleted. Build again to make a new one.")
             } else if build.status == .done {
                 Color.clear
             } else {

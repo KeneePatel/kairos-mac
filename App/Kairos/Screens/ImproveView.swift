@@ -31,7 +31,6 @@ struct ImproveView: View {
         NavigationStack(path: $path) {
             content
                 .navigationTitle("Improve")
-                .navigationSubtitle(subtitle)
                 .navigationDestination(for: JobID.self) { JobScreen(id: $0) }
         }
         // Worked out again when verdicts, your resume or your title list change.
@@ -59,22 +58,27 @@ struct ImproveView: View {
 
     @ViewBuilder private var content: some View {
         if let report {
-            if Self.items(report).isEmpty {
-                ContentUnavailableView {
-                    Label("Nothing to improve yet", systemImage: "chart.line.uptrend.xyaxis")
-                } description: {
-                    Text(
-                        "When the AI rules jobs No or Maybe, what kept them from a Yes, and what could change it, appears here."
-                    )
-                    .foregroundStyle(Color(.inkSecondary))
+            ListPaneLayout(listWidth: 380) {
+                VStack(spacing: 0) {
+                    ColumnTitle(
+                        title: "Improve", line: subtitle.isEmpty ? "What keeps No and Maybe jobs from a Yes" : subtitle)
+                    if Self.items(report).isEmpty {
+                        EmptyState(
+                            "Nothing to improve yet",
+                            "When the AI rules jobs No or Maybe, what kept them from a Yes, and what could change it, appears here."
+                        )
+                    } else {
+                        list(report)
+                    }
                 }
-            } else {
-                HStack(spacing: 0) {
-                    list(report).frame(width: 320)
-                    Divider()
+            } pane: {
+                if Self.items(report).isEmpty {
+                    EmptyState("Nothing to show", "Fixes appear here as the AI judges more jobs.")
+                } else {
                     ScrollView {
                         detail(report)
-                            .padding(Spacing.space6)
+                            .padding(.horizontal, Spacing.space7)
+                            .padding(.vertical, Spacing.space6)
                             .frame(maxWidth: 760, alignment: .leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -137,7 +141,8 @@ struct ImproveView: View {
                 }
             }
         }
-        .listStyle(.sidebar)
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 
     private func row(_ title: String, gain: String, meta: String) -> some View {

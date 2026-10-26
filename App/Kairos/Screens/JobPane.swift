@@ -57,7 +57,7 @@ struct JobPane: View {
                     .frame(maxWidth: .infinity)
                 }
             } else {
-                ContentUnavailableView("This job is gone", systemImage: "questionmark.folder")
+                EmptyState("This job is gone", "It was deleted or tidied away.")
             }
         }
         .background(Color(.surface))

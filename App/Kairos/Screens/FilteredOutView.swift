@@ -2,10 +2,11 @@ import Screening
 import Store
 import SwiftUI
 
-/// Filtered out (2026-10-22): the jobs your filters dropped before any AI call, apart from Review.
-/// Reasons on the left, with All; the setting behind the chosen reason one click away; Bring back
-/// on each job sends it to Review to be judged like any other, and the filters never drop it again.
-/// Re-check filters applies your current filters to every job without spending AI calls.
+/// Filtered out (UI v2): the jobs your filters dropped before any AI call, apart from the Inbox.
+/// Reasons on the left with their counts, under All; the chosen reason's jobs on the right with
+/// its setting one click away; Bring back on each job sends it to the Inbox to be judged like any
+/// other, and the filters never drop it again. Re-check filters applies your current filters to
+/// every job without spending AI calls.
 struct FilteredOutView: View {
     /// A row of the reasons list: All, or one rule.
     enum Reason: Hashable {
@@ -15,36 +16,39 @@ struct FilteredOutView: View {
 
     @Environment(AppModel.self) private var model
     @State private var choice: Reason? = .all
+    @State private var path: [JobID] = []
+    @State private var selection: JobID?
+    @State private var message: String?
 
     /// The chosen rule; nil for All.
     private var rule: PrefilterRule? {
         if case .rule(let rule)? = choice { return rule }
         return nil
     }
-    @State private var path: [JobID] = []
-    @State private var selection: JobID?
-    @State private var message: String?
 
     var body: some View {
         NavigationStack(path: $path) {
-            content
-                .navigationTitle("Filtered out")
-                .navigationSubtitle("\(model.filteredCount) jobs your filters removed before any AI call")
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            model.recheckFilters()
-                        } label: {
-                            Label("Re-check filters", systemImage: "arrow.triangle.2.circlepath")
-                                .labelStyle(.titleAndIcon)
-                        }
-                        .disabled(model.isFetching || model.jobs.isEmpty)
-                        .help(
-                            "Applies your current filters to every job, with no AI calls. Jobs they now let through go to Review."
-                        )
+            ListPaneLayout(listWidth: 300) {
+                reasons
+            } pane: {
+                jobs
+            }
+            .navigationTitle("Filtered out")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        model.recheckFilters()
+                    } label: {
+                        Label("Re-check filters · no AI calls", systemImage: "arrow.triangle.2.circlepath")
+                            .labelStyle(.titleOnly)
                     }
+                    .disabled(model.isFetching || model.jobs.isEmpty)
+                    .help(
+                        "Applies your current filters to every job, with no AI calls. Jobs they now let through go to the Inbox."
+                    )
                 }
-                .navigationDestination(for: JobID.self) { JobScreen(id: $0) }
+            }
+            .navigationDestination(for: JobID.self) { JobScreen(id: $0) }
         }
         .onChange(of: selection) { _, id in
             guard let id else { return }
@@ -58,70 +62,87 @@ struct FilteredOutView: View {
         }
     }
 
-    @ViewBuilder private var content: some View {
-        if model.filteredCount == 0 {
-            ContentUnavailableView {
-                Label("Nothing filtered out", systemImage: "line.3.horizontal.decrease.circle")
-            } description: {
-                Text("Jobs your settings rule out (titles, level, countries, French and more) appear here, by reason.")
-                    .foregroundStyle(Color(.inkSecondary))
-            }
-        } else {
-            HStack(spacing: 0) {
-                reasons.frame(width: 250)
-                Divider()
-                VStack(alignment: .leading, spacing: 0) {
-                    ruleBar
-                    Divider()
-                    table
-                }
-            }
-        }
-    }
-
     /// Every reason with its count, most first, under All.
     private var reasons: some View {
-        List(selection: $choice) {
-            row("All", count: model.filteredCount).tag(Reason.all)
-            ForEach(model.filteredReasons, id: \.rule) { reason in
-                row(reason.rule.reason, count: reason.count).tag(Reason.rule(reason.rule))
+        VStack(spacing: 0) {
+            ColumnTitle(
+                title: "Filtered out",
+                line:
+                    "\(model.filteredCount.formatted()) job\(model.filteredCount == 1 ? "" : "s") your filters dropped before any AI call"
+            )
+            if model.filteredCount == 0 {
+                EmptyState(
+                    "Nothing filtered out",
+                    "Jobs your settings rule out (titles, level, countries, French and more) appear here, by reason.")
+            } else {
+                List(selection: $choice) {
+                    row("All", count: model.filteredCount).tag(Reason.all)
+                    ForEach(model.filteredReasons, id: \.rule) { reason in
+                        row(reason.rule.reason, count: reason.count).tag(Reason.rule(reason.rule))
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         }
-        .listStyle(.sidebar)
     }
 
     private func row(_ title: String, count: Int) -> some View {
         HStack {
-            Text(title).foregroundStyle(Color(.ink))
+            Text(title).font(TypeStyle.body).foregroundStyle(Color(.ink)).lineLimit(1)
             Spacer()
-            Text(count.formatted()).monospacedDigit().foregroundStyle(Color(.inkSecondary))
+            Text(count.formatted()).font(TypeStyle.callout).monospacedDigit().foregroundStyle(Color(.inkSecondary))
         }
+        .frame(height: 32)
+        .listRowInsets(EdgeInsets(top: 0, leading: Spacing.space4, bottom: 0, trailing: Spacing.space4))
     }
 
-    /// What the chosen reason is about, and where to change it.
-    private var ruleBar: some View {
-        HStack(spacing: Spacing.space3) {
-            Text(setting(for: rule)).font(TypeStyle.callout).foregroundStyle(Color(.ink2)).lineLimit(2)
-            Spacer()
-            Button(rule == .postingAge ? "Change in Find jobs" : "Change in Settings") {
-                if rule == .postingAge {
-                    model.section = .sources
-                } else {
-                    model.settingsTab = .search
-                    model.section = .settings
+    /// The chosen reason's jobs: its title and setting, the link to change it, then the table.
+    @ViewBuilder private var jobs: some View {
+        if model.filteredCount == 0 {
+            EmptyState("Nothing to show", "Find new jobs fills this once your filters have dropped something.")
+        } else {
+            VStack(spacing: 0) {
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.space4) {
+                    VStack(alignment: .leading, spacing: Spacing.space1) {
+                        Text("\(rule?.reason ?? "All") · \(model.filteredJobs(rule).count.formatted())")
+                            .font(TypeStyle.title1).foregroundStyle(Color(.ink))
+                        Text(setting(for: rule)).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                            .lineLimit(2)
+                    }
+                    Spacer()
+                    if let rule {
+                        Button(rule == .postingAge ? "Change in Sources" : "Change in Settings") {
+                            if rule == .postingAge {
+                                model.section = .sources
+                            } else {
+                                model.settingsTab = .search
+                                model.section = .settings
+                            }
+                        }
+                    }
                 }
+                .padding(.horizontal, Spacing.space7)
+                .padding(.top, Spacing.space6)
+                .padding(.bottom, Spacing.space4)
+                Divider()
+                table
+                Divider()
+                Text(
+                    "A job you bring back goes to the Inbox to be judged like any other, and these filters never drop it again."
+                )
+                .font(TypeStyle.caption).foregroundStyle(Color(.inkSecondary)).lineLimit(1)
+                .padding(.horizontal, Spacing.space7).padding(.vertical, Spacing.space3)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.link)
         }
-        .padding(.horizontal, Spacing.space4).padding(.vertical, Spacing.space3)
-        .background(Color(.surfaceRaised))
     }
 
     private var table: some View {
         Table(model.filteredJobs(rule), selection: $selection) {
             TableColumn("Role") { job in
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(job.title).font(TypeStyle.headline).foregroundStyle(Color(.ink))
+                    Text(job.title).font(TypeStyle.headline).foregroundStyle(Color(.ink)).lineLimit(1)
                     Text(
                         rule == nil
                             ? "\(job.company) · \(model.filterRule(of: job)?.reason ?? "Other reasons")" : job.company
@@ -130,20 +151,23 @@ struct FilteredOutView: View {
                 }
                 .padding(.vertical, Spacing.space1)
             }
-            .width(min: 260, ideal: 420)
-            TableColumn("Location") { job in Text(job.placeLabel).foregroundStyle(Color(.inkSecondary)) }
-                .width(min: 110, ideal: 150)
+            .width(min: 240, ideal: 400)
+            TableColumn("Location") { job in
+                Text(job.placeLabel).foregroundStyle(Color(.inkSecondary)).lineLimit(1)
+            }
+            .width(min: 100, ideal: 150)
             TableColumn("Found") { job in
                 Text(job.firstSeenAt.formatted(.relative(presentation: .named))).foregroundStyle(Color(.inkSecondary))
+                    .lineLimit(1)
             }
-            .width(min: 90, ideal: 110)
+            .width(min: 80, ideal: 100)
             TableColumn("") { job in
                 Button("Bring back") {
                     Task { message = await model.bringBack(job) }
                 }
-                .help("Sends it to Review to be judged like any other. Your filters won't drop it again.")
+                .help("Sends it to the Inbox to be judged like any other. Your filters won't drop it again.")
             }
-            .width(min: 100, ideal: 110)
+            .width(min: 90, ideal: 100)
         }
     }
 

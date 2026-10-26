@@ -68,7 +68,13 @@
                 ("applied", AnyView(AppliedView())), ("interviews", AnyView(InterviewsView())),
                 ("sources", AnyView(SourcesView())), ("improve", AnyView(ImproveView())),
             ]
-            if let ai = model.ai { shown.append(("settings", AnyView(SettingsView().environment(ai)))) }
+            shown.append(("filtered", AnyView(FilteredOutView())))
+            if let ai = model.ai {
+                shown.append(("settings", AnyView(SettingsView().environment(ai))))
+                if let resume = model.resume {
+                    shown.append(("master-resume", AnyView(MasterResumeView().environment(resume).environment(ai))))
+                }
+            }
             if let built {
                 shown.append(("job-built", AnyView(NavigationStack { JobScreen(id: built.id) })))
                 shown.append(("job-resume", AnyView(NavigationStack { BuildsView(job: built.id) })))

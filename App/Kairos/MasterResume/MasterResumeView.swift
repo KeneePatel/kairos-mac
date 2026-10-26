@@ -14,6 +14,13 @@ struct MasterResumeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.space6) {
+                VStack(alignment: .leading, spacing: Spacing.space1) {
+                    Text("Master resume").font(TypeStyle.pageTitle).foregroundStyle(Color(.ink))
+                    Text(
+                        "Version \(model.resume.version) · the only source for every resume Kairos builds · nothing here is invented into a resume"
+                    )
+                    .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                }
                 if let error = model.saveError {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
                         .font(TypeStyle.callout).foregroundStyle(Color(.error))
@@ -28,13 +35,13 @@ struct MasterResumeView: View {
                 Divider()
                 AdditionalSections(editing: $editing, deleting: $deleting)
             }
-            .padding(Spacing.space6)
+            .padding(.horizontal, Spacing.space7)
+            .padding(.vertical, Spacing.space6)
             .frame(maxWidth: 920, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Color(.surface))
         .navigationTitle("Master resume")
-        .navigationSubtitle("Version \(model.resume.version) · the only source for every resume Kairos builds")
         .toolbar {
             ToolbarItem {
                 Menu {
