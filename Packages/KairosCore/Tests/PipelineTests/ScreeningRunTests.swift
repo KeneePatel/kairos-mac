@@ -218,6 +218,43 @@ struct ScreeningRunTests {
         #expect(stopped == .stopped("AI isn't set up yet. Add a key in Settings, AI providers."))
     }
 
+    /// Applying retires the posting's other copies waiting in the Inbox (2026-10-26): the same job
+    /// under a slightly different title at that company, or the same title and text under another
+    /// name. They go to Filtered out as "already applied"; other roles stay; done once.
+    @Test func applyingRetiresThePostingsOtherCopies() async throws {
+        let db = try Database(path: ":memory:")
+        try await Migrator.migrate(db, with: Migrator.bundled())
+        let source = UUID(uuidString: "0199f0a0-0000-7000-8000-0000000000bb")!
+        let text = String(repeating: "Run the fleet's clusters and the Vac DST pipeline. ", count: 6)
+        func job(_ n: Int, _ title: String, company: String, text: String, verdict: Verdict? = .maybe) -> Job {
+            Job(
+                canonicalURL: "https://jobs.example/\(n)", sourceID: source, url: "https://jobs.example/\(n)",
+                dedupKey: "\(company.lowercased())|\(title.lowercased())|toronto", company: company, title: title,
+                country: .canada, descriptionMarkdown: text, verdict: verdict,
+                verdictSource: verdict.map { _ in .analysis },
+                firstSeenAt: seenAt)
+        }
+        let applied = job(1, "DevOps Engineer (Vac DST)", company: "Institute of Free Technology", text: text)
+        let sameCompany = job(
+            2, "DevOps Engineer - Vac DST", company: "Institute of Free Technology", text: "Other words.")
+        let otherName = job(3, "DevOps Engineer (Vac DST)", company: "Logos", text: text)
+        let otherRole = job(4, "MLOps Engineer Internship", company: "Institute of Free Technology", text: text)
+        try await JobRepository(db).upsert([applied, sameCompany, otherName, otherRole])
+        try await ApplicationRepository(db).apply(job: applied.id, at: seenAt)
+        let run = ScreeningRun(db: db, router: nil)
+        #expect(await run.retireCopies(of: applied.id) == 2)
+        let after = Dictionary(uniqueKeysWithValues: try await JobRepository(db).jobs().map { ($0.id, $0) })
+        #expect(after[sameCompany.id]?.verdict == .no && after[sameCompany.id]?.verdictSource == .prefilter)
+        #expect(after[otherName.id]?.verdict == .no && after[otherName.id]?.verdictSource == .prefilter)
+        #expect(after[otherRole.id]?.verdict == .maybe && after[otherRole.id]?.verdictSource == .analysis)
+        #expect(after[applied.id]?.state == .applied)
+        let trail = try await ScreeningRepository(db).trail(for: otherName.id)
+        #expect(
+            trail.last?.ruleID == "already_applied"
+                && trail.last?.reasons.first?.contains("Institute of Free Technology") == true)
+        #expect(await run.retireCopies(of: applied.id) == 0)
+    }
+
     @Test func withoutAIOnlyThePrefilterRuns() async throws {
         let db = try await database()
         try await JobRepository(db).upsert([

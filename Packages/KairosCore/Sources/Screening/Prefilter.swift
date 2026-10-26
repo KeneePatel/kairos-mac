@@ -204,6 +204,22 @@ public struct Prefilter: Sendable {
         return Rejection(rule: .alreadyApplied, reason: "You applied to “\(match.title)” at \(match.company).")
     }
 
+    /// Whether `job` is a copy of a posting you applied to (2026-10-26): the same company and a
+    /// title with at least 80% of its words in common, as the "already applied" rule reads it, or
+    /// the same title with the same text under another company name (one posting listed twice, as
+    /// Himalayas did for a foundation and its lab). Such a copy leaves the Inbox when you apply.
+    public static func isCopy(_ job: Job, of applied: Job) -> Bool {
+        guard job.id != applied.id else { return false }
+        let title = Set(TextScan.words(TextScan.fold(job.title)))
+        let other = Set(TextScan.words(TextScan.fold(applied.title)))
+        let shared = Double(title.intersection(other).count) / Double(max(title.union(other).count, 1))
+        if companyWords(job.company) == companyWords(applied.company), shared >= 0.8 { return true }
+        guard shared >= 0.999, let text = job.descriptionMarkdown?.trimmingCharacters(in: .whitespacesAndNewlines),
+            let known = applied.descriptionMarkdown?.trimmingCharacters(in: .whitespacesAndNewlines), text.count >= 200
+        else { return false }
+        return text == known
+    }
+
     // MARK: - Helpers
 
     /// A company's name without legal suffixes: "Amazon.com Services LLC" is amazon, com, services.

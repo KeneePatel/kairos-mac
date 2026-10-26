@@ -133,6 +133,27 @@ struct ListingLedgerTests {
         #expect(try await f.events(job) == [.found, .postedElsewhere, .upgraded])
     }
 
+    /// One posting listed under two company names (Himalayas, a foundation and its lab): the same
+    /// title and the same whole text from another source attach as a copy, not a second job.
+    @Test func theSamePostingUnderAnotherCompanyNameIsOneJob() async throws {
+        let f = try await Fixture()
+        let text = String(repeating: "Run the fleet's clusters and the Vac DST pipeline. ", count: 6)
+        try await f.fromBoard([posting(f.board.id, "gh/1", title: "DevOps Engineer (Vac DST)", text: text)])
+        let himalayas = try await SourceRepository(f.db).add(kind: .himalayas)
+        var twin = posting(himalayas.id, "him/1", title: "DevOps Engineer (Vac DST)", text: text)
+        twin.company = "Logos"
+        var other = posting(
+            himalayas.id, "him/2", title: "DevOps Engineer (Vac DST)", text: "Another opening entirely.")
+        other.company = "Logos"
+        let outcome = try await f.ledger.record(
+            [twin, other], from: himalayas.id, kind: .himalayas, complete: false, at: day(1))
+        #expect(outcome.attached == 1 && outcome.added == 1)
+        let jobs = try await f.jobs()
+        #expect(jobs.count == 2 && jobs.contains { $0.company == "Acme Robotics" })
+        let copies = try await ListingRepository(f.db).listings(of: jobs.first { $0.company == "Acme Robotics" }!.id)
+        #expect(copies.count == 2)
+    }
+
     /// Seen again, a posting moves its job's last-seen time; edited, it's updated and screened
     /// again, unless you've acted on the job.
     @Test func anEditedPostingIsUpdatedAndScreenedAgain() async throws {

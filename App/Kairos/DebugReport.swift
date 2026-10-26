@@ -245,6 +245,61 @@
                 out +=
                     "\(row.string("company") ?? "?"): \(row.int("n") ?? 0) (filtered \(row.int("filtered") ?? 0), yes or maybe \(row.int("good") ?? 0))\n"
             }
+            out += "\n## Applications (2026-10-26: a job marked applied twice)\n"
+            for row in try await db.query(
+                """
+                SELECT a.job_id AS job, COUNT(*) AS n, j.state AS state, j.title AS title, j.company AS company
+                FROM application a LEFT JOIN job j ON j.id = a.job_id WHERE a.deleted = 0
+                GROUP BY a.job_id HAVING n > 1 OR j.state IS NULL OR j.state != 'applied'
+                """)
+            {
+                out +=
+                    "\(row.string("title") ?? "?") · \(row.string("company") ?? "?"): \(row.int("n") ?? 0) applications, job state \(row.string("state") ?? "missing")\n"
+            }
+            for row in try await db.query(
+                """
+                SELECT j.company AS company, j.title AS title, s.kind AS kind, j.state AS state, a.applied_at AS at,
+                    j.city AS city
+                FROM application a LEFT JOIN job j ON j.id = a.job_id LEFT JOIN source s ON s.id = j.source_id
+                WHERE a.deleted = 0 ORDER BY j.company, j.title
+                """)
+            {
+                let at =
+                    row.int64("at").map { Date(milliseconds: $0).formatted(.dateTime.month(.abbreviated).day()) } ?? "?"
+                out +=
+                    "- \(row.string("company") ?? "?") · \(row.string("title") ?? "?") · \(row.string("city") ?? "-") · \(row.string("kind") ?? "?") · \(row.string("state") ?? "?") · \(at)\n"
+            }
+            for row in try await db.query(
+                """
+                SELECT a.id AS id, a.deleted AS deleted, a.job_id AS job, j.title AS title, j.company AS company,
+                    j.state AS state, a.applied_at AS at, a.status AS status
+                FROM application a LEFT JOIN job j ON j.id = a.job_id
+                WHERE a.deleted = 1 OR a.applied_at > ? ORDER BY a.applied_at
+                """, [.integer(now - 2 * 86_400_000)])
+            {
+                let at =
+                    row.int64("at").map { Date(milliseconds: $0).formatted(date: .abbreviated, time: .shortened) }
+                    ?? "?"
+                out +=
+                    "recent or deleted: \(row.string("company") ?? "?") · \(row.string("title") ?? "?") · job \(row.string("job")?.prefix(8) ?? "?") · state \(row.string("state") ?? "missing") · \(row.string("status") ?? "?") · deleted \(row.int("deleted") ?? 0) · \(at)\n"
+            }
+            for row in try await db.query(
+                """
+                SELECT e.kind AS kind, e.at AS at, a.job_id AS job, j.title AS title
+                FROM application_event e JOIN application a ON a.id = e.application_id LEFT JOIN job j ON j.id = a.job_id
+                WHERE e.at > ? ORDER BY e.at
+                """, [.integer(now - 2 * 86_400_000)])
+            {
+                let at =
+                    row.int64("at").map { Date(milliseconds: $0).formatted(date: .omitted, time: .shortened) } ?? "?"
+                out +=
+                    "event \(at): \(row.string("kind") ?? "?") · \(row.string("title") ?? "?") · job \(row.string("job")?.prefix(8) ?? "?")\n"
+            }
+            if let row = try await db.query(
+                "SELECT COUNT(*) AS n, COUNT(DISTINCT job_id) AS jobs FROM application WHERE deleted = 0"
+            ).first {
+                out += "\(row.int("n") ?? 0) applications for \(row.int("jobs") ?? 0) jobs\n"
+            }
             out += "\n## Company lookups (snippet companies looked up on public boards)\n"
             if let row = try await db.query("SELECT COUNT(*) AS n, SUM(kind IS NOT NULL) AS found FROM company_lookup")
                 .first

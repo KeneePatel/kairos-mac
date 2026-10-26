@@ -191,6 +191,26 @@ public struct ScreeningRun: Sendable {
             await screen(job, with: router, context: context, engine: context.verdictEngine(), fresh: true))
     }
 
+    /// When you apply to a job, its other copies still waiting in the Inbox leave it (2026-10-26):
+    /// the same posting at the same company under a slightly different title, or the same title
+    /// and text under another company name. Each is filtered as "already applied", with Bring back
+    /// in Filtered out like any rule. Returns how many.
+    public func retireCopies(of applied: JobID) async -> Int {
+        guard let job = try? await JobRepository(db).job(applied),
+            let waiting = try? await JobRepository(db).jobs(matching: JobFilter(states: [.new], openOnly: true)),
+            let context = try? await ScreeningContext.load(from: db)
+        else { return 0 }
+        var retired = 0
+        for copy in waiting where copy.verdictSource != .prefilter && Prefilter.isCopy(copy, of: job) {
+            let rejection = Rejection(rule: .alreadyApplied, reason: "You applied to “\(job.title)” at \(job.company).")
+            try? await ScreeningRepository(db).record(rejection, for: copy.id)
+            _ = try? await JobRepository(db).setVerdict(
+                .no, source: .prefilter, rank: context.rank(.no, for: copy, match: 0), for: copy.id)
+            retired += 1
+        }
+        return retired
+    }
+
     /// "Bring back" from Filtered out: the job leaves the filters' reach for good and is judged
     /// like any job that passed them (its stored analysis, or the AI's), or waits for the AI.
     public func bringBack(_ id: JobID) async -> Reevaluation {

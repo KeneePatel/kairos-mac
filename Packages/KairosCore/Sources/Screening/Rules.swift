@@ -24,6 +24,11 @@ public enum PrefilterRule: String, Sendable, CaseIterable, Codable {
 public struct Rejection: Sendable, Equatable {
     public let rule: PrefilterRule
     public let reason: String
+
+    public init(rule: PrefilterRule, reason: String) {
+        self.rule = rule
+        self.reason = reason
+    }
 }
 
 /// A job you applied to, for the "already applied" rule.

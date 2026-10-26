@@ -1031,9 +1031,12 @@ final class AppModel {
     /// finished one unless `build` says.
     func markApplied(_ job: Job, build: UUID? = nil) async {
         guard let db else { return }
+        advanceSelection(past: job.id)
         let sent = build ?? builds.first { $0.jobID == job.id.rawValue && $0.status == .done }?.id
         _ = try? await ApplicationRepository(db).apply(
             job: job.id, build: sent, channel: source(job.sourceID)?.kind.displayName, at: Date())
+        // Its other copies waiting in the Inbox leave it, filtered as "already applied" (2026-10-26).
+        _ = await ScreeningRun(db: db, router: nil).retireCopies(of: job.id)
         await reload()
     }
 

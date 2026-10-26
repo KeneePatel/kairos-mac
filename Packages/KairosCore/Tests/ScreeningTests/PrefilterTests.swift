@@ -316,6 +316,29 @@ struct PrefilterTests {
         check(blocked, [(job(company: "Procom"), .blacklist)])
     }
 
+    /// A copy of a job you applied to: the same company and nearly the same title, or the same
+    /// title and whole text under another company name. Different roles at that company aren't.
+    @Test func aCopyOfAnAppliedJobIsKnown() {
+        let text = String(repeating: "Build the fleet API in Go with PostgreSQL and Kafka. ", count: 6)
+        let applied = job("DevOps Engineer (Vac DST)", company: "Institute of Free Technology", description: text)
+        // Its own address: the helper derives one from the title, and the twin must be another job.
+        let twin = Job(
+            canonicalURL: "https://logos.example/1", sourceID: source, url: "https://logos.example/1", dedupKey: "k",
+            company: "Logos", title: "DevOps Engineer (Vac DST)", location: "Toronto, ON", country: .canada,
+            descriptionMarkdown: text, firstSeenAt: now)
+        #expect(Prefilter.isCopy(twin, of: applied))
+        #expect(
+            Prefilter.isCopy(
+                job("DevOps Engineer - Vac DST", company: "Institute of Free Technology Inc."), of: applied))
+        var otherText = twin
+        otherText.descriptionMarkdown = "Different text."
+        #expect(!Prefilter.isCopy(otherText, of: applied))
+        #expect(
+            !Prefilter.isCopy(job("MLOps Engineer Internship", company: "Institute of Free Technology"), of: applied))
+        #expect(!Prefilter.isCopy(job("Data Engineer", company: "Logos", description: text), of: applied))
+        #expect(!Prefilter.isCopy(applied, of: applied))
+    }
+
     @Test func postingsOlderThanYourLimitAreOut() {
         let filter = prefilter { preferences, _ in preferences.maxAgeDays = 30 }
         check(

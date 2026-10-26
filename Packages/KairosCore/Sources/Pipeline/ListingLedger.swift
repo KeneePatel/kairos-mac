@@ -353,7 +353,17 @@ private struct Writer {
                 return stored
             }
         }
-        return nil
+        // The same posting under another company name (2026-10-26: Himalayas listed one job for a
+        // foundation and for its lab): the same title and the same whole text are one opening.
+        guard let text = candidate.descriptionMarkdown, text.count >= 200 else { return nil }
+        let twin = try connection.query(
+            """
+            SELECT * FROM job WHERE deleted = 0 AND closed_at IS NULL AND title = ? AND description = ?
+                AND id NOT IN (SELECT job_id FROM listing WHERE source_id = ? AND deleted = 0)
+            ORDER BY first_seen_at, id LIMIT 1
+            """, [.text(candidate.title), .text(text), .text(source.lowercased)])
+        guard let id = twin.first?.string("id") else { return nil }
+        return try JobRepository.job(JobID(rawValue: id), in: connection)?.job
     }
 
     // MARK: - Closing
