@@ -139,6 +139,15 @@
                 done.wait()
                 exit(0)
             }
+            if CommandLine.arguments.contains("--master-resume-pdf") {
+                let done = DispatchSemaphore(value: 0)
+                Task.detached {
+                    await masterResumePDF()
+                    done.signal()
+                }
+                done.wait()
+                exit(0)
+            }
             guard CommandLine.arguments.contains("--screening-report") else { return }
             let done = DispatchSemaphore(value: 0)
             Task.detached {
@@ -1189,6 +1198,27 @@
                 }
             } catch {
                 print("render-letters: \(error)")
+            }
+        }
+
+        /// `--master-resume-pdf`: your whole master resume rendered with no page budget (SPEC §5.10,
+        /// Export), as the Export PDF button saves it, printed as one base64 line
+        /// (`MASTER-RESUME-PDF <base64>`) so a terminal can write the file the sandbox can't. It's
+        /// your own resume, contact details included: keep the output to yourself.
+        private static func masterResumePDF() async {
+            do {
+                let db = try Database(path: try AccountStore.applicationSupport().databaseURL(for: .local).path)
+                let resume = try await MasterResumeRepository(db).load()
+                guard let typst = Bundle.main.url(forAuxiliaryExecutable: "typst") else {
+                    print("master-resume-pdf: typst isn't in the app bundle")
+                    return
+                }
+                let renderer = ResumeRenderer(runner: TypstRunner(executable: typst))
+                let pdf = try await renderer.render(ResumeDocument(FullResume(resume)))
+                print("master-resume-pdf: version \(resume.version), \(pdf.pageCount) page(s)")
+                print("MASTER-RESUME-PDF \(pdf.data.base64EncodedString())")
+            } catch {
+                print("master-resume-pdf: \(error)")
             }
         }
 

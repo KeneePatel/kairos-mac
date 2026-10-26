@@ -551,7 +551,7 @@ One per user. It's the complete record of everything they've done, longer than a
 - **Editing:** a dedicated screen with sections, inline editing, reordering, and Proven / Can discuss toggles on skills. Edits sync like everything else.
 - **Versioning:** every save increments `master_version`. Each build records the version it used, so a resume made before an edit shows "Built from version 12; master resume edited since".
 - **Import:** onboarding asks for the required contact fields first. `importResume` then drafts everything else from a PDF or pasted text, after code removes those values and anything shaped like an email, phone number or profile URL. `importGitHubRepo` drafts project entries from chosen repos. Drafts are shown for review, never saved silently.
-- **Export:** a full-length "everything" PDF rendered by Typst (no page budget), plus JSON in the data export.
+- **Export:** a full-length "everything" PDF rendered by Typst (no page budget), plus JSON in the data export. Built 2026-10-26: Master resume → Export PDF saves every entry and bullet in the Harvard layout builds use (summary from your highlights, Education, Skills with Proven by category then Can discuss, Experience, Projects with linked titles, Certifications, then every other section), over as many pages as it takes; debug builds print the same PDF with `--master-resume-pdf`.
 
 ---
 
