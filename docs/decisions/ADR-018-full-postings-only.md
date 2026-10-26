@@ -48,4 +48,4 @@ catalog".
 - A migration (015) adds `apply_url` and `via`, a `lead` table, and archives snippet jobs.
 - Google Jobs coverage on the free plan is about every role and place every five days; coverage
   of employers on Workday, iCIMS and job boards depends on it.
-- Remotive joins with its terms (four fetches a day, its own page as the link, a 24-hour delay).
+- Remotive was to join, but its public API answers only the ten newest jobs whatever is asked (checked 2026-10-26), so it doesn't.

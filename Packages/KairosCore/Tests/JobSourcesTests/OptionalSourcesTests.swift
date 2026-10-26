@@ -74,6 +74,10 @@ struct OptionalSourcesTests {
         #expect(posting.url.absoluteString == "https://himalayas.app/companies/acme/jobs/backend")
         #expect(posting.location == "Remote - Canada" && posting.workplace == .remote && posting.countryHint == "CA")
         #expect(posting.descriptionHTML.contains("fleet API"))
+        // Apply opens the application link unchanged (its terms); Himalayas is where it was seen.
+        #expect(
+            posting.applyURL?.absoluteString == "https://boards.greenhouse.io/acme/jobs/1" && posting.via == "Himalayas"
+        )
         #expect(script.requests.first?.value(forHTTPHeaderField: "Authorization") == "Bearer him-key")
         let (open, keyless) = ScriptedURLProtocol.client([
             himalayasURL("qa engineer", page: 1): .http(status: 200, body: himalayas([]))

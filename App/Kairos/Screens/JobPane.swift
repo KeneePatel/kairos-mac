@@ -46,7 +46,6 @@ struct JobPane: View {
                         header(job)
                         actions(job)
                         verdict(job)
-                        if model.isSnippet(job) { snippetNote(job) }
                         if let analysis = stored?.analysis { requirements(analysis) }
                         if !listings.isEmpty { wherePosted(job) }
                         posting(job)
@@ -92,7 +91,7 @@ struct JobPane: View {
         VStack(alignment: .leading, spacing: Spacing.space1) {
             HStack(spacing: Spacing.space1) {
                 // Adzuna's terms ask that its listings name it, linked: the credit replaces "via".
-                if model.isSnippet(job) {
+                if model.source(job.sourceID)?.kind == .adzuna {
                     Text("\(job.company) ·").font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
                     AdzunaCredit()
                 } else {
@@ -310,20 +309,6 @@ struct JobPane: View {
     /// Everything after the deciding reason except the coverage line, which the groups show.
     private func notes(_ job: Job) -> [String] {
         Array((model.screening(for: job)?.reasons ?? []).dropFirst()).filter { !$0.hasPrefix("Covers ") }
-    }
-
-    private func snippetNote(_ job: Job) -> some View {
-        HStack(spacing: Spacing.space3) {
-            Image(systemName: "text.badge.minus").foregroundStyle(Color(.inkSecondary))
-            Text(
-                "Only a snippet of this posting came from Adzuna. Open the posting to read the rest before you decide."
-            )
-            .font(TypeStyle.callout).foregroundStyle(Color(.ink2)).fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: Spacing.space2)
-            Button("Open posting") { model.openPosting(job) }.font(TypeStyle.callout)
-        }
-        .padding(Spacing.space3)
-        .background(RoundedRectangle(cornerRadius: Radius.card).fill(Color(.surfaceRaised)))
     }
 
     // MARK: - Requirements

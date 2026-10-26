@@ -2,16 +2,16 @@ import Foundation
 import JobSources
 import Store
 
-/// Fills in search snippets from companies' own boards (job collection v2, J6). Adzuna sends 500
-/// characters of a posting and Kairos never opens its paid advert link; but the same posting is
-/// often on the company's public board, in full (2026-10-23: about a quarter of Adzuna's
-/// companies). For the companies behind open snippet jobs, newest first, it looks for a board:
-/// in Kairos's catalog, among your sources, then by trying the name's slugs. A board found is
-/// added as a source (origin "search") for the fetch to read now; the ledger then attaches each
-/// copy to its job, and the full posting replaces the snippet.
-public struct SnippetFinder: Sendable {
-    /// Companies looked up per fetch: a few dozen requests at most.
-    public static let perRun = 20
+/// Finds companies' boards behind a search's leads (job collection v3, C2; v2's snippet finder
+/// before). Adzuna names the companies posting at your roles but sends only a snippet of each
+/// posting, which Kairos no longer keeps; the same postings are often on the company's public
+/// board, in full. For the companies behind the newest leads it looks for a board: in Kairos's
+/// catalog, among your sources, then by trying the name's slugs. A board found is added as a
+/// source (origin "search") for the fetch to read now. Each company is looked up once, and again
+/// a month later when nothing was found.
+public struct LeadFinder: Sendable {
+    /// Companies looked up per fetch: at most a few hundred requests, spread over the fetches.
+    public static let perRun = 60
     /// A company with no board found is looked up again after this long.
     public static let recheckAfter: TimeInterval = 30 * 86_400
     let db: Database
@@ -33,19 +33,13 @@ public struct SnippetFinder: Sendable {
         String(DedupKey.company(of: DedupKey.make(company: name, title: "", city: nil)))
     }
 
-    /// Looks up the companies of open snippet jobs that weren't looked up lately, and returns the
-    /// boards it added as sources.
+    /// Looks up the companies behind the leads that weren't looked up lately, newest first, and
+    /// returns the boards it added as sources.
     public func findBoards() async -> [Source] {
         let sources = SourceRepository(db)
-        guard
-            let rows = try? await db.query(
-                """
-                SELECT company, MAX(first_seen_at) AS newest FROM job
-                WHERE deleted = 0 AND closed_at IS NULL AND description_kind = 'snippet' AND company != 'Company not listed'
-                GROUP BY company ORDER BY newest DESC
-                """),
-            let every = try? await sources.everySource()
+        guard let companies = try? await LeadRepository(db).companies(), let every = try? await sources.everySource()
         else { return [] }
+        let rows = companies.map(\.company).filter { $0 != "Company not listed" }
         var boards: [String: Source] = [:]
         var byCompany: [String: (SourceKind, String)] = [:]
         for source in every where SourceKind.boards.contains(source.kind) {
@@ -59,8 +53,8 @@ public struct SnippetFinder: Sendable {
 
         var added: [Source] = []
         var looked = 0
-        for row in rows {
-            guard looked < Self.perRun, let name = row.string("company") else { break }
+        for name in rows {
+            guard looked < Self.perRun else { break }
             let key = Self.key(name)
             guard !key.isEmpty, byCompany[key] == nil, !BoardCatalog.isAggregator(name) else { continue }
             if let lookup = try? await db.query("SELECT * FROM company_lookup WHERE name_key = ?", [.text(key)]).first {

@@ -48,6 +48,7 @@ Every row names the command that produces its verdict. Gitleaks is the external 
 | ID | Rule | Path | Reason | Owner | Expires |
 |----|------|------|--------|-------|---------|
 | E3 | Floor guard: assertion-removed (1 line) | `Packages/KairosCore/Tests/JobSourcesTests/OptionalSourcesTests.swift` | Approved by you 2026-10-26 (job collection v3, C1). The Google Jobs test asserted that a job's address starts with Google's search page (`share_link`), the bug v3 fixes: the address is now the page Google took the posting from, and the test asserts that instead. | Kenee Patel | When `collection-v3-c1` merges into `main` |
+| E4 | Floor guard: assertion-removed (20 lines in six test files) | `Packages/KairosCore/Tests/{PipelineTests/InboxTests,PipelineTests/FetchRunTests,PipelineTests/ImproveReportTests,PipelineTests/LeadFinderTests,ScreeningTests/VerdictRankingTests,JobSourcesTests/OptionalSourcesTests}.swift` | Approved by you 2026-10-26 (job collection v3, C2). The assertions pinned snippet behaviour that ADR-018 removes: the Inbox's "Needs a full read" group, the `snippet_only` verdict and the screening context's snippet sources, a snippet filled in from a board, Adzuna's copy counted as a duplicate. Each is replaced by a test of the new behaviour (leads, two groups, a board read behind a lead). | Kenee Patel | When `collection-v3-c2` merges into `main` |
 
 ## Where each check runs
 

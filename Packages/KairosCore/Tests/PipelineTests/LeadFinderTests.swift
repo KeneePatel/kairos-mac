@@ -33,6 +33,12 @@ private func boardPosting(_ source: SourceID, title: String = "Software Engineer
         descriptionHTML: "<p>\(snippet). You'll own our Workday and BambooHR connectors in Go.</p>")
 }
 
+private func lead(_ source: SourceID, _ company: String, path: String) -> Lead {
+    Lead(
+        id: JobID(canonicalURL: "https://www.adzuna.ca/land/ad/\(path)").rawValue, sourceID: source, company: company,
+        title: "Backend Developer", location: "Toronto, Ontario", postedAt: day0, firstSeenAt: day0, lastSeenAt: day0)
+}
+
 /// An HTTP client only these replies can answer.
 private func scripted(_ replies: [String: ScriptedURLProtocol.Reply]) -> (
     URLSessionHTTPClient, ScriptedURLProtocol.Script
@@ -48,9 +54,10 @@ private struct Answer: JobSource {
     func fetch(_ query: SourceQuery) async throws -> [Posting] { postings }
 }
 
-/// Job collection v2, J6: snippets filled in from companies' own boards.
-@Suite("Snippet finder")
-struct SnippetFinderTests {
+/// Job collection v3, C2 (v2, J6 before): companies behind a search's leads, found on their own
+/// boards and read in full.
+@Suite("Lead finder")
+struct LeadFinderTests {
     /// A snippet's opening words found in a posting's text.
     @Test func aSnippetIsFoundInItsPosting() {
         #expect(ListingLedgerContains.check(snippet: snippet, in: "Intro. \(snippet). More."))
@@ -63,18 +70,14 @@ struct SnippetFinderTests {
     @Test func itFindsTheBoardAndRemembers() async throws {
         let db = try await database()
         let adzuna = try await SourceRepository(db).add(kind: .adzuna)
-        _ = try await ListingLedger(db).record(
-            [adzunaPosting(adzuna.id)] + [
-                Posting(
-                    sourceID: adzuna.id, url: URL(string: "https://www.adzuna.ca/land/ad/2")!, company: "Nowhere Ltd",
-                    title: "Backend Developer", location: "Toronto, Ontario", postedAt: day0,
-                    descriptionHTML: "<p>Build things.</p>")
-            ], from: adzuna.id, kind: .adzuna, complete: false, at: day0)
+        _ = try await LeadRepository(db).record([
+            lead(adzuna.id, "Syndio", path: "1"), lead(adzuna.id, "Nowhere Ltd", path: "2"),
+        ])
         let (http, script) = scripted([
             "https://boards-api.greenhouse.io/v1/boards/syndio/jobs": .http(
                 status: 200, body: Data(#"{"jobs":[{"title":"x"}]}"#.utf8))
         ])
-        let finder = SnippetFinder(
+        let finder = LeadFinder(
             db: db, probe: BoardProbe(http: http), catalog: BoardCatalog(checked: "", boards: []), now: { day0 })
         let found = await finder.findBoards()
         #expect(found.count == 1 && found.first?.kind == .greenhouse)
@@ -92,15 +95,9 @@ struct SnippetFinderTests {
     @Test func aggregatorsArentLookedUp() async throws {
         let db = try await database()
         let adzuna = try await SourceRepository(db).add(kind: .adzuna)
-        _ = try await ListingLedger(db).record(
-            [
-                Posting(
-                    sourceID: adzuna.id, url: URL(string: "https://www.adzuna.ca/land/ad/3")!, company: "Jobgether",
-                    title: "Backend Developer", location: "Toronto, Ontario", postedAt: day0,
-                    descriptionHTML: "<p>Remote role.</p>")
-            ], from: adzuna.id, kind: .adzuna, complete: false, at: day0)
+        _ = try await LeadRepository(db).record([lead(adzuna.id, "Jobgether", path: "3")])
         let (http, script) = scripted([:])
-        let finder = SnippetFinder(
+        let finder = LeadFinder(
             db: db, probe: BoardProbe(http: http), catalog: BoardCatalog(checked: "", boards: []), now: { day0 })
         #expect(await finder.findBoards().isEmpty && script.requests.isEmpty)
     }
@@ -121,16 +118,16 @@ struct SnippetFinderTests {
         #expect(outcome.upgraded == 1 && outcome.tooOld == 0 && outcome.otherRoles == 0)
     }
 
-    /// In a fetch: Adzuna's snippet, then the finder adds Syndio's board and reads it, and the
-    /// board's full posting replaces the snippet, though its title isn't word for word the same.
-    @Test func aFetchFillsInTheSnippet() async throws {
+    /// In a fetch (v3, C2): Adzuna's answer becomes a lead, never a job; the finder adds Syndio's
+    /// board and reads it; the board's full posting is the job.
+    @Test func aFetchTurnsASnippetIntoALeadAndReadsTheBoardFound() async throws {
         let db = try await database()
         _ = try await SourceRepository(db).add(kind: .adzuna)
         let (http, _) = scripted([
             "https://boards-api.greenhouse.io/v1/boards/syndio/jobs": .http(
                 status: 200, body: Data(#"{"jobs":[{"title":"x"}]}"#.utf8))
         ])
-        let finder = SnippetFinder(
+        let finder = LeadFinder(
             db: db, probe: BoardProbe(http: http), catalog: BoardCatalog(checked: "", boards: []), now: { day0 })
         let run = FetchRun(
             db: db, now: { day0 }, finder: finder,
@@ -149,12 +146,12 @@ struct SnippetFinderTests {
             })
         var last = FetchRun.Progress()
         for await progress in run.start() { last = progress }
-        #expect(
-            last.boardsFound == 1 && last.upgraded == 1 && last.added == 1,
-            "found \(last.boardsFound), upgraded \(last.upgraded), added \(last.added), failures \(last.failures)")
-        let job = try #require(try await JobRepository(db).jobs().first)
-        #expect(job.descriptionKind == .full && job.descriptionMarkdown?.contains("BambooHR connectors") == true)
-        #expect(try await ListingRepository(db).listings(of: job.id).count == 2)
+        #expect(last.leads == 1 && last.boardsFound == 1 && last.added == 1 && last.upgraded == 0)
+        let jobs = try await JobRepository(db).jobs()
+        #expect(jobs.count == 1 && jobs.first?.descriptionKind == .full)
+        #expect(jobs.first?.url == "https://job-boards.greenhouse.io/syndio/jobs/7")
+        #expect(try await LeadRepository(db).count() == 1)
+        #expect(try await db.query("SELECT COUNT(*) AS n FROM listing").first?.int("n") == 1)
     }
 }
 

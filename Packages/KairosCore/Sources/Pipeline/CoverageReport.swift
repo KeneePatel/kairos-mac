@@ -26,8 +26,10 @@ public struct CoverageReport: Sendable, Equatable {
     public var openJobs: [DescriptionKind: Int]
     public var closedThisWeek: Int
     public var newThisWeek: Int
-    /// Snippets filled in by a full posting, all time.
+    /// Snippets filled in by a full posting, all time (before v3).
     public var upgraded: Int
+    /// Leads held: postings a search sent as snippets, kept as company names to look up (v3, C2).
+    public var leads: Int = 0
     /// The most common failures this week, with their counts.
     public var failures: [(message: String, count: Int)]
 
@@ -92,7 +94,7 @@ public struct CoverageReport: Sendable, Equatable {
             newThisWeek: try await count(
                 "SELECT COUNT(*) AS n FROM job_event WHERE kind = 'found' AND deleted = 0 AND at >= ?", [week]),
             upgraded: try await count("SELECT COUNT(*) AS n FROM job_event WHERE kind = 'upgraded' AND deleted = 0"),
-            failures: failures)
+            leads: try await count("SELECT COUNT(*) AS n FROM lead"), failures: failures)
     }
 
     /// The report as plain text, one fact a line.
@@ -102,6 +104,7 @@ public struct CoverageReport: Sendable, Equatable {
         var out = [
             "Open jobs: \(total) (\(full) with the full posting, \(openJobs[.snippet] ?? 0) snippets, \(openJobs[.none] ?? 0) without text)",
             "This week: \(newThisWeek) new, \(closedThisWeek) closed; snippets filled in, all time: \(upgraded)",
+            "Leads held (postings a search sent as snippets, 30 days): \(leads)",
             "Sources by origin: "
                 + byOrigin.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", "),
             "",

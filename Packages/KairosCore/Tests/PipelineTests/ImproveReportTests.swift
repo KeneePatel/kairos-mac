@@ -150,7 +150,6 @@ private func report() -> ImproveReport {
     /// Snippets, levels you've turned off, and titles your list misses aren't resume fixes.
     @Test func searchAndHeldReasonsStandApart() {
         let report = report()
-        #expect(report.snippets == [snippet.id])
         #expect(report.held == [.init(rule: .seniority, jobs: [senior.id])])
         // "Software Development Engineer" has every word of "Software Engineer"; the Senior one
         // would still be dropped for its level, and business development isn't close.

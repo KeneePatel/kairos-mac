@@ -222,6 +222,34 @@ struct FetchRunTests {
         #expect(try await JobRepository(db).jobs().count == 1 && listings == 2)
     }
 
+    /// A search that sends snippets (Adzuna) gives leads, never jobs (v3, C2): company names at
+    /// your roles, counted and kept 30 days; the Inbox sees none of them.
+    @Test func snippetSearchesGiveLeadsNotJobs() async throws {
+        let db = try await database()
+        let adzuna = try await SourceRepository(db).add(kind: .adzuna)
+        let run = FetchRun(
+            db: db, now: { seenAt }, roles: RoleMatcher(families: [.software]),
+            makeSource: { source in
+                var developer = posting(source.id, "Backend Developer", "Toronto, ON", path: "ad/1")
+                developer.url = URL(string: "https://www.adzuna.ca/land/ad/1")!
+                var nurse = posting(source.id, "Registered Nurse", "Toronto, ON", path: "ad/2")
+                nurse.url = URL(string: "https://www.adzuna.ca/land/ad/2")!
+                let reply = [developer, nurse]
+                return (FakeSource(id: source.id, reply: { reply }), SourceQuery())
+            })
+        let outcome = try #require(await collect(run).last)
+        #expect(outcome.leads == 1 && outcome.otherRoles == 1 && outcome.added == 0 && outcome.found == 2)
+        #expect(try await JobRepository(db).jobs().isEmpty)
+        let leads = try await LeadRepository(db).leads()
+        #expect(leads.map(\.company) == ["Acme Robotics"] && leads.first?.sourceID == adzuna.id)
+        // The run's record says so, and a second fetch adds nothing.
+        let stats = try await RunRepository(db).runs(kind: "fetch", limit: 1).first.flatMap {
+            FetchRun.Stats.decode($0.stats)
+        }
+        #expect(stats?.leads == 1)
+        #expect(try #require(await collect(run).last).leads == 0)
+    }
+
     @Test func searchSourcesRunAfterTheBoards() async throws {
         let db = try await database()
         let sources = SourceRepository(db)
@@ -241,7 +269,8 @@ struct FetchRunTests {
         ]
         let last = try #require(await collect(fetchRun(db, replies)).last)
         #expect(order.withLock { $0 } == ["board", "adzuna"])
-        #expect(last.added == 1 && last.duplicates == 1 && last.sourcesDone == 2)
+        // Adzuna's copy is a lead now (v3, C2), not a duplicate.
+        #expect(last.added == 1 && last.leads == 1 && last.sourcesDone == 2)
         #expect(try await JobRepository(db).jobs().map(\.sourceID) == [board.id])
     }
 

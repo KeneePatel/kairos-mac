@@ -289,11 +289,6 @@ final class AppModel {
         return nil
     }
 
-    /// Whether `job` came from a search's snippet (Adzuna), so its description is partial.
-    /// Kairos holds only a search's snippet of it: Adzuna's, until the full posting turns up on
-    /// the company's board.
-    func isSnippet(_ job: Job) -> Bool { job.descriptionKind == .snippet || source(job.sourceID)?.kind == .adzuna }
-
     func source(_ id: UUID) -> Source? { sourcesByID[id] }
 
     /// Sources by id, for the lookups every row and pane make: a scan of 800 catalog boards per
@@ -348,7 +343,7 @@ final class AppModel {
                 db: db, postedWithinDays: preferences.maxAgeDays, roles: roles,
                 watch: preferences.watchCatalog
                     ? CatalogWatch(catalog: .bundled, countries: preferences.countries) : nil,
-                finder: SnippetFinder(db: db, probe: BoardProbe(http: http), catalog: .bundled),
+                finder: LeadFinder(db: db, probe: BoardProbe(http: http), catalog: .bundled),
                 makeSource: { try SourceFactory.make($0, http: http, search: search) }),
             screening: ScreeningRun(db: db, router: ai?.router()))
         fetchTask = Task { [weak self] in
@@ -649,7 +644,7 @@ final class AppModel {
             case .saved: savedJobs
             case .skipped: skippedJobs
             }
-        return Inbox.groups(source, query: query, countries: searchPreferences.countries) { isSnippet($0) }
+        return Inbox.groups(source, query: query, countries: searchPreferences.countries)
     }
 
     /// Skip (X): to Skipped, verdict kept; ⌘Z brings it back.
@@ -715,7 +710,7 @@ final class AppModel {
         selectedJob = visibleJobs[next]
     }
 
-    /// Opens the posting in your browser (O). For a snippet that's Adzuna's advert page.
+    /// Opens the posting in your browser (O), where it lives.
     /// Opens where the posting lives (job collection v3): the employer's page behind a job board's
     /// copy, Himalayas's application link, else the job's own address.
     func openPosting(_ job: Job) {
@@ -1198,14 +1193,14 @@ final class AppModel {
         if stats.failed > 0 { parts.append("\(stats.failed) board\(stats.failed == 1 ? "" : "s") failed") }
         if let tooOld = stats.tooOld { parts.append("\(tooOld) older ones skipped") }
         // Job collection v2: what changed on postings already known.
-        if let upgraded = stats.upgraded { parts.append("\(upgraded) snippet\(upgraded == 1 ? "" : "s") filled in") }
+        if let leads = stats.leads { parts.append("\(leads) lead\(leads == 1 ? "" : "s") from Adzuna") }
         if let changed = stats.changed { parts.append("\(changed) edited") }
         if let closed = stats.closed { parts.append("\(closed) no longer posted") }
         if let other = stats.otherRoles { parts.append("\(other) at other roles left out") }
         if let added = stats.catalogAdded { parts.append("\(added) catalog compan\(added == 1 ? "y" : "ies") added") }
         if let quiet = stats.quiet { parts.append("\(quiet) quiet boards rested") }
         if let found = stats.boardsFound {
-            parts.append("\(found) compan\(found == 1 ? "y's" : "ies'") boards found behind snippets")
+            parts.append("\(found) compan\(found == 1 ? "y's" : "ies'") boards found behind searches")
         }
         if stats.searchesSkipped != nil { parts.append("Adzuna's share for today is used up") }
         if let unchanged = stats.unchanged {

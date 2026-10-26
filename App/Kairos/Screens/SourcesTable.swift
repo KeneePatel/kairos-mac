@@ -295,7 +295,7 @@ struct AdzunaSheet: View {
                 Text(model.adzunaSource == nil ? "Search Adzuna" : "Change your Adzuna keys")
                     .font(TypeStyle.title2).foregroundStyle(Color(.ink))
                 Text(
-                    "Adzuna lists jobs from many employers. Kairos searches it for the job titles in Settings, Search, Canada first, after your company boards."
+                    "Adzuna lists jobs from many employers. Kairos searches it for your roles to learn which companies are hiring, finds their public boards, and reads the full postings there."
                 )
                 .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
                 .fixedSize(horizontal: false, vertical: true)
@@ -311,7 +311,7 @@ struct AdzunaSheet: View {
             VStack(alignment: .leading, spacing: Spacing.space2) {
                 Label {
                     Text(
-                        "Adzuna sends a snippet of each posting, not the whole text, so its jobs are Maybe at most. Open one to read the rest before you build."
+                        "Adzuna sends a snippet of each posting, not the whole text, so its results never become jobs: they are leads, company names Kairos looks up on boards it can read in full."
                     )
                 } icon: {
                     Image(systemName: "text.badge.minus")

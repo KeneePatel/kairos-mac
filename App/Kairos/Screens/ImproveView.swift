@@ -12,7 +12,6 @@ struct ImproveView: View {
     /// A row of the list.
     enum Item: Hashable {
         case fix(String)
-        case snippets
         case title(String)
         case yearsLimit
         case held(VerdictRule)
@@ -93,7 +92,7 @@ struct ImproveView: View {
     // MARK: - The list
 
     static func items(_ report: ImproveReport) -> [Item] {
-        report.fixes.map { .fix($0.id) } + (report.snippets.isEmpty ? [] : [.snippets])
+        report.fixes.map { .fix($0.id) }
             + report.titleMisses.map { .title($0.phrase) } + (report.yearsLimit.isEmpty ? [] : [.yearsLimit])
             + report.held.map { .held($0.rule) } + (report.oneOffs.isEmpty ? [] : [.oneOffs])
     }
@@ -107,12 +106,8 @@ struct ImproveView: View {
                     }
                 }
             }
-            if !report.snippets.isEmpty || !report.titleMisses.isEmpty || !report.yearsLimit.isEmpty {
+            if !report.titleMisses.isEmpty || !report.yearsLimit.isEmpty {
                 Section("In your search") {
-                    if !report.snippets.isEmpty {
-                        row("Adzuna snippets", gain: "\(report.snippets.count) Maybe", meta: "Open each and decide")
-                            .tag(Item.snippets)
-                    }
                     ForEach(report.titleMisses) { miss in
                         row(miss.phrase, gain: Self.jobs(miss.jobs.count), meta: "A title your list leaves out")
                             .tag(Item.title(miss.phrase))
@@ -188,11 +183,6 @@ struct ImproveView: View {
         switch choice {
         case .fix(let id)?:
             if let fix = report.fixes.first(where: { $0.id == id }) { fixDetail(fix, report) }
-        case .snippets?:
-            page(
-                "In your search", "Adzuna snippets",
-                "These jobs are Maybe only because Adzuna gives a snippet of each posting, so the AI can't judge the whole match. Open each one, read the posting, and change its verdict yourself if it fits.",
-                jobs: report.snippets)
         case .title(let phrase)?:
             if let miss = report.titleMisses.first(where: { $0.phrase == phrase }) {
                 page(

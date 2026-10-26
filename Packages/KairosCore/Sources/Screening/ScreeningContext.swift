@@ -14,8 +14,6 @@ public struct ScreeningContext: Sendable {
     public var applied: [AppliedJob]
     /// Your master resume as the evidence `analyzeJob` matches against (contact details redacted).
     public var evidence: ScreeningProfile
-    /// Sources whose descriptions are snippets (Adzuna): their jobs can't be a Yes.
-    public var snippetSources: Set<UUID> = []
     /// Jobs you brought back from Filtered out: the filters never drop them again.
     public var broughtBack: Set<JobID> = []
 
@@ -56,17 +54,10 @@ public struct ScreeningContext: Sendable {
             },
             totalYears: resume.header.totalYears,
             applied: applied.map { AppliedJob(company: $0.company, title: $0.title) }, resume: resume)
-        context.snippetSources = Set(try await SourceRepository(db).sources().filter { $0.kind == .adzuna }.map(\.id))
         context.broughtBack = Set(
             (try await SettingsRepository(db).value(Self.broughtBackKey, as: [String].self) ?? []).map(
                 JobID.init(rawValue:)))
         return context
-    }
-
-    /// Whether `job`'s description is only a search's snippet. A job whose snippet a full posting
-    /// replaced shows that posting, from its board.
-    public func isSnippet(_ job: Job) -> Bool {
-        job.descriptionKind == .snippet || snippetSources.contains(job.sourceID)
     }
 
     public func prefilter(now: Date) -> Prefilter {

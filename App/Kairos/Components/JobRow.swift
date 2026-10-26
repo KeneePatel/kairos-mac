@@ -37,14 +37,12 @@ struct JobRow: View {
     }
 
     /// "Northline Freight · Toronto, ON · Hybrid", with the reason instead of the work kind for a
-    /// Maybe or No, and "Snippet from Adzuna" for a snippet.
+    /// Maybe or No.
     private var meta: String {
         var parts = [job.company]
         let place = job.location.isEmpty ? job.placeLabel : job.location
         if place != "—", !place.isEmpty { parts.append(place) }
-        if job.descriptionKind == .snippet {
-            parts.append("Snippet from Adzuna")
-        } else if let reason, job.verdict != .yes {
+        if let reason, job.verdict != .yes {
             parts.append(reason)
         } else if job.workLabel != "—" {
             parts.append(job.workLabel)

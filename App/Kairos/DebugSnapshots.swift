@@ -98,20 +98,16 @@
             let blocked = AppModel(
                 preview: today.model.jobs, screenings: today.model.screenings, sources: today.model.sources,
                 resume: ResumeModel(preview: unfinished, db: db))
-            // T40: the same job as Adzuna found it, with its snippet note and credit.
-            let adzuna = Source(id: UUID(), kind: .adzuna, config: "{}")
-            var adzunaJob = today.selected
-            adzunaJob.sourceID = adzuna.id
-            let fromAdzuna = AppModel(
-                preview: [adzunaJob], screenings: today.model.screenings, sources: [adzuna], resume: resume)
+            // Job collection v3: the same posting found on Google Jobs too, on the employer's page.
+            let google = Source(id: UUID(), kind: .googleJobs, config: "{}")
             let stored = StoredAnalysis(
                 analysis: today.analysis, model: "gemini-flash-lite-latest", promptVersion: 2,
                 analyzedAt: Date().addingTimeInterval(-3_600))
-            // Job collection v2: the job on its company's board and on Adzuna, with its history.
+            // Job collection v2: the job on its company's board and on Google Jobs, with its history.
             let job = today.selected
             let posted = AppModel(
                 preview: today.model.jobs, screenings: today.model.screenings,
-                sources: today.model.sources + [adzuna], resume: resume)
+                sources: today.model.sources + [google], resume: resume)
             let listings = [
                 Listing(
                     canonicalURL: job.canonicalURL, jobID: job.id, sourceID: job.sourceID, url: job.url,
@@ -120,9 +116,9 @@
                     descriptionKind: .full, firstSeenAt: Date().addingTimeInterval(-3 * 86_400),
                     lastSeenAt: Date().addingTimeInterval(-3_600)),
                 Listing(
-                    canonicalURL: "https://www.adzuna.ca/land/ad/5123", jobID: job.id, sourceID: adzuna.id,
-                    url: "https://www.adzuna.ca/land/ad/5123", title: job.title, company: job.company,
-                    location: job.location, postedAt: job.postedAt, descriptionMarkdown: nil, descriptionKind: .snippet,
+                    canonicalURL: "https://careers.northline.example/jobs/5123", jobID: job.id, sourceID: google.id,
+                    url: "https://careers.northline.example/jobs/5123", title: job.title, company: job.company,
+                    location: job.location, postedAt: job.postedAt, descriptionMarkdown: nil, descriptionKind: .full,
                     firstSeenAt: Date().addingTimeInterval(-2 * 86_400), lastSeenAt: Date().addingTimeInterval(-86_400)),
             ]
             let history = [
@@ -130,7 +126,7 @@
                     jobID: job.id, at: Date().addingTimeInterval(-3 * 86_400), kind: .found, sourceID: job.sourceID),
                 JobEvent(
                     jobID: job.id, at: Date().addingTimeInterval(-2 * 86_400), kind: .postedElsewhere,
-                    sourceID: adzuna.id),
+                    sourceID: google.id),
             ]
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 render(
@@ -163,13 +159,6 @@
                 render(
                     AdzunaSheet().environment(today.model).background(Color(.surface)),
                     to: folder.appending(path: "adzuna-sheet-\(name).png"), appearance: appearance)
-                render(
-                    NavigationStack { SourcesView() }.environment(fromAdzuna).frame(width: 1_440, height: 420),
-                    to: folder.appending(path: "sources-adzuna-\(name).png"), appearance: appearance)
-                render(
-                    NavigationStack { JobScreen(id: adzunaJob.id, preview: stored) }.environment(fromAdzuna)
-                        .frame(width: 1_200, height: 700),
-                    to: folder.appending(path: "job-adzuna-\(name).png"), appearance: appearance)
             }
             // 2026-10-26: Review's screening banner above an empty Yes list, in each of its states.
             let waitingJobs = today.model.jobs.map { job in

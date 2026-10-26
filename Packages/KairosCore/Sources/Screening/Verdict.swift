@@ -43,7 +43,8 @@ public enum VerdictRule: String, Sendable, CaseIterable, Codable {
     case partialMatch = "partial_match"
     case weakMatch = "weak_match"
     case noRequirements = "no_requirements"
-    /// The posting is a search's snippet (Adzuna), so a strong match is only worth a Maybe.
+    /// Before job collection v3: the posting was a search's snippet (Adzuna), so a strong match
+    /// was only worth a Maybe. Stored trails still carry it; nothing produces it now (ADR-018).
     case snippetOnly = "snippet_only"
 }
 
@@ -134,9 +135,7 @@ public struct VerdictEngine: Sendable {
         speaksFrench = Prefilter.speaksFrench(languages)
     }
 
-    /// `snippetOnly`: the description is a search's snippet, not the whole posting (Adzuna). What
-    /// it shows can still rule a job out, but it can't make it a Yes.
-    public func decide(_ analysis: JobAnalysis, for job: Job, snippetOnly: Bool = false) -> VerdictDecision {
+    public func decide(_ analysis: JobAnalysis, for job: Job) -> VerdictDecision {
         let analysis = analysis.recognizingLanguages(languages)
         let coverage = Coverage(analysis)
         let flags = analysis.flags
@@ -207,22 +206,17 @@ public struct VerdictEngine: Sendable {
         }
 
         if coverage.mustTotal + coverage.niceTotal == 0 {
-            if snippetOnly { return decision(.maybe, .snippetOnly, Self.snippetReason) }
             return decision(.maybe, .noRequirements, "The posting lists no skills to compare with yours.")
         }
         let share = coverage.mustTotal > 0 ? coverage.must : coverage.nice
         let thresholds = preferences.thresholds
         if share >= thresholds.yesAt {
             if let yearsNote { return decision(.maybe, .yearsAboveYours, yearsNote) }
-            if snippetOnly { return decision(.maybe, .snippetOnly, Self.snippetReason) }
             return decision(.yes, .strongMatch)
         }
         let gap = Self.missing(analysis)
         return share >= thresholds.maybeAt ? decision(.maybe, .partialMatch, gap) : decision(.no, .weakMatch, gap)
     }
-
-    static let snippetReason =
-        "Only a snippet of this posting came from Adzuna. Open it to read the rest before you build."
 
     /// "Missing Rust", "Missing Rust and Scala", "Missing Rust, Scala and 2 more": the counted
     /// must-haves your master resume doesn't show at all.

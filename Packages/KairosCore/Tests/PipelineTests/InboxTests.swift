@@ -37,16 +37,16 @@ import Testing
         #expect(Inbox.skipped(jobs).map(\.title) == ["Skipped", "Closed"])
     }
 
-    @Test func snippetsNeedAFullReadAndNoSitsApart() {
+    /// Two groups since job collection v3 (ADR-018): a No sits apart; everything else is to decide.
+    @Test func noSitsApart() {
         let jobs = [
-            job("Full Maybe"), job("Snippet", snippet: true), job("Snippet No", verdict: .no, snippet: true),
-            job("Full No", verdict: .no), job("Full Yes", verdict: .yes),
+            job("Full Maybe"), job("Full No", verdict: .no), job("Full Yes", verdict: .yes),
+            job("Another No", verdict: .no),
         ]
-        let groups = Inbox.groups(jobs, query: Inbox.Query(), countries: countries) { $0.descriptionKind == .snippet }
-        #expect(groups.map(\.kind) == [.decide, .needsFullRead, .noFromAI])
+        let groups = Inbox.groups(jobs, query: Inbox.Query(), countries: countries)
+        #expect(groups.map(\.kind) == [.decide, .noFromAI])
         #expect(groups[0].jobs.map(\.title) == ["Full Yes", "Full Maybe"])
-        #expect(groups[1].jobs.map(\.title) == ["Snippet"])
-        #expect(groups[2].jobs.map(\.title) == ["Full No", "Snippet No"])
+        #expect(groups[1].jobs.map(\.title) == ["Another No", "Full No"])
     }
 
     @Test func matchOrderIsYourCountriesThenVerdictThenRankThenNewest() {
@@ -79,7 +79,7 @@ import Testing
             job("Data Engineer", company: "Tidewater", verdict: .maybe),
         ]
         func titles(_ query: Inbox.Query) -> [String] {
-            Inbox.groups(jobs, query: query, countries: countries) { _ in false }.flatMap(\.jobs).map(\.title)
+            Inbox.groups(jobs, query: query, countries: countries).flatMap(\.jobs).map(\.title)
         }
         #expect(titles(Inbox.Query(verdict: .yes)) == ["Backend Developer", "Backend Engineer"])
         #expect(titles(Inbox.Query(country: .unitedStates)) == ["Backend Engineer"])
@@ -87,7 +87,7 @@ import Testing
         // Canada first, whatever the verdict.
         #expect(titles(Inbox.Query(search: "ENGINEER")) == ["Data Engineer", "Backend Engineer"])
         #expect(
-            Inbox.groups(jobs, query: Inbox.Query(search: "nothing here"), countries: countries) { _ in false }.isEmpty)
+            Inbox.groups(jobs, query: Inbox.Query(search: "nothing here"), countries: countries).isEmpty)
     }
 
     @Test func newTodayCountsFirstSeenDates() {

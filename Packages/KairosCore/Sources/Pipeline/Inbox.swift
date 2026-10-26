@@ -1,15 +1,14 @@
 import Foundation
 import Store
 
-/// The Inbox (UI v2, ADR-017): the jobs waiting for your decision, in three groups, best first.
-/// Pure functions over the jobs the app already holds, so the grouping and the order are tested.
+/// The Inbox (UI v2, ADR-017): the jobs waiting for your decision, in two groups, best first
+/// (three until job collection v3 dropped snippets, ADR-018). Pure functions over the jobs the app
+/// already holds, so the grouping and the order are tested.
 public enum Inbox {
-    /// Which of the Inbox's three groups a job falls in.
+    /// Which of the Inbox's groups a job falls in.
     public enum GroupKind: String, Sendable, CaseIterable, Identifiable {
-        /// Judged on a full posting: decide now.
+        /// Judged on the whole posting: decide now.
         case decide
-        /// A search snippet (Adzuna): open the posting before deciding.
-        case needsFullRead
         /// The AI's No, kept out of the way.
         case noFromAI
 
@@ -18,7 +17,6 @@ public enum Inbox {
         public var title: String {
             switch self {
             case .decide: "Decide"
-            case .needsFullRead: "Needs a full read"
             case .noFromAI: "No from the AI"
             }
         }
@@ -80,21 +78,16 @@ public enum Inbox {
         }
     }
 
-    /// `jobs` (already narrowed to a list) in the three groups, each ordered by `query.sort`:
-    /// a snippet whose verdict isn't No needs a full read, a No sits apart, the rest are to decide.
-    /// Empty groups are left out.
-    public static func groups(
-        _ jobs: [Job], query: Query, countries: [Country], isSnippet: (Job) -> Bool
-    ) -> [Group] {
+    /// `jobs` (already narrowed to a list) in the two groups, each ordered by `query.sort`: a No
+    /// sits apart, the rest are to decide. Empty groups are left out.
+    public static func groups(_ jobs: [Job], query: Query, countries: [Country]) -> [Group] {
         let shown = jobs.filter { job in
             (query.verdict == nil || job.verdict == query.verdict)
                 && (query.country == nil || job.country == query.country) && matches(job, query.search)
         }
         var byKind: [GroupKind: [Job]] = [:]
         for job in shown {
-            let kind: GroupKind =
-                job.verdict == .no ? .noFromAI : isSnippet(job) ? .needsFullRead : .decide
-            byKind[kind, default: []].append(job)
+            byKind[job.verdict == .no ? .noFromAI : .decide, default: []].append(job)
         }
         return GroupKind.allCases.compactMap { kind in
             guard let members = byKind[kind], !members.isEmpty else { return nil }

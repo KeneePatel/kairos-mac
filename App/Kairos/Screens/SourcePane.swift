@@ -91,7 +91,7 @@ struct SourcePane: View {
         let how =
             switch BoardConfig.decode(source.config)?.origin {
             case "catalog"?: "from Kairos's catalog"
-            case "search"?: "found behind a search snippet"
+            case "search"?: "found behind an Adzuna lead"
             case "google_jobs"?: "found behind a Google Jobs result"
             case "himalayas"?: "found behind a Himalayas job"
             default: "added by you"

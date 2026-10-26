@@ -280,7 +280,7 @@ public struct ScreeningRun: Sendable {
                 return Self.outcome(of: error)
             }
         }
-        let decision = engine.decide(analysis, for: job, snippetOnly: context.isSnippet(job))
+        let decision = engine.decide(analysis, for: job)
         try? await ScreeningRepository(db).record(decision, for: job.id)
         _ = try? await JobRepository(db).setVerdict(
             decision.verdict, source: .analysis,

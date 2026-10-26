@@ -68,7 +68,7 @@ this: [`docs/design/job-collection-v3.md`](../../design/job-collection-v3.md); t
 | Source | Full text | Link | Terms that matter | In v3 |
 |---|---|---|---|---|
 | Himalayas | yes, HTML | `applicationLink` used unchanged; a visible link to Himalayas | free key optional; 60 a minute, 10,000 a day; remove expired jobs; show only in apps you operate | kept; Apply goes to `applicationLink` |
-| Remotive | yes, HTML | the Remotive job URL, named as the source | at most 4 fetches a day; 24 h delay; no reposting | added, remote only |
+| Remotive | yes, HTML | the Remotive job URL, named as the source | at most 4 fetches a day; 24 h delay; no reposting | not added: two requests on 2026-10-26 (`category=software-development&limit=4`, `category=qa`) each answered the same ten newest jobs across every category (`total-job-count` 10), so the public endpoint can't be searched by role |
 | The Muse | yes, HTML (about 8,000 characters) | themuse.com page, not the employer's; categories unreliable | registration beyond testing | not added |
 | JSearch (OpenWeb Ninja) | yes | via Google for Jobs | RapidAPI plans | not added: the same data as SerpApi |
 | Active Jobs DB (Fantastic Jobs) | ATS feeds of 275,000 career sites | employer pages | from $95 a month | not added |

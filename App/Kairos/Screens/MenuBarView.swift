@@ -46,13 +46,12 @@ struct MenuBarView: View {
         }
     }
 
-    /// "247 to decide", the full reads and today's new ones, and the verdicts as tiles.
+    /// "247 to decide", today's new ones and the ones waiting, and the verdicts as tiles.
     private var waiting: some View {
         let groups = model.groups(.inbox, query: Inbox.Query())
         func count(_ kind: Inbox.GroupKind) -> Int { groups.first { $0.kind == kind }?.jobs.count ?? 0 }
         let decide = count(.decide)
         var line: [String] = []
-        if count(.needsFullRead) > 0 { line.append("\(count(.needsFullRead)) need a full read") }
         let new = Inbox.newToday(inbox)
         if new > 0 { line.append("\(new) new today") }
         if model.waitingForAI > 0 { line.append("\(model.waitingForAI) waiting for the AI") }

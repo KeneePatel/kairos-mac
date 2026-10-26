@@ -188,40 +188,6 @@ struct RankingTests {
 
 @Suite("Screening trail")
 struct ScreeningTrailTests {
-    /// A search's snippet (Adzuna) can't make a Yes: a strong match is a Maybe that says why, and a
-    /// snippet naming no skills says the same. What a snippet does show can still rule a job out.
-    @Test func aSnippetCanRuleOutButNotPromise() {
-        let strong = analysis(must: [("Go", "Go"), ("Kafka", "Kafka"), ("PostgreSQL", "PostgreSQL")])
-        let capped = engine().decide(strong, for: toronto, snippetOnly: true)
-        #expect(capped.verdict == .maybe && capped.rule == .snippetOnly)
-        #expect(capped.reasons.first == VerdictEngine.snippetReason)
-        #expect(engine().decide(strong, for: toronto).verdict == .yes)  // the whole posting: a Yes
-        let bare = engine().decide(analysis(must: []), for: toronto, snippetOnly: true)
-        #expect(bare.verdict == .maybe && bare.rule == .snippetOnly)
-        let weak = engine().decide(
-            analysis(must: [("Go", "Go"), ("Rust", nil), ("Scala", nil)]), for: toronto, snippetOnly: true)
-        #expect(weak.verdict == .no && weak.rule == .weakMatch)
-        let french = analysis(
-            must: [("Go", "Go")],
-            flags: .init(sponsorship: .notMentioned, clearance: .notMentioned, french: .required, remoteScope: .onsite))
-        #expect(engine().decide(french, for: toronto, snippetOnly: true).rule == .french)
-    }
-
-    /// Screening knows which sources give snippets: Adzuna's.
-    @Test func screeningKnowsWhichSourcesGiveSnippets() async throws {
-        let db = try Database(path: ":memory:")
-        try await Migrator.migrate(db, with: Migrator.bundled())
-        let adzuna = try await SourceRepository(db).add(kind: .adzuna)
-        let board = try await SourceRepository(db).add(kind: .lever)
-        let context = try await ScreeningContext.load(from: db)
-        #expect(context.snippetSources == [adzuna.id])
-        var job = toronto
-        job.sourceID = adzuna.id
-        #expect(context.isSnippet(job))
-        job.sourceID = board.id
-        #expect(!context.isSnippet(job))
-    }
-
     @Test func everyVerdictIsStoredWithItsRule() async throws {
         let db = try Database(path: ":memory:", device: "0000beef", now: { 1_790_000_000_000 })
         try await Migrator.migrate(db, with: Migrator.bundled())

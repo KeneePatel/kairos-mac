@@ -31,7 +31,7 @@ built; this document says what changes.
    Staffing agencies and aggregators are filtered by default, copies are collapsed, and every job
    says where it was seen and when.
 4. **More of the real ones.** Google Jobs per place; every link that points at a board Kairos can
-   read adds that company; Remotive added; Adzuna's company names looked up, all of them over time.
+   read adds that company; Adzuna's company names looked up, all of them over time.
 5. **Within the rules**, unchanged: public APIs and feeds, polite rates, no advert clicks, no
    requests to hosts whose terms forbid them (Workday, Indeed, LinkedIn, Glassdoor, Job Bank).
 
@@ -42,7 +42,7 @@ built; this document says what changes.
 | **Company boards** (Greenhouse, Lever, Ashby, SmartRecruiters, Workable, Recruitee, Personio, BambooHR, Teamtailor) | the backbone: every open job of a company Kairos watches | yes | the board's job page | — |
 | **Google Jobs** (SerpApi, free plan) | the long tail: employers on Workday, iCIMS, SuccessFactors and job boards Kairos can't read | yes (SerpApi's `description`) | `source_link`, the page Google took it from; the employer's apply option when `source_link` is a job board's page and the option names the company | from `source_link` and apply options that point at a board Kairos reads |
 | **Himalayas** | remote roles open to Canada | yes | `applicationLink`, unchanged, with a credit link to Himalayas | from `applicationLink` |
-| **Remotive** (new) | remote roles | yes | the Remotive job page, named as the source (its terms) | — |
+| ~~Remotive~~ | not added: on 2026-10-26 its public API answered the ten newest jobs across every category whatever the `category` or `limit` asked, so it can't be searched by role | | | |
 | **Adzuna** | leads: which companies post at your roles, and how many postings Kairos can't read | — | none kept | names looked up in the catalog, then probed on public boards |
 
 The board catalog stays as it is in the fetch (every board with jobs in your countries, checked
@@ -126,7 +126,6 @@ quietly, resting three days when it has nothing for you). It stops being somethi
 - `lead` (local, not synced): `id`, `source_id`, `company`, `title`, `location`, `posted_at`,
   `first_seen_at`, `last_seen_at`; trimmed after 30 days.
 - The migration archives open snippet-only jobs with a job event and leaves everything else.
-- `SourceKind.remotive`; Remotive runs at most 4 times a day (its terms).
 
 ## What you'll see
 
@@ -135,8 +134,8 @@ quietly, resting three days when it has nothing for you). It stops being somethi
 - **Sources:** a page of channels, each with its yield this week and one line of settings:
   Company boards (163 hiring for you · 19 you added · 42 found · checked 12:39), Google Jobs (8
   searches a day · 184 of 250 left this month · every role and place about every 5 days),
-  Himalayas, Remotive, Adzuna leads (1,200 postings at 600 companies · 31 boards found · "Jobs by
-  Adzuna"). Company boards opens the companies list, filtered Hiring for you · Watching · Found by
+  Himalayas, Adzuna leads (1,200 postings at 600 companies · 31 boards found · "Jobs by Adzuna").
+  Company boards opens the companies list, filtered Hiring for you · Watching · Found by
   Kairos · Muted · All, with search, Add company, and the company pane beside it as today. Google
   Jobs opens its page: the key, the places, the plan and this week's results; the other channels
   likewise.
@@ -151,9 +150,9 @@ quietly, resting three days when it has nothing for you). It stops being somethi
 | # | Phase | Delivers | Size |
 |---|---|---|---|
 | C1 | Google Jobs done right | `apply_url` and `via` (migration 015); `source_link` and the apply-option rule; dates from `extensions`; boards found from Google's links; a recorded SerpApi fixture; the pane's "posted on · seen on" line; stored google.com links fixed by the next fetch | S |
-| C2 | Full postings only | Adzuna answers become leads; lead-based company lookup, 60 a fetch; snippet-only jobs archived; `snippet_only`, "Needs a full read" and the snippet note removed; Himalayas Apply on `applicationLink` with its credit and boards found from it; Remotive source with its credit | M |
+| C2 | Full postings only | Adzuna answers become leads; lead-based company lookup, 60 a fetch; snippet-only jobs archived; `snippet_only`, "Needs a full read" and the snippet note removed; Himalayas Apply on `applicationLink` and boards found from it (Remotive dropped: see the table above) | M |
 | C3 | Quality and the plan | the "Staffing agency" rule and its setting; Places in Settings, Search; the Google Jobs rotation and budget; Filtered out's new reason | M |
-| C4 | Sources page v3 | channels page with yields; companies list with its filters; the Google Jobs, Himalayas, Remotive and Adzuna leads pages; the catalog invisible until it hires for you | M |
+| C4 | Sources page v3 | channels page with yields; companies list with its filters; the Google Jobs, Himalayas and Adzuna leads pages; the catalog invisible until it hires for you | M |
 | C5 | Docs | SPEC §5.2 and §5.4; ADR-018 accepted; research README; memory | S |
 
 Every phase: tests first with recorded fixtures (no network in tests), the migration tested on a

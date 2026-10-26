@@ -90,14 +90,16 @@ public struct HimalayasSource: JobSource {
     }
 
     private func posting(_ job: HimalayasPage.Job, country: Country, posted: Date?) -> Posting? {
-        // Its own page names Himalayas as the source and carries its apply link.
+        // Its own page is the job's address and names Himalayas as the source; Apply opens the
+        // application link, unchanged, as its terms ask (v3, C2).
         guard let url = URL(string: job.guid) ?? job.applicationLink.flatMap(URL.init(string:)) else { return nil }
         let places = job.locationRestrictions ?? []
         return Posting(
             sourceID: id, url: url, company: job.companyName, title: job.title,
             location: places.isEmpty ? "Remote, anywhere" : "Remote - " + places.joined(separator: ", "),
             postedAt: posted, descriptionHTML: job.description ?? job.excerpt ?? "",
-            countryHint: places.isEmpty ? nil : country.rawValue, workplace: .remote)
+            countryHint: places.isEmpty ? nil : country.rawValue, workplace: .remote,
+            applyURL: job.applicationLink.flatMap(URL.init(string:)), via: "Himalayas")
     }
 }
 

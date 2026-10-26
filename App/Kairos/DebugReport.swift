@@ -792,7 +792,7 @@
                         db: db, postedWithinDays: preferences.maxAgeDays, roles: preferences.roleMatcher,
                         watch: preferences.watchCatalog
                             ? CatalogWatch(catalog: .bundled, countries: preferences.countries) : nil,
-                        finder: SnippetFinder(db: db, probe: BoardProbe(http: http), catalog: .bundled),
+                        finder: LeadFinder(db: db, probe: BoardProbe(http: http), catalog: .bundled),
                         makeSource: { try SourceFactory.make($0, http: http, search: search) })
                     var last = FetchRun.Progress()
                     for await progress in run.start() { last = progress }

@@ -225,14 +225,13 @@ struct JobsView: View {
         }
     }
 
-    /// "247 to decide · 283 need a full read · 14 new today".
+    /// "247 to decide · 14 new today · 12 waiting for the AI".
     private var countLine: String {
         let all = model.groups(scope, query: Inbox.Query())
         func count(_ kind: Inbox.GroupKind) -> Int { all.first { $0.kind == kind }?.jobs.count ?? 0 }
         switch scope {
         case .inbox:
             var parts = ["\(count(.decide)) to decide"]
-            if count(.needsFullRead) > 0 { parts.append("\(count(.needsFullRead)) need a full read") }
             let new = Inbox.newToday(model.inboxJobs)
             if new > 0 { parts.append("\(new) new today") }
             if model.waitingForAI > 0 { parts.append("\(model.waitingForAI) waiting for the AI") }

@@ -89,8 +89,6 @@ public struct ImproveReport: Sendable, Equatable {
     /// Asked by one posting, for something nowhere on your resume, or grouped with nothing.
     public let oneOffs: [Fix]
     public let years: Years
-    /// Maybe only because Adzuna gave a snippet.
-    public let snippets: [JobID]
     public let titleMisses: [TitleMiss]
     /// No because they ask for more years than your limit in Settings, Search.
     public let yearsLimit: [JobID]
@@ -113,7 +111,6 @@ public struct ImproveReport: Sendable, Equatable {
         years = Years(stated: stated, datedMonths: datedMonths)
 
         var analysed = 0
-        var snippets: [JobID] = []
         var yearsLimit: [JobID] = []
         var held: [VerdictRule: [JobID]] = [:]
         var considered: [(job: Job, analysis: JobAnalysis, verdict: Verdict)] = []
@@ -123,7 +120,8 @@ public struct ImproveReport: Sendable, Equatable {
             else { continue }
             analysed += 1
             switch rule {
-            case .snippetOnly: snippets.append(job.id)
+            // Before v3, a snippet's Maybe; such jobs are archived now (ADR-018).
+            case .snippetOnly: break
             case .seniority, .workAuthorization, .remoteScope, .clearance, .french, .enrolment:
                 held[rule, default: []].append(job.id)
             case .yearsRequired: yearsLimit.append(job.id)
@@ -135,7 +133,6 @@ public struct ImproveReport: Sendable, Equatable {
         }
         self.analysed = analysed
         self.considered = considered.count
-        self.snippets = snippets
         self.yearsLimit = yearsLimit
         self.held = VerdictRule.allCases.compactMap { rule in held[rule].map { Held(rule: rule, jobs: $0) } }
 

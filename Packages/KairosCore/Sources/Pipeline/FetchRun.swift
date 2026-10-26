@@ -40,8 +40,10 @@ public struct FetchRun: Sendable {
         public var catalogAdded = 0
         /// Catalog boards with nothing for you, checked lately, so not asked this time.
         public var quiet = 0
-        /// Companies' boards found behind search snippets and read this run (J6).
+        /// Companies' boards found behind a search's leads or links and read this run (J6, C1).
         public var boardsFound = 0
+        /// New leads: postings a search sent as snippets, kept as company names to look up (C2).
+        public var leads = 0
         /// Dropped because they were posted before your "posted within" limit.
         public var tooOld = 0
         public var added = 0
@@ -81,6 +83,7 @@ public struct FetchRun: Sendable {
         public var catalogAdded: Int?
         public var quiet: Int?
         public var boardsFound: Int?
+        public var leads: Int?
 
         public static func decode(_ json: String) -> Stats? {
             try? JSONDecoder().decode(Stats.self, from: Data(json.utf8))
@@ -96,7 +99,7 @@ public struct FetchRun: Sendable {
     let postedWithinDays: Int?
     let roles: RoleMatcher?
     let watch: CatalogWatch?
-    let finder: SnippetFinder?
+    let finder: LeadFinder?
 
     /// A catalog board with nothing open for you is asked every this often, not every fetch.
     public static let quietEvery: TimeInterval = 3 * 86_400
@@ -109,7 +112,7 @@ public struct FetchRun: Sendable {
     public init(
         db: Database, maxConcurrent: Int = 4, now: @escaping @Sendable () -> Date = { Date() },
         postedWithinDays: Int? = nil, roles: RoleMatcher? = nil, watch: CatalogWatch? = nil,
-        finder: SnippetFinder? = nil, makeSource: @escaping MakeSource
+        finder: LeadFinder? = nil, makeSource: @escaping MakeSource
     ) {
         self.watch = watch
         self.finder = finder
@@ -193,8 +196,8 @@ public struct FetchRun: Sendable {
                 continuation.yield(progress)
             }
         }
-        // Snippets: the boards behind a search's companies, read now so their full postings
-        // replace the snippets (J6).
+        // The boards behind a search's leads, read now so the companies' postings arrive in full
+        // (J6, C2).
         if !Task.isCancelled, let finder {
             for source in await finder.findBoards() where !Task.isCancelled {
                 progress.boardsFound += 1
@@ -215,6 +218,8 @@ public struct FetchRun: Sendable {
         if !Task.isCancelled, let retired = try? await Retention(db).apply(now: now()) {
             progress.retired = retired
         }
+        // Leads keep 30 days: a company still posting stays worth a look.
+        _ = try? await LeadRepository(db).deleteOlder(than: now().addingTimeInterval(-30 * 86_400))
         // The AI call logs keep 30 days (SPEC §6.2), the per-key one with them.
         let logStart = now().addingTimeInterval(-Double(CallLog.retentionDays) * 86_400)
         _ = try? await CallLog(db).deleteOlder(than: logStart)
@@ -236,7 +241,8 @@ public struct FetchRun: Sendable {
                 searchesSkipped: progress.searchesSkipped > 0 ? progress.searchesSkipped : nil,
                 catalogAdded: progress.catalogAdded > 0 ? progress.catalogAdded : nil,
                 quiet: progress.quiet > 0 ? progress.quiet : nil,
-                boardsFound: progress.boardsFound > 0 ? progress.boardsFound : nil)
+                boardsFound: progress.boardsFound > 0 ? progress.boardsFound : nil,
+                leads: progress.leads > 0 ? progress.leads : nil)
             let json = (try? JSONEncoder().encode(stats)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
             try? await runs.finish(runID, stats: json, error: progress.phase == .cancelled ? "cancelled" : nil)
         }
@@ -342,6 +348,31 @@ public struct FetchRun: Sendable {
             state.lastOKAt = at
             state.failRuns = 0
             entry.outcome = .unchanged
+        case .success(.postings(let postings, let memo))? where source.kind.sendsSnippets:
+            // A search that sends snippets (Adzuna) gives leads, never jobs (v3, C2): the
+            // companies posting at your roles, for the finder to look up on public boards.
+            progress.found += postings.count
+            entry.items = postings.count
+            entry.requests = memo?.requests ?? 1
+            var leads: [Lead] = []
+            for posting in postings {
+                if let roles, !roles.matches(posting.title) {
+                    progress.otherRoles += 1
+                    continue
+                }
+                leads.append(
+                    Lead(
+                        id: JobID(canonicalURL: URLCanonicalizer.canonical(posting.url)).rawValue, sourceID: source.id,
+                        company: posting.company, title: posting.title, location: posting.location,
+                        postedAt: posting.postedAt, firstSeenAt: at, lastSeenAt: at))
+            }
+            let new = (try? await LeadRepository(db).record(leads)) ?? 0
+            progress.leads += new
+            entry.added = new
+            state.fingerprint = fingerprint
+            state.lastOKAt = at
+            state.failRuns = 0
+            _ = try? await sources.recordRun(of: source.id, found: postings.count, at: at)
         case .success(.postings(let postings, let memo))?:
             progress.found += postings.count
             entry.items = postings.count
