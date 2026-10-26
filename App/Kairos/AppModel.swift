@@ -304,6 +304,114 @@ final class AppModel {
     /// SwiftUI abort when you left Find jobs for Review (2026-10-26).
     var openRoles: [UUID: Int] { jobs.reduce(into: [:]) { $0[$1.sourceID, default: 0] += 1 } }
 
+    /// Open roles for you by source (v3, C4): judged jobs still posted, not archived.
+    var rolesBySource: [UUID: Int] {
+        jobs.reduce(into: [:]) { counts, job in
+            if job.isOpen && job.verdict != nil && job.verdictSource != .prefilter && job.state != .archived {
+                counts[job.sourceID, default: 0] += 1
+            }
+        }
+    }
+
+    /// The boards in one of the Companies list's filters (v3, C4).
+    func companies(in scope: SourcesTable.Scope) -> [Source] {
+        let roles = rolesBySource
+        return sources.filter { source in
+            guard SourceKind.boards.contains(source.kind) else { return false }
+            let origin = BoardConfig.decode(source.config)?.origin
+            switch scope {
+            case .hiring: return source.enabled && roles[source.id, default: 0] > 0
+            case .watching: return origin == nil
+            case .found: return origin != nil && origin != "catalog"
+            case .muted: return !source.enabled
+            case .all: return true
+            }
+        }
+    }
+
+    /// What a channel's page and row show that takes a query (v3, C4): searches spent, and leads.
+    struct ChannelFacts: Equatable {
+        var requests: [SourceKind: (today: Int, month: Int)] = [:]
+        var leads = 0
+        var leadCompanies = 0
+        var boardsFromLeads = 0
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.leads == rhs.leads && lhs.leadCompanies == rhs.leadCompanies
+                && lhs.boardsFromLeads == rhs.boardsFromLeads
+                && lhs.requests.mapValues { "\($0.today)/\($0.month)" }
+                    == rhs.requests.mapValues { "\($0.today)/\($0.month)" }
+        }
+    }
+
+    func channelFacts() async -> ChannelFacts {
+        var facts = ChannelFacts()
+        guard let db else { return facts }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
+        let log = FetchLog(db)
+        let now = Date()
+        for kind in [SourceKind.adzuna, .googleJobs, .himalayas] {
+            guard let source = source(of: kind) else { continue }
+            func used(_ component: Calendar.Component) async -> Int {
+                guard let start = utc.dateInterval(of: component, for: now)?.start else { return 0 }
+                return (try? await log.requests(of: source.id, since: start)) ?? 0
+            }
+            facts.requests[kind] = (await used(.day), await used(.month))
+        }
+        let leads = LeadRepository(db)
+        facts.leads = (try? await leads.count()) ?? 0
+        facts.leadCompanies = (try? await leads.companies().count) ?? 0
+        facts.boardsFromLeads = sources.count { BoardConfig.decode($0.config)?.origin == "search" }
+        return facts
+    }
+
+    /// Jobs a channel found this week, and how many are still open for you.
+    func jobsThisWeek(from channel: Channel) -> (found: Int, kept: Int) {
+        let week = Date().addingTimeInterval(-7 * 86_400)
+        let ids: Set<UUID> =
+            channel == .boards
+            ? Set(sources.filter { SourceKind.boards.contains($0.kind) }.map(\.id))
+            : Set(sources.filter { $0.kind == channel.kind }.map(\.id))
+        let recent = jobs.filter { ids.contains($0.sourceID) && $0.firstSeenAt >= week }
+        let kept = recent.count {
+            $0.isOpen && $0.verdict != nil && $0.verdictSource != .prefilter && $0.state != .archived
+        }
+        return (recent.count, kept)
+    }
+
+    /// A channel's row on Sources: this week's yield and one line of where it stands (v3, C4).
+    func channelLine(_ channel: Channel, facts: ChannelFacts) -> String {
+        switch channel {
+        case .boards:
+            let hiring = companies(in: .hiring).count
+            let watching = companies(in: .watching).count
+            let found = companies(in: .found).count
+            var parts = ["\(hiring) hiring for you", "\(watching) you added", "\(found) found by Kairos"]
+            if let checked = sources.filter({ SourceKind.boards.contains($0.kind) }).compactMap(\.lastRunAt).max() {
+                parts.append("checked \(SourcesTable.checked(checked))")
+            }
+            return parts.joined(separator: " · ")
+        case .googleJobs:
+            guard let source = source(of: .googleJobs) else { return "Not set up · add your SerpApi key" }
+            let week = jobsThisWeek(from: channel)
+            let used = facts.requests[.googleJobs] ?? (0, 0)
+            let left = max(0, GoogleJobsSource.budget.month - used.month)
+            return
+                "\(week.found) jobs this week · \(GoogleJobsSource.budget.day) searches a day, \(left) of \(GoogleJobsSource.budget.month) left this month"
+                + (source.enabled ? "" : " · paused")
+        case .himalayas:
+            guard let source = source(of: .himalayas) else { return "Not set up · works without a key" }
+            let week = jobsThisWeek(from: channel)
+            return "\(week.found) jobs this week, \(week.kept) open for you" + (source.enabled ? "" : " · paused")
+        case .adzuna:
+            guard let source = source(of: .adzuna) else { return "Not set up · add your Adzuna keys" }
+            return
+                "\(facts.leads) leads at \(facts.leadCompanies) companies · \(facts.boardsFromLeads) boards found behind them"
+                + (source.enabled ? "" : " · paused")
+        }
+    }
+
     // MARK: - Jobs
 
     /// Canada first, then the US, then jobs whose country the posting didn't state.

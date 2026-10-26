@@ -142,6 +142,9 @@
                     NavigationStack { SourcesView() }.environment(today.model).frame(width: 1_440, height: 640),
                     to: folder.appending(path: "sources-\(name).png"), appearance: appearance)
                 render(
+                    NavigationStack { CompaniesView() }.environment(today.model).frame(width: 1_440, height: 640),
+                    to: folder.appending(path: "companies-\(name).png"), appearance: appearance)
+                render(
                     NavigationStack {
                         JobScreen(id: today.selected.id, preview: stored, listings: listings, history: history)
                     }

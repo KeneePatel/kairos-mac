@@ -1,21 +1,65 @@
+import JobSources
+import Pipeline
 import Screening
 import Store
 import SwiftUI
 
-/// Sources (UI v2): the companies and boards Kairos watches in a table, with the chosen board
-/// beside it: its status, the open roles it has for you, what the filters dropped from it, and
-/// Pause or Stop watching. The toolbar holds the scope, the search, Add, the Posted limit and
-/// Find new jobs.
+/// Where jobs come from (job collection v3, C4): the channels, each with this week's yield and one
+/// line of settings. Company boards opens the companies list; a search opens its own page. The
+/// toolbar holds Add, the Posted limit, More and Find new jobs.
+enum Channel: String, CaseIterable, Identifiable, Hashable {
+    case boards, googleJobs, himalayas, adzuna
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .boards: "Company boards"
+        case .googleJobs: "Google Jobs"
+        case .himalayas: "Himalayas"
+        case .adzuna: "Adzuna leads"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .boards: "building.2"
+        case .googleJobs: "magnifyingglass"
+        case .himalayas: "globe.americas"
+        case .adzuna: "list.bullet.rectangle"
+        }
+    }
+
+    /// The search source behind a channel; nil for the boards.
+    var kind: SourceKind? {
+        switch self {
+        case .boards: nil
+        case .googleJobs: .googleJobs
+        case .himalayas: .himalayas
+        case .adzuna: .adzuna
+        }
+    }
+
+    /// What the channel is for, in one line.
+    var purpose: String {
+        switch self {
+        case .boards: "Every open job of the companies Kairos watches, read in full from their own boards."
+        case .googleJobs:
+            "Employers on Workday, LinkedIn, Indeed and other sites Kairos can't read itself, through SerpApi."
+        case .himalayas: "Remote roles open to your countries, in full, with each job's own application link."
+        case .adzuna: "Which companies post at your roles: never jobs, since Adzuna sends snippets, but boards to find."
+        }
+    }
+}
+
 struct SourcesView: View {
     @Environment(AppModel.self) private var model
-    @State private var path: [JobID] = []
-    @State private var selection: Source.ID?
-    @State private var scope = SourcesTable.Scope.yours
-    @State private var search = ""
+    @State private var path: [Channel] = []
     @State private var addingCompany = false
     @State private var addingAdzuna = false
     @State private var addingSearch: SearchChoice?
     @State private var clearing: JobRepository.Clearing?
+    @State private var facts = AppModel.ChannelFacts()
 
     /// Which optional search's sheet is open.
     struct SearchChoice: Identifiable {
@@ -25,75 +69,58 @@ struct SourcesView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            ListPaneLayout(listWidth: 640) {
-                VStack(spacing: 0) {
-                    ColumnTitle(title: "Sources", line: countLine)
-                    SourcesTable(selection: $selection, scope: scope, search: search)
-                    Divider()
-                    Text("↑↓ move · ↩ open the board · P pause or resume")
-                        .font(TypeStyle.caption).foregroundStyle(Color(.inkSecondary)).lineLimit(1)
-                        .padding(.horizontal, Spacing.space6).padding(.vertical, Spacing.space3)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            channels
+                .navigationTitle("Sources")
+                .toolbar {
+                    ToolbarItemGroup(placement: .primaryAction) {
+                        Menu {
+                            Button("Company board…") { addingCompany = true }
+                            Button(model.adzunaSource == nil ? "Adzuna search…" : "Change Adzuna keys…") {
+                                addingAdzuna = true
+                            }
+                            Button(
+                                model.source(of: .himalayas) == nil ? "Himalayas remote jobs…" : "Change Himalayas key…"
+                            ) {
+                                addingSearch = SearchChoice(kind: .himalayas)
+                            }
+                            Button(
+                                model.source(of: .googleJobs) == nil ? "Google Jobs (SerpApi)…" : "Change SerpApi key…"
+                            ) {
+                                addingSearch = SearchChoice(kind: .googleJobs)
+                            }
+                        } label: {
+                            Label("Add", systemImage: "plus").labelStyle(.titleAndIcon)
+                        }
+                        PostedWithinMenu()
+                        Menu {
+                            Button("Delete all jobs…", role: .destructive) {
+                                Task { clearing = await model.clearingPreview() }
+                            }
+                            .disabled(model.isFetching || model.jobs.isEmpty)
+                        } label: {
+                            Label("More", systemImage: "ellipsis.circle")
+                        }
+                        .help("More actions")
+                    }
+                    RunControls(model: model, title: "Find new jobs")
                 }
-            } pane: {
-                if let id = selection, let source = model.source(id) {
-                    SourcePane(source: source, changeAdzuna: { addingAdzuna = true }) { path.append($0) }
-                } else {
-                    VStack(spacing: Spacing.space1) {
-                        Text("Nothing selected").font(TypeStyle.title2).foregroundStyle(Color(.ink))
-                        Text("Choose a company in the table.").font(TypeStyle.body)
-                            .foregroundStyle(Color(.inkSecondary))
+                .navigationDestination(for: Channel.self) { channel in
+                    if channel == .boards {
+                        CompaniesView(addCompany: { addingCompany = true }, changeAdzuna: { addingAdzuna = true })
+                    } else {
+                        ChannelView(
+                            channel: channel, facts: facts,
+                            changeKey: {
+                                if channel == .adzuna {
+                                    addingAdzuna = true
+                                } else if let kind = channel.kind {
+                                    addingSearch = SearchChoice(kind: kind)
+                                }
+                            })
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-            }
-            .navigationTitle("Sources")
-            .searchable(text: $search, placement: .toolbar, prompt: "Search companies")
-            .toolbar {
-                ToolbarItemGroup(placement: .primaryAction) {
-                    Picker("Show", selection: $scope) {
-                        ForEach(SourcesTable.Scope.allCases) { scope in
-                            Text("\(scope.rawValue) \(count(scope))").tag(scope)
-                        }
-                    }
-                    .pickerStyle(.segmented).labelsHidden().monospacedDigit().fixedSize()
-                    Menu {
-                        Button("Company board…") { addingCompany = true }
-                        Button(model.adzunaSource == nil ? "Adzuna search…" : "Change Adzuna keys…") {
-                            addingAdzuna = true
-                        }
-                        Button(
-                            model.source(of: .himalayas) == nil ? "Himalayas remote jobs…" : "Change Himalayas key…"
-                        ) {
-                            addingSearch = SearchChoice(kind: .himalayas)
-                        }
-                        Button(model.source(of: .googleJobs) == nil ? "Google Jobs (SerpApi)…" : "Change SerpApi key…")
-                        {
-                            addingSearch = SearchChoice(kind: .googleJobs)
-                        }
-                    } label: {
-                        Label("Add", systemImage: "plus").labelStyle(.titleAndIcon)
-                    }
-                    PostedWithinMenu()
-                    Menu {
-                        Button("Delete all jobs…", role: .destructive) {
-                            Task { clearing = await model.clearingPreview() }
-                        }
-                        .disabled(model.isFetching || model.jobs.isEmpty)
-                    } label: {
-                        Label("More", systemImage: "ellipsis.circle")
-                    }
-                    .help("More actions")
-                }
-                RunControls(model: model, title: "Find new jobs")
-            }
-            .navigationDestination(for: JobID.self) { JobScreen(id: $0) }
         }
-        .task(id: model.sources.map(\.id)) {
-            if selection.map({ model.source($0) == nil }) ?? true {
-                selection = model.sources.first { !$0.isFromCatalog }?.id ?? model.sources.first?.id
-            }
-        }
+        .task(id: model.lastFetch?.id) { facts = await model.channelFacts() }
         .sheet(isPresented: $addingCompany) { AddCompanySheet() }
         .sheet(isPresented: $addingAdzuna) { AdzunaSheet() }
         .sheet(item: $addingSearch) { choice in SearchSourceSheet(kind: choice.kind) }
@@ -111,20 +138,42 @@ struct SourcesView: View {
         }
     }
 
-    private func count(_ scope: SourcesTable.Scope) -> Int {
-        switch scope {
-        case .yours: model.sources.count { !$0.isFromCatalog }
-        case .catalog: model.sources.count(where: \.isFromCatalog)
-        case .all: model.sources.count
+    /// The channels, each a row: its name, this week's yield, and where it stands.
+    private var channels: some View {
+        VStack(spacing: 0) {
+            ColumnTitle(title: "Sources", line: countLine)
+            List {
+                ForEach(Channel.allCases) { channel in
+                    NavigationLink(value: channel) { row(channel) }
+                        .listRowInsets(EdgeInsets(top: 0, leading: Spacing.space4, bottom: 0, trailing: Spacing.space4))
+                }
+            }
+            .listStyle(.inset)
+            .scrollContentBackground(.hidden)
         }
+        .background(Color(.surface))
     }
 
-    /// "27 companies you added · 794 from the catalog · checked 12:39 AM".
+    private func row(_ channel: Channel) -> some View {
+        HStack(alignment: .top, spacing: Spacing.space3) {
+            Image(systemName: channel.symbol).font(TypeStyle.title2).foregroundStyle(Color(.inkSecondary))
+                .frame(width: 28).padding(.top, 2).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(channel.title).font(TypeStyle.headline).foregroundStyle(Color(.ink))
+                Text(model.channelLine(channel, facts: facts)).font(TypeStyle.callout)
+                    .foregroundStyle(Color(.inkSecondary)).lineLimit(2)
+                Text(channel.purpose).font(TypeStyle.caption).foregroundStyle(Color(.inkSecondary)).lineLimit(2)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, Spacing.space3)
+    }
+
+    /// "4 channels · 163 companies hiring for you · checked 12:39 AM".
     private var countLine: String {
-        let yours = count(.yours)
-        let catalog = count(.catalog)
-        var parts = ["\(yours) compan\(yours == 1 ? "y" : "ies") you added"]
-        if catalog > 0 { parts.append("\(catalog) from the catalog") }
+        var parts = ["\(Channel.allCases.count) channels"]
+        let hiring = model.rolesBySource.filter { $0.value > 0 }.count
+        parts.append("\(hiring) compan\(hiring == 1 ? "y" : "ies") hiring for you")
         if let checked = model.sources.compactMap(\.lastRunAt).max() {
             parts.append("checked \(SourcesTable.checked(checked))")
         }

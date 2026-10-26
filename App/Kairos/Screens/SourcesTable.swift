@@ -2,36 +2,39 @@ import JobSources
 import Store
 import SwiftUI
 
-/// The companies and boards Kairos watches (UI v2): the table on the left of Sources. Its scope
-/// (Yours · Catalog · All) and search come from the section's toolbar; the chosen row's board
-/// shows beside it.
+/// The companies whose boards Kairos reads (job collection v3, C4): the table on the left of
+/// Companies. Its filter (Hiring for you · Watching · Found · Muted · All) and search come from
+/// the toolbar; the chosen row's board shows beside it. Searches have their own pages.
 struct SourcesTable: View {
     @Environment(AppModel.self) private var model
     @Binding var selection: Source.ID?
-    var scope = Scope.yours
+    var scope = Scope.hiring
     var search = ""
 
     enum Scope: String, CaseIterable, Identifiable {
-        case yours = "Yours"
-        case catalog = "Catalog"
+        /// Enabled boards with an open role for you, wherever they came from.
+        case hiring = "Hiring for you"
+        /// Boards you added yourself.
+        case watching = "Watching"
+        /// Boards Kairos found behind a search's leads or links.
+        case found = "Found"
+        /// Boards you paused.
+        case muted = "Muted"
         case all = "All"
         var id: Self { self }
     }
 
     private var shown: [Source] {
-        model.sources.filter { source in
-            let catalog = source.isFromCatalog
-            let inScope = scope == .all || (scope == .catalog) == catalog
-            return inScope && (search.isEmpty || source.displayName.localizedCaseInsensitiveContains(search))
+        model.companies(in: scope).filter {
+            search.isEmpty || $0.displayName.localizedCaseInsensitiveContains(search)
         }
     }
 
     var body: some View {
         // Read here, once, not in each row: rows reading the model made SwiftUI abort when you
         // left Find jobs for Review (2026-10-26).
-        let open = model.openRoles
+        let open = model.rolesBySource
         let failures = model.failures
-        let adzunaUsed = model.adzunaUsed
         if shown.isEmpty {
             VStack(spacing: Spacing.space2) {
                 Text(model.sources.isEmpty ? "No companies yet" : "No matches").font(TypeStyle.title2)
@@ -67,13 +70,9 @@ struct SourcesTable: View {
                 }
                 .width(min: 72, ideal: 90)
                 TableColumn("Status") { source in
-                    if source.kind == .adzuna, source.enabled, failures[source.id] == nil {
-                        AdzunaPlan(used: adzunaUsed)
-                    } else {
-                        SourceStatus(
-                            source: source, failure: failures[source.id],
-                            quiet: source.isQuiet(openRoles: open[source.id, default: 0]))
-                    }
+                    SourceStatus(
+                        source: source, failure: failures[source.id],
+                        quiet: source.isQuiet(openRoles: open[source.id, default: 0]))
                 }
                 .width(min: 120, ideal: 170)
             }
@@ -108,26 +107,6 @@ extension Source {
 
     /// A catalog board with no open job for you: checked every few days, not every fetch (J5).
     func isQuiet(openRoles: Int) -> Bool { isFromCatalog && openRoles == 0 && lastRunAt != nil }
-}
-
-/// What's left of Adzuna's free plan today, as Kairos spends it (job collection v2, J4): a bar
-/// and the words, with the month under it.
-private struct AdzunaPlan: View {
-    let used: (today: Int, month: Int)
-
-    var body: some View {
-        let budget = AdzunaSource.Budget.standard
-        let left = max(0, budget.day - used.today)
-        VStack(alignment: .leading, spacing: 3) {
-            Meter(left: Double(left) / Double(budget.day)).frame(width: 120)
-            Text(
-                "\(left) of \(budget.day) searches left today · \(used.month) of \(budget.month.formatted()) this month"
-            )
-            .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).monospacedDigit()
-        }
-        .accessibilityElement(children: .combine)
-        .help("Adzuna's free plan allows 250 searches a day and 2,500 a month; Kairos keeps under 200 and 2,400.")
-    }
 }
 
 /// A dot or a warning, always with words: never colour alone.

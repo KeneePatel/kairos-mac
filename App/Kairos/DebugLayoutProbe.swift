@@ -66,7 +66,8 @@
             var shown: [(String, AnyView)] = [
                 ("inbox", AnyView(JobsView(scope: .inbox))), ("resumes", AnyView(ResumesView())),
                 ("applied", AnyView(AppliedView())), ("interviews", AnyView(InterviewsView())),
-                ("sources", AnyView(SourcesView())), ("improve", AnyView(ImproveView())),
+                ("sources", AnyView(SourcesView())), ("companies", AnyView(NavigationStack { CompaniesView() })),
+                ("improve", AnyView(ImproveView())),
             ]
             shown.append(("filtered", AnyView(FilteredOutView())))
             if let ai = model.ai {
