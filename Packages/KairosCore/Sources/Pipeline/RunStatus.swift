@@ -80,7 +80,7 @@ public struct RunStatus: Equatable, Sendable {
                 fraction: screening.total > 0 ? Double(screening.done) / Double(screening.total) : nil)
         }
         if let checked = input.lastChecked {
-            let new = input.newLastTime > 0 ? "\(input.newLastTime) new" : "nothing new"
+            let new = input.newLastTime > 0 ? "\(input.newLastTime.formatted()) new" : "nothing new"
             return RunStatus(
                 kind: .idle, title: "Checked \(time(checked)) · \(new)",
                 detail: input.waiting > 0 ? "\(input.waiting) waiting for the AI" : nil)
