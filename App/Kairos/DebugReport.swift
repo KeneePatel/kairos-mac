@@ -784,7 +784,8 @@
                     query: SourceQuery(
                         titles: preferences.roleMatcher.searches, countries: preferences.countries,
                         maxAgeDays: preferences.maxAgeDays),
-                    adzuna: adzuna)
+                    adzuna: adzuna, himalayasKey: (try? secrets.read(SecretKey("himalayas.key"))) ?? nil,
+                    serpAPIKey: (try? secrets.read(SecretKey("serpapi.key"))) ?? nil)
                 let http = URLSessionHTTPClient()
                 for pass in 1...2 {
                     let started = Date()
@@ -793,12 +794,13 @@
                         watch: preferences.watchCatalog
                             ? CatalogWatch(catalog: .bundled, countries: preferences.countries) : nil,
                         finder: LeadFinder(db: db, probe: BoardProbe(http: http), catalog: .bundled),
+                        googlePhrases: preferences.roleMatcher.googlePhrases, places: preferences.effectivePlaces,
                         makeSource: { try SourceFactory.make($0, http: http, search: search) })
                     var last = FetchRun.Progress()
                     for await progress in run.start() { last = progress }
                     say(
                         "fetch \(pass) in \(String(format: "%.1f", Date().timeIntervalSince(started))) s: \(last.sourcesDone) sources, "
-                            + "\(last.found) found, \(last.added) new, \(last.attached) attached, \(last.upgraded) upgraded, "
+                            + "\(last.found) found, \(last.added) new, \(last.leads) leads, \(last.attached) attached, \(last.upgraded) upgraded, "
                             + "\(last.changed) changed, \(last.closed) closed, \(last.reopened) reopened, "
                             + "\(last.unchanged) unchanged, \(last.outside) outside, \(last.tooOld) too old, "
                             + "\(last.otherRoles) other roles, \(last.boardsFound) boards found, "

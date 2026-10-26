@@ -78,7 +78,7 @@ public struct GoogleJobsSource: JobSource {
         do {
             return try await http.getJSON(url, as: SerpApiJobs.self)
         } catch .http(let status, _) where status == 401 || status == 403 {
-            throw SourceError.invalidConfiguration("SerpApi didn't accept the key; check it in Find jobs, Google Jobs")
+            throw SourceError.invalidConfiguration("SerpApi didn't accept the key; check it in Sources, Google Jobs")
         }
     }
 

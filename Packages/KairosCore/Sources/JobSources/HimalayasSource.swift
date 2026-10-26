@@ -79,7 +79,7 @@ public struct HimalayasSource: JobSource {
         if let key { request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization") }
         let (data, response) = try await http.data(for: request)
         if response.statusCode == 401 || response.statusCode == 403 {
-            throw SourceError.invalidConfiguration("Himalayas didn't accept the key; check it in Find jobs, Himalayas")
+            throw SourceError.invalidConfiguration("Himalayas didn't accept the key; check it in Sources, Himalayas")
         }
         try HTTPClientChecks.check(response)
         do {

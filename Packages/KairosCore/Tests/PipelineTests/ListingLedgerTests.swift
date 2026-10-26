@@ -119,6 +119,20 @@ struct ListingLedgerTests {
         #expect(job.openURL == "https://jobs.example/gh/1?apply=1")
     }
 
+    /// A snippet-only job archived by v3 comes back to the Inbox, whole and screened afresh, when
+    /// its company's board lists the posting; one you'd saved stays saved.
+    @Test func anArchivedSnippetComesBackWhenItsWholePostingArrives() async throws {
+        let f = try await Fixture()
+        try await f.fromAdzuna([posting(f.adzuna.id, "adzuna/1", text: "Build APIs")])
+        var job = try #require(try await f.jobs().first)
+        try await JobRepository(f.db).setVerdict(.maybe, source: .analysis, rank: 1, for: job.id)
+        try await f.db.execute("UPDATE job SET state = 'archived' WHERE id = ?", [.text(job.id.rawValue)])
+        try await f.fromBoard([posting(f.board.id, "gh/1", text: "Build APIs in Go. Full posting.")], at: day(1))
+        job = try #require(try await f.jobs().first)
+        #expect(job.state == .new && job.descriptionKind == .full && job.verdict == nil)
+        #expect(try await f.events(job) == [.found, .postedElsewhere, .upgraded])
+    }
+
     /// Seen again, a posting moves its job's last-seen time; edited, it's updated and screened
     /// again, unless you've acted on the job.
     @Test func anEditedPostingIsUpdatedAndScreenedAgain() async throws {

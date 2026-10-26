@@ -96,7 +96,7 @@ public enum SourceFactory {
             return (HimalayasSource(id: source.id, key: search.himalayasKey, http: http), search.query)
         case .googleJobs:
             guard let key = search.serpAPIKey, !key.isEmpty else {
-                throw .invalidConfiguration("add your SerpApi key in Find jobs, Google Jobs")
+                throw .invalidConfiguration("add your SerpApi key in Sources, Google Jobs")
             }
             return (GoogleJobsSource(id: source.id, key: key, http: http), search.query)
         case .linkedIn, .indeedCanada, .indeedUS, .glassdoor, .wellfound, .jobBank:

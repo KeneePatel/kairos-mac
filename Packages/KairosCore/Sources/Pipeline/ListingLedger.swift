@@ -257,6 +257,9 @@ private struct Writer {
             take(text: candidate, kind: kind, primary: candidate.id, source: source, into: &job)
             try event(job.id, .upgraded, source)
             outcome.upgraded += 1
+            // A snippet-only job that stepped aside (v3, migration 016) comes back whole: it's a
+            // posting Kairos can read now, and it's screened like any other.
+            if job.state == .archived && stored.descriptionKind == .snippet { job.state = .new }
             try JobRepository.upsert(job, hlc: hlc, in: connection)
             try screenAgain(job)
             return
