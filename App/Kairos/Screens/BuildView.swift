@@ -617,26 +617,47 @@ private struct AICallsList: View {
 }
 
 /// What a build worked around, above its PDF: another model took over, or a step was left out.
+/// One line, with each note in a popover: wrapped notes here made the window's minimum taller
+/// than the screen (SwiftUI measures it at the column's narrowest), which pushed half the resume
+/// off it (2026-10-26).
 private struct NotesBanner: View {
     let notes: [BuildActivity.Note]
+    @State private var details = false
 
     private var gaveUp: Bool { notes.contains { $0.kind == .gaveUp } }
 
+    /// "A fallback model helped: Cover letter, Skills".
+    private var summary: String {
+        var parts: [String] = []
+        for note in notes where !parts.contains(BuildActivity.name(note.task)) {
+            parts.append(BuildActivity.name(note.task))
+        }
+        return (gaveUp ? "Some of this build was done without the AI: " : "A fallback model helped: ")
+            + parts.joined(separator: ", ")
+    }
+
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
+        HStack(spacing: Spacing.space2) {
             Image(systemName: gaveUp ? "exclamationmark.triangle.fill" : "arrow.triangle.branch")
                 .foregroundStyle(Color(.maybe)).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: Spacing.space1) {
-                Text(gaveUp ? "Some of this build was done without the AI" : "A fallback model helped")
-                    .font(TypeStyle.headline).foregroundStyle(Color(.ink))
-                ForEach(notes, id: \.self) { note in
-                    Text(note.text).font(TypeStyle.callout).foregroundStyle(Color(.ink2))
-                        .fixedSize(horizontal: false, vertical: true)
+            Text(summary).font(TypeStyle.callout).foregroundStyle(Color(.ink)).lineLimit(1).truncationMode(.tail)
+            Spacer(minLength: Spacing.space2)
+            Button("Details") { details = true }
+                .buttonStyle(.link).font(TypeStyle.callout)
+                .popover(isPresented: $details, arrowEdge: .bottom) {
+                    VStack(alignment: .leading, spacing: Spacing.space2) {
+                        ForEach(notes, id: \.self) { note in
+                            Text(note.text).font(TypeStyle.callout).foregroundStyle(Color(.ink2))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(Spacing.space4)
+                    .frame(width: 380, alignment: .leading)
                 }
-            }
-            Spacer(minLength: 0)
         }
-        .padding(Spacing.space3)
+        .padding(.horizontal, Spacing.space3)
+        .padding(.vertical, Spacing.space2)
         .background(Color(.maybeBg))
+        .help(notes.map(\.text).joined(separator: "\n"))
     }
 }

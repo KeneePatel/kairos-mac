@@ -1,6 +1,9 @@
 #if DEBUG
     import AppKit
+    import LLM
+    import Pipeline
     import SwiftUI
+    import Tailoring
 
     /// Debug builds only: `Kairos --layout-probe` opens the real window on your data, visits every
     /// section and Settings tab, and prints the smallest window each one allows, then quits. A screen
@@ -40,6 +43,7 @@
                 print("PROBE \(name) needs at least \(Int(window.contentMinSize.width)) x \(Int(height))")
                 if height > limit { tooTall.append(name) }
             }
+            tooTall += await buildScreens(model)
             model.section = .fetch
             if let size = CommandLine.arguments.first(where: { $0.hasPrefix("--size=") })?.dropFirst(7)
                 .split(separator: "x").compactMap({ Double($0) }), size.count == 2
@@ -91,6 +95,44 @@
                 }
                 window.orderOut(nil)
             }
+        }
+
+        /// The Build screen with fallback notes above the PDF, for a finished build and a failed one
+        /// when you have them: wrapped notes there made the window's minimum 1,393 pt for a single
+        /// note and pushed half the resume off the screen (2026-10-26).
+        @MainActor private static func buildScreens(_ model: AppModel) async -> [String] {
+            var activity = BuildActivity()
+            let first = ModelRef(provider: "ollama", model: "gemma4:31b")
+            let second = ModelRef(provider: "gemini", model: "gemini-flash-lite-latest")
+            for task in [TaskID.writeExperience, .writeSkills, .coverLetter] {
+                activity.apply(.asking(task: task, model: first, fallback: false), at: Date())
+                activity.apply(
+                    .failed(task: task, model: first, reason: "gave an answer that didn't fit the format", detail: nil),
+                    at: Date())
+                activity.apply(.asking(task: task, model: second, fallback: true), at: Date())
+                activity.apply(.answered(task: task, model: second, seconds: 1, cached: false), at: Date())
+            }
+            var tooTall: [String] = []
+            for status in [BuildStatus.done, .failed] {
+                guard let build = model.builds.first(where: { $0.status == status }) else { continue }
+                let host = NSHostingView(
+                    rootView: BuildView(build: build, job: nil, pdf: nil, step: nil, master: nil, activity: activity)
+                        .environment(model))
+                host.sizingOptions = [.minSize]
+                let window = NSWindow(
+                    contentRect: NSRect(x: 0, y: 0, width: 1048, height: 600), styleMask: [.titled, .resizable],
+                    backing: .buffered, defer: false)
+                window.contentView = host
+                window.orderFront(nil)
+                try? await Task.sleep(for: .seconds(1))
+                let name = "build.\(status.rawValue)-with-notes"
+                print(
+                    "PROBE \(name) needs at least \(Int(window.contentMinSize.width)) x \(Int(window.contentMinSize.height))"
+                )
+                if window.contentMinSize.height > limit { tooTall.append(name) }
+                window.orderOut(nil)
+            }
+            return tooTall
         }
 
         @MainActor private static func scrollViews(in view: NSView?) -> [NSScrollView] {
