@@ -31,6 +31,11 @@ struct SourcesTable: View {
     }
 
     @ViewBuilder private var content: some View {
+        // Read here, once, not in each row: rows reading the model made SwiftUI abort when you
+        // left Find jobs for Review (2026-10-26).
+        let open = model.openRoles
+        let failures = model.failures
+        let adzunaUsed = model.adzunaUsed
         if model.sources.isEmpty {
             ContentUnavailableView {
                 Label("No companies yet", systemImage: "antenna.radiowaves.left.and.right")
@@ -62,7 +67,7 @@ struct SourcesTable: View {
                 }
                 .width(min: 90, ideal: 120)
                 TableColumn("Open roles") { source in
-                    Text(source.lastRunAt == nil ? "—" : "\(model.openRoles(for: source))")
+                    Text(source.lastRunAt == nil ? "—" : "\(open[source.id, default: 0])")
                         .monospacedDigit().foregroundStyle(Color(.ink2))
                 }
                 .width(min: 70, ideal: 90)
@@ -72,11 +77,12 @@ struct SourcesTable: View {
                 }
                 .width(min: 110, ideal: 150)
                 TableColumn("Status") { source in
-                    if source.kind == .adzuna, source.enabled, model.failure(for: source) == nil {
-                        AdzunaPlan(used: model.adzunaUsed)
+                    if source.kind == .adzuna, source.enabled, failures[source.id] == nil {
+                        AdzunaPlan(used: adzunaUsed)
                     } else {
                         SourceStatus(
-                            source: source, failure: model.failure(for: source), quiet: model.isQuiet(source))
+                            source: source, failure: failures[source.id],
+                            quiet: source.isQuiet(openRoles: open[source.id, default: 0]))
                     }
                 }
                 .width(min: 140, ideal: 220)
@@ -114,6 +120,9 @@ struct SourcesTable: View {
 extension Source {
     /// Added from Kairos's board catalog rather than by you (J5).
     var isFromCatalog: Bool { BoardConfig.decode(config)?.origin == "catalog" }
+
+    /// A catalog board with no open job for you: checked every few days, not every fetch (J5).
+    func isQuiet(openRoles: Int) -> Bool { isFromCatalog && openRoles == 0 && lastRunAt != nil }
 }
 
 /// What's left of Adzuna's free plan today, as Kairos spends it (job collection v2, J4): a bar

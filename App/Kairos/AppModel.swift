@@ -222,11 +222,6 @@ final class AppModel {
     /// The Adzuna search, if you've added it.
     var adzunaSource: Source? { sources.first { $0.kind == .adzuna } }
 
-    /// A catalog board with no open job for you: checked every few days, not every fetch (J5).
-    func isQuiet(_ source: Source) -> Bool {
-        source.isFromCatalog && openRoles(for: source) == 0 && source.lastRunAt != nil
-    }
-
     /// Adzuna requests used today (UTC) and this month, against its plan (job collection v2, J4).
     private(set) var adzunaUsed = (today: 0, month: 0)
 
@@ -296,14 +291,14 @@ final class AppModel {
         sources.first { $0.id == id }
     }
 
-    /// The last failure for this source in this session's fetch, if it failed.
-    func failure(for source: Source) -> String? {
-        progress?.failures.first { $0.sourceID == source.id }?.message
+    /// Each source's last failure in this session's fetch, for the ones that failed.
+    var failures: [UUID: String] {
+        Dictionary((progress?.failures ?? []).map { ($0.sourceID, $0.message) }) { first, _ in first }
     }
 
-    func openRoles(for source: Source) -> Int {
-        jobs.count { $0.sourceID == source.id }
-    }
+    /// Open jobs by source, counted once for a whole table: rows that each read `jobs` made
+    /// SwiftUI abort when you left Find jobs for Review (2026-10-26).
+    var openRoles: [UUID: Int] { jobs.reduce(into: [:]) { $0[$1.sourceID, default: 0] += 1 } }
 
     // MARK: - Jobs
 
@@ -798,6 +793,15 @@ final class AppModel {
     func setStatus(_ status: ApplicationStatus, for application: Application, note: String? = nil) async {
         guard let db, status != application.status else { return }
         try? await ApplicationRepository(db).setStatus(status, for: application.id, at: Date(), note: note)
+        await reload()
+    }
+
+    /// Moves several at once, each with its own timeline line, skipping any already there: Applied's
+    /// selection, or the silent ones to No reply (ADR-016).
+    func setStatus(_ status: ApplicationStatus, for applications: [Application]) async {
+        guard let db else { return }
+        let moving = applications.filter { $0.status != status }.map(\.id)
+        try? await ApplicationRepository(db).setStatus(status, for: moving, at: Date())
         await reload()
     }
 
