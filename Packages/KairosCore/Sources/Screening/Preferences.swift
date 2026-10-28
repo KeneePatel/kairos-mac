@@ -31,7 +31,9 @@ public enum Seniority: String, Codable, Sendable, CaseIterable {
         let roles = ["product", "project", "program", "account", "marketing", "sales", "office", "community"]
         if has("manager"), !roles.contains(where: { has("\($0) manager") }) { return .manager }
         if has("principal") { return .principal }
-        if has("staff") { return .staff }
+        // "Member of Technical Staff" is a lab's title for any engineer, not the Staff level (a live
+        // fetch on 2026-10-28 had filtered 21 of them out).
+        if has("staff"), !has("member of technical staff", "member of the technical staff") { return .staff }
         if has("lead", "tech lead", "team lead") { return .lead }
         if has("senior", "sr") || words.contains(where: { ["iii", "iv", "v"].contains($0) }) { return .senior }
         if has("intermediate", "mid level", "mid-level") || words.contains("ii") { return .mid }

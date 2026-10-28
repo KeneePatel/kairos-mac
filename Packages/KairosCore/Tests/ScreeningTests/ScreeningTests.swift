@@ -94,6 +94,8 @@ struct PrefilterTests {
             ("Head of Platform", .director), ("Product Manager", nil), ("Engineering Manager", .manager),
             // A team called "Management" isn't a manager level (Ramp's "Token Spend Management", a real run).
             ("Software Engineer, Spend Management", nil), ("Senior Backend Engineer | Token Spend Management", .senior),
+            // A lab's generic title, not the Staff level (a live fetch, 2026-10-28).
+            ("Member of Technical Staff - Post-Training", nil), ("Senior Member of Technical Staff", .senior),
         ]
         for (title, level) in cases { #expect(Seniority.of(title: title) == level, "\(title)") }
     }
