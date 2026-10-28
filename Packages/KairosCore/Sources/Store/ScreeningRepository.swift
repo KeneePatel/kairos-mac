@@ -88,35 +88,24 @@ public struct ScreeningRepository: Sendable {
         }
     }
 
-    /// Forgets screening's work on jobs you haven't acted on, so the next screening decides them
-    /// again: after you change your preferences, or with the analyses too after your master resume
-    /// or the AI changes. Jobs you brought back wait for the AI again; your own verdicts stay.
-    /// Returns how many jobs will be screened again.
-    @discardableResult
-    public func reset(keepAnalyses: Bool) async throws -> Int {
-        try await db.transaction { connection in
-            let open = """
-                SELECT id FROM job WHERE archived_at IS NULL AND closed_at IS NULL AND decision IS NULL
-                    AND id NOT IN (SELECT job_id FROM build) AND id NOT IN (SELECT job_id FROM application)
-                """
-            if !keepAnalyses {
-                try connection.execute(
-                    """
-                    DELETE FROM analysis WHERE job_id IN (\(open))
-                        AND job_id NOT IN (SELECT job_id FROM screening WHERE your_verdict IS NOT NULL)
-                    """)
-            }
-            try connection.execute(
-                """
-                UPDATE screening SET stage = 'waiting', verdict = NULL, rule = NULL, reasons = '[]', coverage = NULL,
-                    match = NULL, rank = NULL
-                WHERE brought_back = 1 AND your_verdict IS NULL AND job_id IN (\(open))
-                """)
-            let waiting = connection.changes
-            try connection.execute(
-                "DELETE FROM screening WHERE brought_back = 0 AND your_verdict IS NULL AND job_id IN (\(open))")
-            return waiting + connection.changes
-        }
+    /// The jobs a screening run looks at, with where screening left each. New jobs and jobs waiting
+    /// for the AI; with `everything`, also every judged or filtered job you haven't acted on (no
+    /// decision, no application, no verdict of yours), judged again in place.
+    public func candidates(everything: Bool) async throws -> [(job: Job, state: ScreeningState?)] {
+        let scope =
+            everything
+            ? """
+            j.decision IS NULL AND j.id NOT IN (SELECT job_id FROM application) AND s.your_verdict IS NULL
+            """ : "(s.job_id IS NULL OR s.stage = 'waiting')"
+        return try await db.query(
+            """
+            SELECT j.*, s.stage, s.verdict, s.rule, s.reasons, s.coverage, s.match, s.rank, s.your_verdict,
+                s.brought_back, s.screened_at
+            FROM job j LEFT JOIN screening s ON s.job_id = j.id
+            WHERE j.archived_at IS NULL AND j.closed_at IS NULL AND \(scope)
+            ORDER BY j.first_seen_at, j.id
+            """
+        ).map { row in (try JobRepository.job(row), try Self.state(row)) }
     }
 
     // MARK: - Analyses

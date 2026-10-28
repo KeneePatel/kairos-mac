@@ -110,6 +110,11 @@ public struct SourceRepository: Sendable {
             [.text(status.rawValue), SQLValue(resume), SQLValue(resume), .id(id)])
     }
 
+    /// Every board answers in full on its next read: after a change to what a fetch keeps.
+    public func forgetETags() async throws {
+        try await db.execute("UPDATE source SET etag = NULL")
+    }
+
     private func insert(_ source: Source) async throws {
         try await db.execute(Self.insertSQL, Self.values(source))
     }

@@ -87,6 +87,13 @@ public struct JobRepository: Sendable {
             ).compactMap { $0.string("canonical_url") })
     }
 
+    /// How many of `source`'s listings are open: a board with none has nothing for you lately.
+    public func openListingCount(of source: UUID) async throws -> Int {
+        try await db.first(
+            "SELECT count(*) AS n FROM listing WHERE source_id = ? AND closed_at IS NULL", [.id(source)]
+        )?.int("n") ?? 0
+    }
+
     // MARK: - Clearing and retention
 
     /// Jobs you've acted on: saved, built a resume for, or applied to. Clearing and retention keep them.

@@ -72,6 +72,15 @@ public struct DataFolder: Sendable, Equatable {
     public var builds: URL { root.appending(path: "Library/Builds", directoryHint: .isDirectory) }
     public var backups: URL { root.appending(path: "Backups", directoryHint: .isDirectory) }
 
+    /// A backup file named for when it was made: "kairos-20261028-120000.sqlite".
+    public func backup(_ prefix: String = "kairos", at date: Date) -> URL {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return backups.appending(path: "\(prefix)-\(formatter.string(from: date)).sqlite")
+    }
+
     /// A stored relative path as a file URL.
     public func file(_ relative: String) -> URL { root.appending(path: relative) }
 

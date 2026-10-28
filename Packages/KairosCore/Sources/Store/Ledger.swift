@@ -208,7 +208,10 @@ private struct LedgerWriter {
     }
 
     private mutating func seenAgain(_ listing: Listing, stored: Row, job: Job) throws {
-        let edited = stored.string("content_hash") != listing.contentHash
+        // An imported listing has no hash yet: its first sighting refreshes its text quietly, since
+        // this version writes a posting's Markdown its own way.
+        let hash = stored.string("content_hash") ?? ""
+        let edited = !hash.isEmpty && hash != listing.contentHash
         try connection.execute(
             """
             UPDATE listing SET url = ?, apply_url = ?, title = ?, company = ?, location = ?, posted_at = ?,
@@ -220,6 +223,9 @@ private struct LedgerWriter {
                 .text(listing.location), SQLValue(listing.postedAt), .text(listing.contentHash), SQLValue(now),
                 .text(listing.id),
             ])
+        if hash.isEmpty, job.primaryListingID == listing.id {
+            try takeText(of: listing, for: job, sourceKind: source.kind)
+        }
         guard edited else {
             try touch(job)
             return

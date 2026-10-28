@@ -282,13 +282,15 @@ public struct ActivityRepository: Sendable {
 
     // MARK: - Trimming
 
-    /// Drops fetch log rows and runs older than `days`, and leads unseen for that long.
-    public func trim(olderThan days: Int = 90, at now: Date = Date()) async throws {
+    /// Drops fetch log rows and runs older than `days`, and leads unseen for `leadDays`: a company
+    /// still posting stays worth a look.
+    public func trim(olderThan days: Int = 90, leadDays: Int = 30, at now: Date = Date()) async throws {
         let cutoff = SQLValue(now.addingTimeInterval(-.days(Double(days))))
+        let leads = SQLValue(now.addingTimeInterval(-.days(Double(leadDays))))
         try await db.transaction { connection in
             try connection.execute("DELETE FROM fetch_log WHERE at < ?", [cutoff])
             try connection.execute("DELETE FROM run WHERE started_at < ?", [cutoff])
-            try connection.execute("DELETE FROM lead WHERE last_seen_at < ?", [cutoff])
+            try connection.execute("DELETE FROM lead WHERE last_seen_at < ?", [leads])
         }
     }
 

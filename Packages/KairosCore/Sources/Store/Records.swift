@@ -428,12 +428,26 @@ public struct RunStats: Codable, Sendable, Equatable {
     public var sources: Int?
     public var failed: Int?
     public var unchanged: Int?
+    /// Boards with nothing for you lately, resting this time.
+    public var resting: Int?
+    /// Searches not asked: their plan's share for now was spent, or a key is missing.
+    public var searchesSkipped: Int?
+    /// Postings the sources returned.
     public var found: Int?
+    /// Every place outside Canada and the US.
+    public var outside: Int?
+    public var tooOld: Int?
+    public var otherRoles: Int?
     public var added: Int?
+    public var attached: Int?
     public var changed: Int?
     public var closed: Int?
+    public var reopened: Int?
     public var leads: Int?
+    /// Boards added this run: the catalog's, and those found behind searches and leads.
     public var newBoards: Int?
+    /// Jobs retention archived.
+    public var archived: Int?
     public var screened: Int?
     public var filtered: Int?
     public var judged: Int?

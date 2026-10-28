@@ -215,13 +215,10 @@ struct StoreTests {
 
         try await store.screening.setYourVerdict(.yes, for: ids[0], at: now)
         try await store.jobs.setDecision(.skipped, for: ids[1], at: now)
-        #expect(try await store.screening.reset(keepAnalyses: true) == 1)
-        #expect(try await store.screening.unscreened().map(\.id) == [ids[2]])
-        #expect(try await store.screening.analysis(for: ids[2]) != nil)
-
-        #expect(try await store.screening.reset(keepAnalyses: false) == 0)
-        #expect(try await store.screening.analysis(for: ids[2]) == nil)
-        #expect(try await store.screening.analysis(for: ids[0]) != nil)
+        #expect(try await store.screening.candidates(everything: false).isEmpty)
+        let everything = try await store.screening.candidates(everything: true)
+        #expect(everything.map(\.job.id) == [ids[2]])
+        #expect(everything.first?.state?.verdict == .maybe)
     }
 
     // MARK: - Master resume
