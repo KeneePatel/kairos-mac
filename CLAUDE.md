@@ -4,7 +4,7 @@
 
 `design/kairos/` holds the brand guidelines: how Kairos should look and feel, plus the logo. Read `design/kairos/README.md` before any UI change, in the Mac app or the phone web app.
 
-- **What it governs:** visuals only (colour, type, spacing, radii, layout feel, the logo). `SPEC.md` decides what the app does: features, job sources, screens and data. Where a mockup shows different content (for example other job boards or other sidebar items), follow `SPEC.md` and keep only the look.
+- **What it governs:** visuals only (colour, type, spacing, radii, layout feel, the logo). `docs/product.md` decides what the app does: features, job sources, screens and data. Where a mockup shows different content (for example other job boards or other sidebar items), follow `docs/product.md` and keep only the look.
 - **Tokens:** colours (light and dark), type, spacing and radii come only from `design/kairos/tokens.json`: Asset Catalog colour sets in SwiftUI, CSS custom properties in the web app. Never hard-code a hex value in a view.
 - **Mockups:** `design/kairos/screens/*.dc.html` are inspiration to rebuild with native components (system sidebar, toolbar, inspector, segmented pickers, switches, `MenuBarExtra`, SF Symbols), not code to port.
 - **Visual rules to keep:**

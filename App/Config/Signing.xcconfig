@@ -1,4 +1,4 @@
-// Code signing for the app target (docs/signing.md).
+// Code signing for the app target (docs/guides/signing.md).
 //
 // Ad-hoc by default, which is what CI and a fresh clone use. An ad-hoc build gets a new code
 // identity every time it's built, so the login keychain treats each rebuild as a new app and asks

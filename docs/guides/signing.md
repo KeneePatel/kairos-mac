@@ -71,6 +71,6 @@ Results appear in the log:
 ```
 
 **Pass:** build B logs `read: written by build 1` with no prompt on screen.
-**Fail:** a dialog asks to allow Kairos to use the keychain item. The fallback options are in `tasks/plan.md` (Risks).
+**Fail:** a dialog asks to allow Kairos to use the keychain item. The fallback options are in `docs/archive/plan-v1.md` (Risks).
 
 Clean up afterwards: in Keychain Access, search for `debug.signing-spike` and delete the item.

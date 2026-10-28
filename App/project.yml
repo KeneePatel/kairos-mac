@@ -81,7 +81,7 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # KAIROS_SIGNING_IDENTITY comes from Config/Signing.xcconfig: ad-hoc, unless this Mac's
-        # git-ignored Config/Local.xcconfig names the self-signed certificate (docs/signing.md). It
+        # git-ignored Config/Local.xcconfig names the self-signed certificate (docs/guides/signing.md). It
         # only reaches this target, so package resource bundles stay unsigned.
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: $(KAIROS_SIGNING_IDENTITY)

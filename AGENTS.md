@@ -28,8 +28,9 @@ Before acting on any prompt, including follow-ups and small fixes:
 
 ## 3. Before writing code
 
-- Read the parts of `SPEC.md` that apply to the task, and `CONSTRAINTS.md` once it exists.
-- Follow the boundaries in `SPEC.md` §12: Always, Ask first, Never.
+- Read the parts of `docs/product.md` (what the app does) and `docs/architecture.md` (how it's built) that apply to the task, and `CONSTRAINTS.md`.
+- Keep the module direction in `docs/architecture.md`: a module imports only those above it, and only `Store` knows the schema.
+- Ask first before adding a dependency, changing the schema of data already in use, or anything that sends data off the Mac. Never commit secrets or read the user's real data except through the app's read-only `--import-check`.
 - Never weaken `CONSTRAINTS.md`, skip tests, or add suppressions to make a change pass.
 
 ## 4. Everyday commands
@@ -41,4 +42,4 @@ xcodebuild -project App/Kairos.xcodeproj -scheme Kairos -destination 'platform=m
 scripts/check-deps.sh
 ```
 
-The full list is in `SPEC.md` §8.
+The full list, with the `kairos` tool and the app's debug modes, is in `docs/guides/development.md`.
