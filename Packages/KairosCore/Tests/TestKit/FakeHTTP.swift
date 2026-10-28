@@ -8,6 +8,8 @@ public final class FakeHTTP: HTTPClient, @unchecked Sendable {
     public enum Reply: Sendable {
         case status(Int, body: Data = Data(), headers: [String: String] = [:])
         case failure(HTTPError)
+        /// A redirect URLSession followed: a 200 from another address.
+        case moved(to: String)
 
         public static func json(_ text: String, status: Int = 200, headers: [String: String] = [:]) -> Reply {
             .status(status, body: Data(text.utf8), headers: headers)
@@ -47,6 +49,8 @@ public final class FakeHTTP: HTTPClient, @unchecked Sendable {
             return HTTPResponse(url: request.url, status: status, headers: headers, body: body)
         case .failure(let error):
             throw error
+        case .moved(let target):
+            return HTTPResponse(url: URL(string: target) ?? request.url, status: 200, body: Data("<html></html>".utf8))
         case nil:
             throw .network("unscripted request: \(request.method.rawValue) \(request.url.absoluteString)")
         }

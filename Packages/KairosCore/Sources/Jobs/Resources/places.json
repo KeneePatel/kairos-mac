@@ -1,0 +1,88 @@
+{
+  "regions": {
+    "CA": {
+      "AB": ["Alberta", "Alta"],
+      "BC": ["British Columbia", "Colombie-Britannique"],
+      "MB": ["Manitoba"],
+      "NB": ["New Brunswick", "Nouveau-Brunswick"],
+      "NL": ["Newfoundland and Labrador", "Newfoundland", "Labrador"],
+      "NS": ["Nova Scotia", "Nouvelle-Ecosse"],
+      "NT": ["Northwest Territories"],
+      "NU": ["Nunavut"],
+      "ON": ["Ontario", "Ont"],
+      "PE": ["Prince Edward Island", "PEI"],
+      "QC": ["Quebec", "Que", "PQ"],
+      "SK": ["Saskatchewan", "Sask"],
+      "YT": ["Yukon"]
+    },
+    "US": {
+      "AL": ["Alabama"], "AK": ["Alaska"], "AZ": ["Arizona"], "AR": ["Arkansas"], "CA": ["California", "Calif"],
+      "CO": ["Colorado"], "CT": ["Connecticut"], "DE": ["Delaware"], "DC": ["District of Columbia", "Washington DC", "Washington D C"],
+      "FL": ["Florida"], "GA": ["Georgia"], "HI": ["Hawaii"], "ID": ["Idaho"], "IL": ["Illinois"], "IN": ["Indiana"],
+      "IA": ["Iowa"], "KS": ["Kansas"], "KY": ["Kentucky"], "LA": ["Louisiana"], "ME": ["Maine"], "MD": ["Maryland"],
+      "MA": ["Massachusetts"], "MI": ["Michigan"], "MN": ["Minnesota"], "MS": ["Mississippi"], "MO": ["Missouri"],
+      "MT": ["Montana"], "NE": ["Nebraska"], "NV": ["Nevada"], "NH": ["New Hampshire"], "NJ": ["New Jersey"],
+      "NM": ["New Mexico"], "NY": ["New York State"], "NC": ["North Carolina"], "ND": ["North Dakota"], "OH": ["Ohio"],
+      "OK": ["Oklahoma"], "OR": ["Oregon"], "PA": ["Pennsylvania"], "RI": ["Rhode Island"], "SC": ["South Carolina"],
+      "SD": ["South Dakota"], "TN": ["Tennessee"], "TX": ["Texas"], "UT": ["Utah"], "VT": ["Vermont"], "VA": ["Virginia"],
+      "WA": ["Washington", "Washington State"], "WV": ["West Virginia"], "WI": ["Wisconsin"], "WY": ["Wyoming"],
+      "PR": ["Puerto Rico"]
+    }
+  },
+  "cities": {
+    "CA": {
+      "Toronto": "ON", "Greater Toronto Area": "ON", "GTA": "ON", "North York": "ON", "Scarborough": "ON", "Etobicoke": "ON",
+      "Mississauga": "ON", "Brampton": "ON", "Markham": "ON", "Vaughan": "ON", "Oakville": "ON", "Richmond Hill": "ON",
+      "Ottawa": "ON", "Waterloo": "ON", "Kitchener": "ON", "Kitchener-Waterloo": "ON", "Guelph": "ON",
+      "Hamilton": "ON", "Kingston": "ON", "Windsor": "ON", "Barrie": "ON", "Sudbury": "ON",
+      "Montréal": "QC", "Laval": "QC", "Québec City": "QC", "Gatineau": "QC",
+      "Sherbrooke": "QC", "Longueuil": "QC",
+      "Vancouver": "BC", "Burnaby": "BC", "Victoria": "BC", "Kelowna": "BC", "Coquitlam": "BC", "North Vancouver": "BC",
+      "Calgary": "AB", "Edmonton": "AB", "Winnipeg": "MB", "Saskatoon": "SK", "Regina": "SK",
+      "Halifax": "NS", "Dartmouth": "NS", "Fredericton": "NB", "Moncton": "NB", "Saint John": "NB",
+      "St. John's": "NL", "Charlottetown": "PE", "Whitehorse": "YT", "Yellowknife": "NT", "Iqaluit": "NU"
+    },
+    "US": {
+      "New York": "NY", "New York City": "NY", "NYC": "NY", "Brooklyn": "NY", "Manhattan": "NY",
+      "San Francisco": "CA", "SF": "CA", "San Francisco Bay Area": "CA", "Bay Area": "CA", "Oakland": "CA", "San Jose": "CA",
+      "Palo Alto": "CA", "Mountain View": "CA", "Menlo Park": "CA", "Sunnyvale": "CA", "Cupertino": "CA", "Santa Clara": "CA",
+      "Redwood City": "CA", "San Mateo": "CA", "Los Angeles": "CA", "Santa Monica": "CA", "San Diego": "CA", "Irvine": "CA",
+      "Sacramento": "CA",
+      "Seattle": "WA", "Bellevue": "WA", "Redmond": "WA", "Kirkland": "WA", "Portland": "OR",
+      "Austin": "TX", "Dallas": "TX", "Houston": "TX", "San Antonio": "TX", "Plano": "TX",
+      "Boston": "MA", "Somerville": "MA", "Chicago": "IL", "Denver": "CO", "Boulder": "CO",
+      "Atlanta": "GA", "Miami": "FL", "Tampa": "FL", "Orlando": "FL", "Jacksonville": "FL",
+      "Arlington": "VA", "Reston": "VA", "McLean": "VA", "Philadelphia": "PA", "Pittsburgh": "PA",
+      "Detroit": "MI", "Ann Arbor": "MI", "Minneapolis": "MN", "Phoenix": "AZ", "Scottsdale": "AZ", "Tempe": "AZ",
+      "Salt Lake City": "UT", "Lehi": "UT", "Raleigh": "NC", "Durham": "NC", "Charlotte": "NC", "Nashville": "TN",
+      "Columbus": "OH", "Cleveland": "OH", "Cincinnati": "OH", "Indianapolis": "IN", "St. Louis": "MO", "Kansas City": "MO",
+      "Las Vegas": "NV", "Baltimore": "MD", "Jersey City": "NJ", "Hoboken": "NJ", "Newark": "NJ", "Stamford": "CT",
+      "New Haven": "CT", "Providence": "RI", "Madison": "WI", "Milwaukee": "WI", "Honolulu": "HI", "Boise": "ID",
+      "Albuquerque": "NM", "Omaha": "NE", "Des Moines": "IA", "Louisville": "KY", "New Orleans": "LA"
+    }
+  },
+  "elsewhere": [
+    "United Kingdom", "UK", "U K", "England", "Scotland", "Wales", "Northern Ireland", "Great Britain", "GB",
+    "London", "Manchester", "Edinburgh", "Glasgow", "Belfast", "Bristol", "Leeds",
+    "Ireland", "Dublin", "Cork", "Germany", "Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne",
+    "France", "Paris", "Lyon", "Netherlands", "Amsterdam", "Rotterdam", "Belgium", "Brussels", "Luxembourg",
+    "Spain", "Madrid", "Barcelona", "Portugal", "Lisbon", "Porto", "Italy", "Milan", "Rome",
+    "Switzerland", "Zurich", "Geneva", "Austria", "Vienna", "Sweden", "Stockholm", "Norway", "Oslo",
+    "Denmark", "Copenhagen", "Finland", "Helsinki", "Poland", "Warsaw", "Krakow", "Czech Republic", "Czechia", "Prague",
+    "Romania", "Bucharest", "Hungary", "Budapest", "Greece", "Athens", "Ukraine", "Kyiv", "Estonia", "Tallinn",
+    "Lithuania", "Vilnius", "Latvia", "Riga", "Serbia", "Belgrade", "Croatia", "Bulgaria", "Sofia", "Turkey", "Istanbul",
+    "Israel", "Tel Aviv", "Jerusalem", "United Arab Emirates", "UAE", "Dubai", "Abu Dhabi", "Saudi Arabia", "Riyadh",
+    "Egypt", "Cairo", "Nigeria", "Lagos", "Kenya", "Nairobi", "South Africa", "Cape Town", "Johannesburg",
+    "India", "Bangalore", "Bengaluru", "Hyderabad", "Pune", "Mumbai", "Delhi", "New Delhi", "Gurgaon", "Gurugram",
+    "Noida", "Chennai", "Kolkata", "Pakistan", "Karachi", "Lahore", "Bangladesh", "Dhaka", "Sri Lanka", "Colombo",
+    "Singapore", "Malaysia", "Kuala Lumpur", "Indonesia", "Jakarta", "Philippines", "Manila", "Thailand", "Bangkok",
+    "Vietnam", "Ho Chi Minh", "Hanoi", "China", "Beijing", "Shanghai", "Shenzhen", "Hong Kong", "Taiwan", "Taipei",
+    "Japan", "Tokyo", "Osaka", "South Korea", "Korea", "Seoul", "Australia", "Sydney", "Melbourne", "Brisbane", "Perth",
+    "New Zealand", "Auckland", "Wellington",
+    "Mexico", "Mexico City", "Ciudad de Mexico", "Guadalajara", "Monterrey", "Brazil", "Sao Paulo", "Rio de Janeiro",
+    "Argentina", "Buenos Aires", "Chile", "Santiago", "Colombia", "Bogota", "Medellin", "Peru", "Lima", "Uruguay",
+    "Montevideo", "Costa Rica", "San Jose Costa Rica",
+    "Europe", "European Union", "EU", "EMEA", "APAC", "Asia", "Asia Pacific", "LATAM", "Latin America", "South America",
+    "Africa", "Middle East", "Oceania", "Nordics", "DACH", "Benelux"
+  ]
+}

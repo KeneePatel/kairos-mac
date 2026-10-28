@@ -1,0 +1,35 @@
+[
+  {
+    "additionalPlain": "Acme Robotics is an equal opportunity employer.",
+    "additional": "<div>Acme Robotics is an equal opportunity employer.</div>",
+    "categories": { "commitment": "Permanent", "department": "Engineering", "location": "Toronto", "team": "Platform", "allLocations": ["Toronto", "Vancouver"] },
+    "createdAt": 1791566108174,
+    "descriptionPlain": "Our platform team keeps the robots talking.",
+    "description": "<div>Our platform team keeps the robots talking.</div>",
+    "id": "223f9722-3579-4ff2-b123-e4cc7b0c1a64",
+    "lists": [
+      { "text": "What You'll Do", "content": "<div>\n\n<li>Run Kubernetes clusters</li>\n<li>Own on-call for R&amp;D services</li></div>" },
+      { "text": "Who You Are & What You Bring", "content": "<li>5+ years with Go</li>" }
+    ],
+    "text": "Senior Software Engineer",
+    "country": "CA",
+    "workplaceType": "remote",
+    "opening": "",
+    "openingPlain": "",
+    "descriptionBody": "<div>Our platform team keeps the robots talking.</div>",
+    "descriptionBodyPlain": "Our platform team keeps the robots talking.",
+    "hostedUrl": "https://jobs.lever.co/acmerobotics/223f9722-3579-4ff2-b123-e4cc7b0c1a64",
+    "applyUrl": "https://jobs.lever.co/acmerobotics/223f9722-3579-4ff2-b123-e4cc7b0c1a64/apply"
+  },
+  {
+    "categories": { "commitment": "Contract", "location": "Seattle, WA" },
+    "createdAt": 1790000000000,
+    "description": "<p>Short contract.</p>",
+    "id": "7c1d0000-0000-4000-8000-000000000002",
+    "lists": [],
+    "text": "Hardware Test Technician",
+    "workplaceType": "unspecified",
+    "hostedUrl": "https://jobs.lever.co/acmerobotics/7c1d0000-0000-4000-8000-000000000002",
+    "applyUrl": "https://jobs.lever.co/acmerobotics/7c1d0000-0000-4000-8000-000000000002/apply"
+  }
+]

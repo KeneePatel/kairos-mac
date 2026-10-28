@@ -1,0 +1,51 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "d3bc1ced-3ce4-4086-a050-555055dbb1ff",
+      "title": "Staff Data Engineer",
+      "department": "Engineering",
+      "team": "Data",
+      "employmentType": "FullTime",
+      "location": "Toronto, ON",
+      "shouldDisplayCompensationOnJobPostings": true,
+      "secondaryLocations": [
+        { "location": "Remote (Canada)", "address": { "postalAddress": { "addressCountry": "Canada" } } },
+        { "location": "Remote (US)", "address": { "postalAddress": { "addressCountry": "United States" } } }
+      ],
+      "publishedAt": "2026-10-07T17:12:35.753+00:00",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "Hybrid",
+      "address": { "postalAddress": { "addressRegion": "Ontario", "addressCountry": "Canada", "addressLocality": "Toronto" } },
+      "jobUrl": "https://jobs.ashbyhq.com/acmerobotics/d3bc1ced-3ce4-4086-a050-555055dbb1ff",
+      "applyUrl": "https://jobs.ashbyhq.com/acmerobotics/d3bc1ced-3ce4-4086-a050-555055dbb1ff/application",
+      "descriptionHtml": "<p style=\"min-height:1.5em\">Build our data platform.</p><h3>Requirements</h3><ul><li>Spark</li></ul>",
+      "descriptionPlain": "Build our data platform. Requirements: Spark",
+      "compensation": { "compensationTierSummary": "CA$180K – CA$220K", "scrapeableCompensationSalarySummary": "CA$180K - CA$220K", "compensationTiers": [], "summaryComponents": [] }
+    },
+    {
+      "id": "aa000000-0000-4000-8000-000000000002",
+      "title": "Internal Transfer Only",
+      "location": "New York, NY",
+      "secondaryLocations": [],
+      "publishedAt": "2026-10-01T00:00:00.000+00:00",
+      "isListed": false,
+      "isRemote": false,
+      "workplaceType": "OnSite",
+      "jobUrl": "https://jobs.ashbyhq.com/acmerobotics/aa000000-0000-4000-8000-000000000002",
+      "descriptionHtml": "<p>Hidden.</p>"
+    },
+    {
+      "id": "bb000000-0000-4000-8000-000000000003",
+      "title": "Solutions Engineer",
+      "location": "North America",
+      "secondaryLocations": [],
+      "publishedAt": "2026-09-15T12:00:00+00:00",
+      "isListed": true,
+      "isRemote": true,
+      "address": { "postalAddress": { "addressCountry": "United States" } },
+      "jobUrl": "https://jobs.ashbyhq.com/acmerobotics/bb000000-0000-4000-8000-000000000003"
+    }
+  ]
+}

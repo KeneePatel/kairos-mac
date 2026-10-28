@@ -1,0 +1,25 @@
+{
+ "id": "744000000000001",
+ "name": "Backend Developer",
+ "postingUrl": "https://jobs.smartrecruiters.com/AcmeRobotics/744000000000001-backend-developer",
+ "jobAd": {
+  "sections": {
+   "companyDescription": {
+    "title": "Company Description",
+    "text": "<p>Acme Robotics builds warehouse robots.</p>"
+   },
+   "jobDescription": {
+    "title": "Job Description",
+    "text": "<p>Build the services our robots talk to.</p>"
+   },
+   "qualifications": {
+    "title": "Qualifications",
+    "text": "<ul><li>3+ years with Go</li><li>PostgreSQL</li></ul>"
+   },
+   "additionalInformation": {
+    "title": "Additional Information",
+    "text": "<p>Hybrid in Toronto.</p>"
+   }
+  }
+ }
+}
