@@ -38,12 +38,12 @@ The old app worked: about 755 tests passed and it was in daily use. It had grown
 
 ## Progress
 
-- [ ] Foundation: `KairosKit`, `SQL`, `Secrets`, test kit
-- [ ] `Jobs`: types, geography, roles, normalizer, de-duplication, ATS detection, catalog, readers
-- [ ] `Resume`: model, validation, redaction, import tasks
-- [ ] `AI`: providers, client, router, tasks, schema validation
-- [ ] `Screening`: prefilter, analysis, verdict, ranking
-- [ ] `Tailoring` and `Render`
+- [x] Foundation: `KairosKit`, `SQL`, `Secrets`, test kit
+- [x] `Jobs`: types, geography, roles, normalizer, de-duplication, ATS detection, catalog, readers
+- [x] `Resume`: model, validation, redaction, import tasks
+- [x] `AI`: providers, client, router, tasks, schema validation
+- [x] `Screening`: prefilter, analysis, verdict, ranking
+- [x] `Tailoring` and `Render`
 - [ ] `Store`: schema and repositories
 - [ ] `Engine`: fetch, screen, build, retention, importer
 - [ ] `kairos` CLI
