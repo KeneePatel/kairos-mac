@@ -135,7 +135,9 @@ public enum EntryFields: Equatable, Sendable {
         public var projectURL: String?
         public var repoURL: String?
 
-        public init(name: String, role: String = "", tech: [String] = [], projectURL: String? = nil, repoURL: String? = nil) {
+        public init(
+            name: String, role: String = "", tech: [String] = [], projectURL: String? = nil, repoURL: String? = nil
+        ) {
             self.name = name
             self.role = role
             self.tech = tech
@@ -153,7 +155,8 @@ public enum EntryFields: Equatable, Sendable {
         public var coursework: [String]
 
         public init(
-            institution: String, credential: String = "", field: String = "", location: String = "", honours: String = "",
+            institution: String, credential: String = "", field: String = "", location: String = "",
+            honours: String = "",
             coursework: [String] = []
         ) {
             self.institution = institution
@@ -359,7 +362,9 @@ public struct MasterResume: Equatable, Sendable {
     /// Goes up by one on every save; builds record it.
     public var version: Int
 
-    public init(header: ResumeHeader = ResumeHeader(), entries: [ResumeEntry] = [], skills: [Skill] = [], version: Int = 0) {
+    public init(
+        header: ResumeHeader = ResumeHeader(), entries: [ResumeEntry] = [], skills: [Skill] = [], version: Int = 0
+    ) {
         self.header = header
         self.entries = entries
         self.skills = skills
@@ -387,5 +392,37 @@ public struct MasterResume: Equatable, Sendable {
     /// Spoken languages and their levels.
     public var languages: [EntryFields.Language] {
         entries.compactMap { if case .language(let language) = $0.fields { language } else { nil } }
+    }
+}
+
+/// The master resume as one JSON document: snapshots, exports and imports of a whole resume. Each
+/// entry carries its kind beside its fields.
+extension MasterResume: Codable {}
+
+extension ResumeEntry: Codable {
+    private enum CodingKeys: String, CodingKey { case id, kind, fields, start, end, isCurrent, bullets }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try container.decode(EntryKind.self, forKey: .kind)
+        let fields = try container.decode(JSONValue.self, forKey: .fields)
+        self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            fields: try EntryFields.decode(kind: kind, json: fields.text),
+            start: try container.decodeIfPresent(YearMonth.self, forKey: .start),
+            end: try container.decodeIfPresent(YearMonth.self, forKey: .end),
+            isCurrent: try container.decodeIfPresent(Bool.self, forKey: .isCurrent) ?? false,
+            bullets: try container.decodeIfPresent([ResumeBullet].self, forKey: .bullets) ?? [])
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(try JSONValue(parsing: fields.json()), forKey: .fields)
+        try container.encodeIfPresent(start, forKey: .start)
+        try container.encodeIfPresent(end, forKey: .end)
+        try container.encode(isCurrent, forKey: .isCurrent)
+        try container.encode(bullets, forKey: .bullets)
     }
 }
