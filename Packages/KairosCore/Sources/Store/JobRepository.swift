@@ -1,115 +1,126 @@
 import Foundation
+import Jobs
+import KairosKit
+import SQL
+import Screening
 
-/// Which jobs to list. A nil set matches anything; an empty set matches nothing.
-public struct JobFilter: Sendable, Equatable {
-    public var states: Set<JobState>?
-    public var verdicts: Set<Verdict>?
-    public var countries: Set<Country>?
-    /// Leaves out jobs no longer posted anywhere.
-    public var openOnly: Bool
-    public var limit: Int?
-
-    public init(
-        states: Set<JobState>? = nil, verdicts: Set<Verdict>? = nil, countries: Set<Country>? = nil,
-        openOnly: Bool = false, limit: Int? = nil
-    ) {
-        self.states = states
-        self.verdicts = verdicts
-        self.countries = countries
-        self.openOnly = openOnly
-        self.limit = limit
-    }
+/// Which jobs a list asks for.
+public enum JobScope: Sendable, Equatable {
+    /// Every job not archived.
+    case live
+    /// Jobs retention archived.
+    case archived
+    case ids([String])
 }
 
-/// Reads and writes `job` rows. Every write stamps a fresh HLC, and deleting leaves a tombstone so
-/// the deletion can sync (SPEC §6.1).
+/// Jobs, their listings and their history. A fetch writes them through `ListingLedger`.
 public struct JobRepository: Sendable {
-    public let db: Database
+    let db: Database
 
-    public init(_ db: Database) {
-        self.db = db
+    static let table = "job"
+
+    public func job(_ id: String) async throws -> Job? {
+        try await db.first("SELECT * FROM job WHERE id = ?", [.text(id)]).map(Self.job)
     }
 
-    /// Inserts each job, or replaces the stored job with the same id, in one transaction. A job's
-    /// first-seen time keeps the value first written, and a tombstoned job comes back.
-    @discardableResult
-    public func upsert(_ jobs: [Job]) async throws -> HLCTimestamp {
-        let rows = try jobs.map(Self.values)
-        return try await db.write { connection, stamp in
-            for values in rows {
-                try connection.execute(Self.upsertSQL, values + [.text(stamp.hlc.description)])
-            }
-            return stamp.hlc
-        }
-    }
-
-    @discardableResult
-    public func upsert(_ job: Job) async throws -> HLCTimestamp {
-        try await upsert([job])
-    }
-
-    /// The job with `id`, unless it was deleted.
-    public func job(_ id: JobID) async throws -> Job? {
-        let rows = try await db.query("SELECT * FROM job WHERE id = ? AND deleted = 0", [.text(id.rawValue)])
-        return try rows.first.map(Self.job)
-    }
-
-    /// Live jobs matching `filter`, best ranked first, then newest.
-    public func jobs(matching filter: JobFilter = JobFilter()) async throws -> [Job] {
-        var sql = "SELECT * FROM job WHERE deleted = 0"
-        var values: [SQLValue] = []
-        func constrain(_ column: String, to raw: [String]?) {
-            guard let raw else { return }
-            sql += " AND \(column) IN (\(Array(repeating: "?", count: raw.count).joined(separator: ", ")))"
-            values += raw.sorted().map(SQLValue.text)
-        }
-        constrain("state", to: filter.states.map { $0.map(\.rawValue) })
-        constrain("verdict", to: filter.verdicts.map { $0.map(\.rawValue) })
-        constrain("country", to: filter.countries.map { $0.map(\.rawValue) })
-        if filter.openOnly { sql += " AND closed_at IS NULL" }
-        sql += " ORDER BY rank IS NULL, rank DESC, first_seen_at DESC, id"
-        if let limit = filter.limit {
-            sql += " LIMIT ?"
-            values.append(SQLValue(limit))
-        }
-        return try await db.query(sql, values).map(Self.job)
-    }
-
-    /// Which of `ids` are already stored, tombstones included, so a fetch can skip known postings.
-    public func knownIDs(among ids: [JobID]) async throws -> Set<JobID> {
+    /// Jobs with their posting text, in no particular order.
+    public func jobs(_ ids: [String]) async throws -> [Job] {
         guard !ids.isEmpty else { return [] }
-        var known: Set<JobID> = []
-        // Batches stay well under SQLite's bound-parameter limit.
-        for start in stride(from: 0, to: ids.count, by: 500) {
-            let batch = ids[start..<min(start + 500, ids.count)]
-            let marks = Array(repeating: "?", count: batch.count).joined(separator: ", ")
-            let rows = try await db.query(
-                // A job you cleared isn't known: finding it again brings it back.
-                "SELECT id FROM job WHERE id IN (\(marks)) AND cleared = 0", batch.map { .text($0.rawValue) })
-            known.formUnion(rows.compactMap { $0.string("id") }.map(JobID.init(rawValue:)))
-        }
-        return known
+        return try await db.query("SELECT * FROM job WHERE id IN (SELECT value FROM json_each(?))", [try .json(ids)])
+            .map(Self.job)
     }
 
-    /// The source and dedup key of live jobs at these companies (the part of `dedup_key` before
-    /// the first "|"), which near-duplicate checks compare against.
-    public func dedupEntries(companies: Set<String>) async throws -> [(sourceID: UUID, dedupKey: String)] {
-        var entries: [(sourceID: UUID, dedupKey: String)] = []
-        for company in companies.sorted() {
-            // A range on the indexed key: "acme|" up to "acme}" ("}" sorts right after "|").
-            let rows = try await db.query(
-                "SELECT source_id, dedup_key FROM job WHERE deleted = 0 AND dedup_key >= ? AND dedup_key < ?",
-                [.text(company + "|"), .text(company + "}")])
-            for row in rows {
-                let r = RowReader(row: row, table: "job")
-                entries.append((try r.uuid("source_id"), try r.string("dedup_key")))
-            }
+    /// Jobs as lists show them, with their screening, latest build and application.
+    public func summaries(_ scope: JobScope = .live) async throws -> [JobSummary] {
+        var sql = Self.summarySQL
+        var values: [SQLValue] = []
+        switch scope {
+        case .live: sql += " WHERE j.archived_at IS NULL"
+        case .archived: sql += " WHERE j.archived_at IS NOT NULL"
+        case .ids(let ids):
+            guard !ids.isEmpty else { return [] }
+            sql += " WHERE j.id IN (SELECT value FROM json_each(?))"
+            values = [try .json(ids)]
         }
-        return entries
+        return try await db.query(sql, values).map(Self.summary)
     }
 
-    /// What "Delete all jobs" would delete, and what it keeps: jobs you saved, built a resume for or
-    /// applied to.
+    public func summary(_ id: String) async throws -> JobSummary? {
+        try await summaries(.ids([id])).first
+    }
+
+    /// Everything about one job: its listings with their sources, its history, its analysis and
+    /// where screening left it.
+    public func detail(_ id: String) async throws -> JobDetail? {
+        try await db.read { connection in
+            guard let row = try connection.first("SELECT * FROM job WHERE id = ?", [.text(id)]) else { return nil }
+            let listings = try connection.query(
+                """
+                SELECT l.id, l.source_id, l.url, l.first_seen_at, l.last_seen_at, l.closed_at, s.kind, s.name, s.slug
+                FROM listing l LEFT JOIN source s ON s.id = l.source_id
+                WHERE l.job_id = ? ORDER BY l.first_seen_at, l.id
+                """, [.text(id)])
+            let events = try connection.query("SELECT * FROM job_event WHERE job_id = ? ORDER BY at, id", [.text(id)])
+            let analysis = try connection.first("SELECT * FROM analysis WHERE job_id = ?", [.text(id)])
+            let screening = try connection.first("SELECT * FROM screening WHERE job_id = ?", [.text(id)])
+            return JobDetail(
+                job: try Self.job(row), listings: try listings.map(Self.listingRecord),
+                events: try events.map(Self.event),
+                analysis: try analysis.map(ScreeningRepository.analysis)?.analysis,
+                screening: try screening.flatMap(ScreeningRepository.state))
+        }
+    }
+
+    /// Saved or skipped, or neither.
+    public func setDecision(_ decision: Job.Decision?, for id: String, at now: Date = Date()) async throws {
+        try await db.execute(
+            "UPDATE job SET decision = ?, decided_at = ?, updated_at = ? WHERE id = ?",
+            [SQLValue(decision?.rawValue), decision == nil ? .null : SQLValue(now), SQLValue(now), .text(id)])
+    }
+
+    /// Canonical URLs of `source`'s open listings: a board that needs a request per job doesn't ask
+    /// for their text again.
+    public func knownURLs(of source: UUID) async throws -> Set<String> {
+        Set(
+            try await db.query(
+                "SELECT canonical_url FROM listing WHERE source_id = ? AND closed_at IS NULL", [.id(source)]
+            ).compactMap { $0.string("canonical_url") })
+    }
+
+    /// How many of `source`'s listings are open: a board with none has nothing for you lately.
+    public func openListingCount(of source: UUID) async throws -> Int {
+        try await db.first(
+            "SELECT count(*) AS n FROM listing WHERE source_id = ? AND closed_at IS NULL", [.id(source)]
+        )?.int("n") ?? 0
+    }
+
+    /// Open listings per source, for Sources.
+    public func openListingCounts() async throws -> [UUID: Int] {
+        var result: [UUID: Int] = [:]
+        for row in try await db.query(
+            "SELECT source_id, count(*) AS n FROM listing WHERE closed_at IS NULL GROUP BY source_id")
+        {
+            if let id = row.string("source_id").flatMap(UUID.init(uuidString:)) { result[id] = row.int("n") ?? 0 }
+        }
+        return result
+    }
+
+    /// The jobs a source lists now.
+    public func jobIDs(listedBy source: UUID) async throws -> [String] {
+        try await db.query(
+            "SELECT DISTINCT job_id FROM listing WHERE source_id = ? AND closed_at IS NULL", [.id(source)]
+        ).compactMap { $0.string("job_id") }
+    }
+
+    // MARK: - Clearing and retention
+
+    /// Jobs you've acted on: saved, built a resume for, or applied to. Clearing and retention keep them.
+    static let engaged = """
+        (coalesce(decision, '') = 'saved' OR id IN (SELECT job_id FROM build)
+            OR id IN (SELECT job_id FROM application))
+        """
+
+    /// What "Clear jobs" would delete, and what it keeps.
     public struct Clearing: Sendable, Equatable {
         public var deleted = 0
         public var saved = 0
@@ -124,207 +135,183 @@ public struct JobRepository: Sendable {
         }
     }
 
-    /// Jobs you've engaged with, which "Delete all jobs" keeps.
-    private static let engaged = """
-        (state IN ('shortlisted', 'applied')
-            OR id IN (SELECT job_id FROM build WHERE deleted = 0)
-            OR id IN (SELECT job_id FROM application WHERE deleted = 0))
-        """
-
-    /// What `clearAll()` would do now, for its confirmation.
     public func clearingPreview() async throws -> Clearing {
-        let rows = try await db.query(
+        let row = try await db.first(
             """
             SELECT
-              (SELECT COUNT(*) FROM job WHERE deleted = 0 AND NOT \(Self.engaged)) AS deleted,
-              (SELECT COUNT(*) FROM job WHERE deleted = 0 AND state = 'shortlisted') AS saved,
-              (SELECT COUNT(*) FROM job WHERE deleted = 0 AND state != 'applied'
-                  AND id IN (SELECT job_id FROM build WHERE deleted = 0)) AS built,
-              (SELECT COUNT(*) FROM job WHERE deleted = 0 AND (state = 'applied'
-                  OR id IN (SELECT job_id FROM application WHERE deleted = 0))) AS applied
+              (SELECT count(*) FROM job WHERE NOT \(Self.engaged)) AS deleted,
+              (SELECT count(*) FROM job WHERE decision = 'saved') AS saved,
+              (SELECT count(*) FROM job WHERE id IN (SELECT job_id FROM build)
+                  AND id NOT IN (SELECT job_id FROM application)) AS built,
+              (SELECT count(*) FROM application) AS applied
             """)
-        let row = rows.first
         return Clearing(
             deleted: row?.int("deleted") ?? 0, saved: row?.int("saved") ?? 0, built: row?.int("built") ?? 0,
             applied: row?.int("applied") ?? 0)
     }
 
-    /// "Delete all jobs": every job you haven't saved, built for or applied to becomes a cleared
-    /// tombstone, with its analysis and screening trail. Cleared jobs aren't known, so the next
-    /// fetch brings back the ones still posted, screened afresh. Returns how many were deleted.
+    /// "Clear jobs": deletes every job you haven't acted on, with its listings, history, analysis
+    /// and screening. They aren't known any more, so the next fetch brings back the ones still
+    /// posted, screened afresh. Returns how many were deleted.
     @discardableResult
-    public func clearAll() async throws -> Int {
-        try await db.write { connection, stamp in
-            let hlc = SQLValue.text(stamp.hlc.description)
-            let going = "SELECT id FROM job WHERE deleted = 0 AND NOT \(Self.engaged)"
-            for table in ["job_analysis", "screening", "listing", "job_event"] {
-                try connection.execute(
-                    "UPDATE \(table) SET deleted = 1, updated_hlc = ? WHERE deleted = 0 AND job_id IN (\(going))", [hlc]
-                )
+    public func clear() async throws -> Int {
+        try await db.transaction { connection in
+            try connection.execute("DELETE FROM job WHERE NOT \(Self.engaged)")
+            let deleted = connection.changes
+            // A board answering "unchanged" would never send the deleted jobs again.
+            try connection.execute("UPDATE source SET etag = NULL")
+            return deleted
+        }
+    }
+
+    /// What retention did.
+    public struct Retained: Sendable, Equatable {
+        public var archived = 0
+        public var slimmed = 0
+
+        public init(archived: Int = 0, slimmed: Int = 0) {
+            self.archived = archived
+            self.slimmed = slimmed
+        }
+    }
+
+    /// Jobs you never acted on leave on their own: archived `archiveAfterDays` after Kairos first
+    /// saw them, and slimmed at `slimAfterDays` (their text, analysis, screening and history go).
+    /// The row and its listings stay, so a posting still up isn't added back as new.
+    @discardableResult
+    public func applyRetention(archiveAfterDays: Int = 60, slimAfterDays: Int = 120, at now: Date = Date()) async throws
+        -> Retained
+    {
+        let archiveBefore = SQLValue(now.addingTimeInterval(-.days(Double(archiveAfterDays))))
+        let slimBefore = SQLValue(now.addingTimeInterval(-.days(Double(slimAfterDays))))
+        let time = SQLValue(now)
+        return try await db.transaction { connection in
+            try connection.execute(
+                "UPDATE job SET archived_at = ?, updated_at = ? WHERE archived_at IS NULL AND first_seen_at < ? AND NOT \(Self.engaged)",
+                [time, time, archiveBefore])
+            let archived = connection.changes
+            let going = "SELECT id FROM job WHERE archived_at IS NOT NULL AND description != '' AND first_seen_at < ?"
+            for table in ["analysis", "screening", "job_event"] {
+                try connection.execute("DELETE FROM \(table) WHERE job_id IN (\(going))", [slimBefore])
             }
             try connection.execute(
-                "UPDATE job SET deleted = 1, cleared = 1, description = NULL, updated_hlc = ? WHERE id IN (\(going))",
-                [hlc])
-            let cleared = connection.changes
-            // Boards that answer "unchanged" would never send the cleared jobs again.
-            try connection.execute("DELETE FROM source_fetch_state")
-            return cleared
+                "UPDATE job SET description = '', updated_at = ? WHERE id IN (\(going))", [time, slimBefore])
+            return Retained(archived: archived, slimmed: connection.changes)
         }
     }
 
-    /// Marks the job deleted. The row stays as a tombstone, without its description, which a
-    /// deleted job no longer needs.
-    @discardableResult
-    public func tombstone(_ id: JobID) async throws -> HLCTimestamp {
-        try await db.write { connection, stamp in
-            try connection.execute(
-                "UPDATE job SET deleted = 1, description = NULL, updated_hlc = ? WHERE id = ?",
-                [.text(stamp.hlc.description), .text(id.rawValue)])
-            try connection.execute(
-                "UPDATE listing SET deleted = 1, description = NULL, updated_hlc = ? WHERE job_id = ?",
-                [.text(stamp.hlc.description), .text(id.rawValue)])
-            return stamp.hlc
-        }
+    /// Back in the lists: you opened an archived job and kept it.
+    public func unarchive(_ id: String, at now: Date = Date()) async throws {
+        try await db.execute(
+            "UPDATE job SET archived_at = NULL, updated_at = ? WHERE id = ?", [SQLValue(now), .text(id)])
     }
 
-    /// Sets a screening verdict and rank, unless you've overruled the verdict yourself (SPEC user
-    /// story 4). Only those three columns change, so an edit made meanwhile isn't lost. Returns
-    /// whether the job changed.
-    @discardableResult
-    public func setVerdict(_ verdict: Verdict, source: VerdictSource, rank: Double, for id: JobID) async throws -> Bool
-    {
-        try await db.write { connection, stamp in
-            try connection.execute(
-                """
-                UPDATE job SET verdict = ?, verdict_source = ?, rank = ?, updated_hlc = ?
-                WHERE id = ? AND deleted = 0 AND (verdict_source IS NULL OR verdict_source != 'user')
-                """,
-                [
-                    .text(verdict.rawValue), .text(source.rawValue), .real(rank), .text(stamp.hlc.description),
-                    .text(id.rawValue),
-                ])
-            return connection.changes > 0
+    // MARK: - Rows
+
+    static let summarySQL = """
+        SELECT j.id, j.company, j.title, j.location, j.city, j.region, j.country, j.remote_scope, j.salary, j.posted_at,
+            j.first_seen_at, j.closed_at, j.decision, j.source_kind, j.via,
+            s.stage, s.verdict, s.rule, s.reasons, s.coverage, s.match, s.rank, s.your_verdict, s.brought_back,
+            s.screened_at,
+            b.id AS build_id, b.status AS build_status, b.score AS build_score,
+            a.id AS application_id, a.status AS application_status
+        FROM job j
+        LEFT JOIN screening s ON s.job_id = j.id
+        LEFT JOIN build b ON b.id = (SELECT id FROM build WHERE job_id = j.id ORDER BY created_at DESC, id DESC LIMIT 1)
+        LEFT JOIN application a ON a.job_id = j.id
+        """
+
+    static func summary(_ row: Row) throws(SQLError) -> JobSummary {
+        let id = try row.required("id", table: table)
+        let company = row.string("company") ?? ""
+        let title = row.string("title") ?? ""
+        let country = row.optionalValue("country", as: Country.self)
+        let remoteScope = row.optionalValue("remote_scope", as: RemoteScope.self) ?? .unknown
+        let firstSeenAt = try row.requiredDate("first_seen_at", table: table)
+        // The row's place line is the job's, worked out the same way.
+        let place = Job(
+            id: id, company: company, title: title, location: row.string("location") ?? "", city: row.string("city"),
+            region: row.string("region"), country: country, remoteScope: remoteScope, url: "", firstSeenAt: firstSeenAt
+        ).placeLine
+        var build: JobSummary.BuildBrief?
+        if let buildID = row.string("build_id").flatMap(UUID.init(uuidString:)),
+            let status = row.optionalValue("build_status", as: BuildRecord.Status.self)
+        {
+            build = JobSummary.BuildBrief(id: buildID, status: status, score: row.double("build_score"))
         }
+        var application: JobSummary.ApplicationBrief?
+        if let applicationID = row.string("application_id").flatMap(UUID.init(uuidString:)),
+            let status = row.optionalValue("application_status", as: Application.Status.self)
+        {
+            application = JobSummary.ApplicationBrief(id: applicationID, status: status)
+        }
+        return JobSummary(
+            id: id, company: company, title: title, placeLine: place, country: country, remoteScope: remoteScope,
+            salary: try row.json("salary", as: Salary.self, table: table), postedAt: row.date("posted_at"),
+            firstSeenAt: firstSeenAt, closedAt: row.date("closed_at"),
+            decision: row.optionalValue("decision", as: Job.Decision.self),
+            sourceKind: row.optionalValue("source_kind", as: SourceKind.self), via: row.string("via"),
+            screening: try ScreeningRepository.state(row), build: build, application: application)
     }
 
-    /// Your verdict: it wins over screening's from now on (SPEC user story 4).
-    public func setUserVerdict(_ verdict: Verdict, rank: Double, for id: JobID) async throws {
-        try await db.write { connection, stamp in
-            try connection.execute(
-                "UPDATE job SET verdict = ?, verdict_source = 'user', rank = ?, updated_hlc = ? WHERE id = ? AND deleted = 0",
-                [.text(verdict.rawValue), .real(rank), .text(stamp.hlc.description), .text(id.rawValue)])
-        }
+    static func job(_ row: Row) throws(SQLError) -> Job {
+        Job(
+            id: try row.required("id", table: table), company: row.string("company") ?? "",
+            title: row.string("title") ?? "", location: row.string("location") ?? "", city: row.string("city"),
+            region: row.string("region"), country: row.optionalValue("country", as: Country.self),
+            remoteScope: row.optionalValue("remote_scope", as: RemoteScope.self) ?? .unknown,
+            postedAt: row.date("posted_at"), description: row.string("description") ?? "",
+            salary: try row.json("salary", as: Salary.self, table: table), url: row.string("url") ?? "",
+            applyURL: row.string("apply_url"), via: row.string("via"),
+            sourceKind: row.optionalValue("source_kind", as: SourceKind.self),
+            primaryListingID: row.string("primary_listing_id"), dedupKey: row.string("dedup_key"),
+            firstSeenAt: try row.requiredDate("first_seen_at", table: table), lastSeenAt: row.date("last_seen_at"),
+            closedAt: row.date("closed_at"), decision: row.optionalValue("decision", as: Job.Decision.self),
+            decidedAt: row.date("decided_at"), archivedAt: row.date("archived_at"))
     }
 
-    /// Where you are with a job, such as "skipped" for "Not for me". The verdict stays.
-    public func setState(_ state: JobState, for id: JobID) async throws {
-        try await db.write { connection, stamp in
-            try connection.execute(
-                "UPDATE job SET state = ?, updated_hlc = ? WHERE id = ? AND deleted = 0",
-                [.text(state.rawValue), .text(stamp.hlc.description), .text(id.rawValue)])
-        }
+    static func listingRecord(_ row: Row) throws(SQLError) -> JobDetail.ListingRecord {
+        let kind = row.optionalValue("kind", as: SourceKind.self)
+        let name =
+            row.string("name").flatMap { $0.isEmpty ? nil : $0 } ?? row.string("slug").flatMap { $0.isEmpty ? nil : $0 }
+        return JobDetail.ListingRecord(
+            id: try row.required("id", table: "listing"), sourceID: try row.uuid("source_id", table: "listing"),
+            sourceKind: kind,
+            sourceName: (kind?.isBoard == false ? kind?.displayName : name) ?? kind?.displayName ?? "",
+            url: row.string("url") ?? "", firstSeenAt: try row.requiredDate("first_seen_at", table: "listing"),
+            lastSeenAt: try row.requiredDate("last_seen_at", table: "listing"), closedAt: row.date("closed_at"))
     }
 
-    /// Forgets screening's verdicts on new jobs, so the next screening run decides them again, after
-    /// you change your preferences. Your own verdicts and jobs you've acted on keep theirs. Returns
-    /// how many jobs were cleared.
-    @discardableResult
-    public func clearScreening() async throws -> Int {
-        try await db.write { connection, stamp in
-            try connection.execute(
-                """
-                UPDATE job SET verdict = NULL, verdict_source = NULL, rank = NULL, updated_hlc = ?
-                WHERE deleted = 0 AND state = 'new' AND verdict_source IN ('prefilter', 'analysis')
-                """, [.text(stamp.hlc.description)])
-            return connection.changes
-        }
-    }
-
-    /// Clears the prefilter's verdict on one job (for "Bring back"), so it can be judged again.
-    /// Returns whether it changed: a verdict from anything but the prefilter stays.
-    @discardableResult
-    public func clearPrefilterVerdict(for id: JobID) async throws -> Bool {
-        try await db.write { connection, stamp in
-            try connection.execute(
-                """
-                UPDATE job SET verdict = NULL, verdict_source = NULL, rank = NULL, updated_hlc = ?
-                WHERE id = ? AND deleted = 0 AND verdict_source = 'prefilter'
-                """, [.text(stamp.hlc.description), .text(id.rawValue)])
-            return connection.changes > 0
-        }
+    static func event(_ row: Row) throws(SQLError) -> JobEvent {
+        JobEvent(
+            kind: try row.value("kind", as: JobEvent.Kind.self, table: "job_event"),
+            at: try row.requiredDate("at", table: "job_event"),
+            sourceKind: row.optionalValue("source_kind", as: SourceKind.self), detail: row.string("detail"))
     }
 
     // MARK: - Inside a transaction
 
-    /// Inserts or replaces `job` (a tombstone comes back), stamped with `hlc`: for writers that
-    /// change several tables in one transaction, such as a fetch's ledger.
-    public static func upsert(_ job: Job, hlc: HLCTimestamp, in connection: Connection) throws {
-        try connection.execute(upsertSQL, try values(job) + [.text(hlc.description)])
-    }
-
-    /// The job with `id`, tombstones included, and whether it's a cleared one.
-    public static func job(_ id: JobID, in connection: Connection) throws -> (job: Job, deleted: Bool, cleared: Bool)? {
-        guard let row = try connection.query("SELECT * FROM job WHERE id = ?", [.text(id.rawValue)]).first else {
-            return nil
-        }
-        return (try job(row), row.bool("deleted") ?? false, row.bool("cleared") ?? false)
-    }
-
-    // MARK: - Row mapping
-
-    private static let columns = [
-        "id", "source_id", "url", "canonical_url", "dedup_key", "company", "title", "location", "city", "region",
-        "country", "remote_scope", "currency", "salary", "posted_at", "description", "state", "verdict",
-        "verdict_source", "rank", "first_seen_at", "last_seen_at", "closed_at", "description_kind",
-        "primary_listing_id", "apply_url", "via", "updated_hlc",
-    ]
-
-    private static let upsertSQL: String = {
-        let updates = columns.filter { $0 != "id" && $0 != "first_seen_at" }.map { "\($0) = excluded.\($0)" }
-        return """
-            INSERT INTO job (\(columns.joined(separator: ", ")), deleted)
-            VALUES (\(Array(repeating: "?", count: columns.count).joined(separator: ", ")), 0)
-            ON CONFLICT (id) DO UPDATE SET \(updates.joined(separator: ", ")), deleted = 0, cleared = 0
+    static func insert(_ job: Job, at now: Date, in connection: Connection) throws {
+        try connection.execute(
             """
-    }()
-
-    /// Every column but `updated_hlc`, which comes from the write's stamp.
-    private static func values(_ job: Job) throws(StoreError) -> [SQLValue] {
-        [
-            .text(job.id.rawValue), .text(job.sourceID.lowercased), .text(job.url), .text(job.canonicalURL),
-            .text(job.dedupKey), .text(job.company), .text(job.title), .text(job.location), SQLValue(job.city),
-            SQLValue(job.region), SQLValue(job.country), SQLValue(job.remoteScope), SQLValue(job.currency),
-            try SQLValue(json: job.salary), SQLValue(job.postedAt), SQLValue(job.descriptionMarkdown),
-            SQLValue(job.state), SQLValue(job.verdict), SQLValue(job.verdictSource), SQLValue(job.rank),
-            SQLValue(job.firstSeenAt), SQLValue(job.lastSeenAt), SQLValue(job.closedAt), SQLValue(job.descriptionKind),
-            SQLValue(job.primaryListingID?.rawValue), SQLValue(job.applyURL), SQLValue(job.via),
-        ]
+            INSERT INTO job (id, company, title, location, city, region, country, remote_scope, salary, posted_at,
+                description, url, apply_url, via, source_kind, primary_listing_id, dedup_key, first_seen_at, last_seen_at,
+                closed_at, decision, decided_at, archived_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                .text(job.id), .text(job.company), .text(job.title), .text(job.location), SQLValue(job.city),
+                SQLValue(job.region), SQLValue(job.country?.rawValue), .text(job.remoteScope.rawValue),
+                try .json(job.salary),
+                SQLValue(job.postedAt), .text(job.description), .text(job.url), SQLValue(job.applyURL),
+                SQLValue(job.via),
+                SQLValue(job.sourceKind?.rawValue), .text(job.primaryListingID), .text(job.dedupKey),
+                SQLValue(job.firstSeenAt), SQLValue(job.lastSeenAt), SQLValue(job.closedAt),
+                SQLValue(job.decision?.rawValue), SQLValue(job.decidedAt), SQLValue(job.archivedAt), SQLValue(now),
+            ])
     }
 
-    private static func job(_ row: Row) throws(StoreError) -> Job {
-        let r = RowReader(row: row, table: "job")
-        let canonicalURL = try r.string("canonical_url")
-        var job = Job(
-            canonicalURL: canonicalURL, sourceID: try r.uuid("source_id"), url: try r.string("url"),
-            dedupKey: try r.string("dedup_key"), company: try r.string("company"), title: try r.string("title"),
-            location: try r.string("location"), city: row.string("city"), region: row.string("region"),
-            country: try r.optionalValue("country", as: Country.self),
-            remoteScope: try r.value("remote_scope", as: RemoteScope.self), currency: row.string("currency"),
-            salary: try r.json("salary", as: Salary.self), postedAt: r.optionalDate("posted_at"),
-            descriptionMarkdown: row.string("description"), state: try r.value("state", as: JobState.self),
-            verdict: try r.optionalValue("verdict", as: Verdict.self),
-            verdictSource: try r.optionalValue("verdict_source", as: VerdictSource.self), rank: row.double("rank"),
-            firstSeenAt: try r.date("first_seen_at"), lastSeenAt: r.optionalDate("last_seen_at"),
-            closedAt: r.optionalDate("closed_at"),
-            descriptionKind: try r.value("description_kind", as: DescriptionKind.self),
-            primaryListingID: row.string("primary_listing_id").map(JobID.init(rawValue:)))
-        // The stored id must still be the hash of the stored URL; anything else is a damaged row.
-        guard job.id.rawValue == row.string("id") else {
-            throw .corruptRow(table: "job", id: job.id.rawValue, column: "id")
-        }
-        job.applyURL = row.string("apply_url")
-        job.via = row.string("via")
-        job.updatedHLC = try r.hlc("updated_hlc")
-        return job
+    static func job(_ id: String, in connection: Connection) throws -> Job? {
+        try connection.first("SELECT * FROM job WHERE id = ?", [.text(id)]).map(job)
     }
 }

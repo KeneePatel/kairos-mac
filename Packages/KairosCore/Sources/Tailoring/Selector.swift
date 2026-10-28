@@ -1,28 +1,5 @@
 import Foundation
-import MasterResume
-
-/// What a posting asks for, as tailoring reads it: requirement texts, must-haves first. The
-/// pipeline fills it from screening's analysis (tailoring doesn't depend on screening, SPEC §4).
-public struct JobRequirements: Sendable, Equatable {
-    public var musts: [String]
-    public var nices: [String]
-    public var domains: [String]
-    /// The posting asks about spoken languages, so the resume shows yours.
-    public var asksForLanguages: Bool
-    /// What the posting says about certifications, if anything: the resume shows yours that match.
-    public var certificationAsks: [String]
-
-    public init(
-        musts: [String], nices: [String] = [], domains: [String] = [], asksForLanguages: Bool = false,
-        certificationAsks: [String] = []
-    ) {
-        self.musts = musts
-        self.nices = nices
-        self.domains = domains
-        self.asksForLanguages = asksForLanguages
-        self.certificationAsks = certificationAsks
-    }
-}
+import Resume
 
 public struct RankedBullet: Sendable, Equatable {
     public let bullet: ResumeBullet
@@ -37,7 +14,7 @@ public struct SelectedEntry: Sendable, Equatable {
     public let score: Double
 }
 
-/// The master-resume entries a build may use (SPEC §5.3, Select): roles most recent first with
+/// The master-resume entries a build may use: roles most recent first with
 /// their best bullets, the most relevant projects, and your Proven skills, matching ones first.
 public struct Selection: Sendable, Equatable {
     public let experience: [SelectedEntry]
@@ -47,7 +24,7 @@ public struct Selection: Sendable, Equatable {
 
 /// Scores every bullet and project by overlap with the requirements (technologies through
 /// `Synonyms.json`, then plain keywords at half weight), with a small bonus for numbers and a
-/// recency factor between roles. Code decides; the `select` task only breaks ties (T35).
+/// recency factor between roles. Code decides.
 public struct Selector: Sendable {
     /// Bullets kept per role, most recent role first; the last count repeats. Generous by default:
     /// the writers get more than fits, and the page fitter keeps what earns its lines.

@@ -1,180 +1,157 @@
 import Foundation
+import Jobs
+import KairosKit
+import SQL
 
-/// Where jobs come from (SPEC §5.4): company ATS boards, the Adzuna aggregator, or a page runner.
-public enum SourceKind: String, Sendable, CaseIterable {
-    case greenhouse, lever, ashby, adzuna
-    case smartRecruiters = "smartrecruiters"
-    case workable, recruitee, personio
-    case bambooHR = "bamboohr"
-    case teamtailor
-    /// Remote jobs, searched (job collection v2, J7).
-    case himalayas
-    case linkedIn = "linkedin"
-    case indeedCanada = "indeed_ca"
-    case indeedUS = "indeed_us"
-    case glassdoor
-    case googleJobs = "google_jobs"
-    case wellfound
-    case jobBank = "job_bank"
-
-    /// Searches across companies (Adzuna, the page runners) rather than one company's own board.
-    /// Boards run first in a fetch, so their full postings win over a search's copy.
-    public var isSearch: Bool { !Self.boards.contains(self) }
-
-    /// Companies' own public job boards (SPEC §5.4, tier A; job collection v2, J2).
-    public static let boards: Set<SourceKind> = [
-        .greenhouse, .lever, .ashby, .smartRecruiters, .workable, .recruitee, .personio, .bambooHR, .teamtailor,
-    ]
-
-    /// Its descriptions are snippets, not the whole posting (Adzuna's API sends 500 characters).
-    public var sendsSnippets: Bool { self == .adzuna }
-}
-
-public enum SourceHealth: String, Sendable, CaseIterable {
-    case ok, degraded
-    /// The board answered "not found" fetch after fetch: the company left that ATS or closed its
-    /// board. It isn't fetched again until you resume it.
-    case gone
-}
-
-/// One configured source (SPEC §6.2, `source`).
-public struct Source: Sendable, Equatable, Identifiable {
-    /// Runs in a row with no results before a source is marked degraded (SPEC §5.4).
-    public static let degradedAfterEmptyRuns = 3
-
-    public let id: UUID
-    public var kind: SourceKind
-    /// A JSON object; each source kind reads its own settings from it, such as a Greenhouse board token.
-    public var config: String
-    public var enabled: Bool
-    public var lastRunAt: Date?
-    public var health: SourceHealth
-    public var emptyRuns: Int
-    /// Set by the repository on every write.
-    public internal(set) var updatedHLC: HLCTimestamp?
-
-    public init(
-        id: UUID, kind: SourceKind, config: String = "{}", enabled: Bool = true, lastRunAt: Date? = nil,
-        health: SourceHealth = .ok, emptyRuns: Int = 0
-    ) {
-        self.id = id
-        self.kind = kind
-        self.config = config
-        self.enabled = enabled
-        self.lastRunAt = lastRunAt
-        self.health = health
-        self.emptyRuns = emptyRuns
-    }
-}
-
-/// Reads and writes `source` rows, stamping a fresh HLC on every write.
+/// Company boards and searches.
 public struct SourceRepository: Sendable {
-    public let db: Database
+    let db: Database
 
-    public init(_ db: Database) {
-        self.db = db
+    static let table = "source"
+
+    public func all() async throws -> [Source] {
+        try await db.query("SELECT * FROM source ORDER BY kind, name COLLATE NOCASE, slug").map(Self.source)
     }
 
-    /// Creates a source with a new UUIDv7 id.
-    public func add(kind: SourceKind, config: String = "{}", enabled: Bool = true) async throws -> Source {
-        var source = Source(id: await db.newID(), kind: kind, config: config, enabled: enabled)
-        source.updatedHLC = try await save(source)
-        return source
-    }
-
-    /// Inserts the source, or replaces the stored one with the same id. A tombstoned source comes back.
-    @discardableResult
-    public func save(_ source: Source) async throws -> HLCTimestamp {
-        let values: [SQLValue] = [
-            .text(source.id.lowercased), SQLValue(source.kind), .text(source.config), SQLValue(source.enabled),
-            SQLValue(source.lastRunAt), SQLValue(source.health), SQLValue(source.emptyRuns),
-        ]
-        return try await db.write { connection, stamp in
-            try connection.execute(
-                """
-                INSERT INTO source (id, kind, config, enabled, last_run_at, health, empty_runs, updated_hlc, deleted)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-                ON CONFLICT (id) DO UPDATE SET kind = excluded.kind, config = excluded.config,
-                    enabled = excluded.enabled, last_run_at = excluded.last_run_at, health = excluded.health,
-                    empty_runs = excluded.empty_runs, updated_hlc = excluded.updated_hlc, deleted = 0
-                """, values + [.text(stamp.hlc.description)])
-            return stamp.hlc
-        }
-    }
-
-    /// The source with `id`, unless it was deleted.
     public func source(_ id: UUID) async throws -> Source? {
-        let rows = try await db.query("SELECT * FROM source WHERE id = ? AND deleted = 0", [.text(id.lowercased)])
-        return try rows.first.map(Self.source)
+        try await db.first("SELECT * FROM source WHERE id = ?", [.id(id)]).map(Self.source)
     }
 
-    /// Live sources in the order they were added.
-    public func sources(enabledOnly: Bool = false) async throws -> [Source] {
-        let sql = "SELECT * FROM source WHERE deleted = 0" + (enabledOnly ? " AND enabled = 1" : "") + " ORDER BY id"
-        return try await db.query(sql).map(Self.source)
+    /// The board, whatever its status (a removed one too), or nil.
+    public func board(kind: SourceKind, slug: String) async throws -> Source? {
+        try await db.first(
+            "SELECT * FROM source WHERE kind = ? AND slug = ?", [.text(kind.rawValue), .text(Self.slug(slug, kind))]
+        )
+        .map(Self.source)
     }
 
-    /// Every source ever added, removed ones too: so a catalog board you removed isn't added back.
-    public func everySource() async throws -> [Source] {
-        try await db.query("SELECT * FROM source ORDER BY id").map(Self.source)
+    /// The source for a search, made on first use.
+    public func search(_ kind: SourceKind, at now: Date = Date()) async throws -> Source {
+        if let existing = try await db.first(
+            "SELECT * FROM source WHERE kind = ? AND slug = ''", [.text(kind.rawValue)])
+        {
+            return try Self.source(existing)
+        }
+        let source = Source(kind: kind, name: kind.displayName, origin: .search, addedAt: now)
+        try await insert(source)
+        return source
     }
 
-    /// Adds many sources in one transaction (the catalog's boards), each with a new UUIDv7 id.
+    /// Adds `board` unless it's there already (whatever its status, so a removed board stays
+    /// removed). Returns the new source, or nil when it was known.
     @discardableResult
-    public func add(_ boards: [(kind: SourceKind, config: String)]) async throws -> Int {
-        var made: [UUID] = []
-        for _ in boards { made.append(await db.newID()) }
-        let ids = made
-        return try await db.write { connection, stamp in
-            for (board, id) in zip(boards, ids) {
-                try connection.execute(
-                    "INSERT INTO source (id, kind, config, enabled, health, empty_runs, updated_hlc) VALUES (?, ?, ?, 1, 'ok', 0, ?)",
-                    [.text(id.lowercased), SQLValue(board.kind), .text(board.config), .text(stamp.hlc.description)])
+    public func add(_ board: Board, origin: Source.Origin, at now: Date = Date()) async throws -> Source? {
+        guard try await self.board(kind: board.kind, slug: board.slug) == nil else { return nil }
+        let source = Source(
+            kind: board.kind, slug: Self.slug(board.slug, board.kind), name: board.name, region: board.region,
+            origin: origin,
+            addedAt: now)
+        try await insert(source)
+        return source
+    }
+
+    /// Adds every board not yet known, in one transaction. Returns how many were added.
+    @discardableResult
+    public func add(_ boards: [Board], origin: Source.Origin, at now: Date = Date()) async throws -> Int {
+        let sources = boards.map {
+            Source(
+                kind: $0.kind, slug: Self.slug($0.slug, $0.kind), name: $0.name, region: $0.region, origin: origin,
+                addedAt: now)
+        }
+        return try await db.transaction { connection in
+            var added = 0
+            for source in sources {
+                try connection.execute(Self.insertSQL + " ON CONFLICT (kind, slug) DO NOTHING", Self.values(source))
+                added += connection.changes
             }
-            return boards.count
+            return added
         }
     }
 
-    /// Marks a board gone: it isn't fetched again until you resume it.
-    public func markGone(_ id: UUID) async throws {
-        guard var source = try await source(id) else { return }
-        source.health = .gone
-        try await save(source)
-    }
-
-    /// Records a finished run: when it ran, and whether it found anything. A source is degraded
-    /// after `Source.degradedAfterEmptyRuns` empty runs in a row, and healthy again after any result.
-    /// Returns nil if the source no longer exists.
-    @discardableResult
-    public func recordRun(of id: UUID, found count: Int, at date: Date) async throws -> Source? {
-        guard var source = try await source(id) else { return nil }
-        source.lastRunAt = date
-        source.emptyRuns = count > 0 ? 0 : source.emptyRuns + 1
-        if source.health != .gone {
-            source.health = source.emptyRuns >= Source.degradedAfterEmptyRuns ? .degraded : .ok
+    /// You added it: it's watched again even if you'd removed it, and keeps the name you gave.
+    public func addByYou(_ board: Board, at now: Date = Date()) async throws -> Source {
+        if var existing = try await self.board(kind: board.kind, slug: board.slug) {
+            existing.status = .watching
+            existing.origin = .you
+            if !board.name.isEmpty { existing.name = board.name }
+            existing.missingStreak = 0
+            existing.restUntil = nil
+            try await save(existing)
+            return existing
         }
-        source.updatedHLC = try await save(source)
+        let source = Source(
+            kind: board.kind, slug: Self.slug(board.slug, board.kind), name: board.name, region: board.region,
+            origin: .you,
+            addedAt: now)
+        try await insert(source)
         return source
     }
 
-    /// Marks the source deleted, leaving a tombstone that can sync.
-    @discardableResult
-    public func tombstone(_ id: UUID) async throws -> HLCTimestamp {
-        try await db.write { connection, stamp in
-            try connection.execute(
-                "UPDATE source SET deleted = 1, updated_hlc = ? WHERE id = ?",
-                [.text(stamp.hlc.description), .text(id.lowercased)])
-            return stamp.hlc
-        }
+    public func save(_ source: Source) async throws {
+        try await db.execute(
+            """
+            UPDATE source SET name = ?, region = ?, origin = ?, status = ?, checked_at = ?, ok_at = ?, etag = ?,
+                fail_streak = ?, missing_streak = ?, quiet_streak = ?, rest_until = ?, last_error = ?
+            WHERE id = ?
+            """,
+            [
+                .text(source.name), SQLValue(source.region), .text(source.origin.rawValue),
+                .text(source.status.rawValue),
+                SQLValue(source.checkedAt), SQLValue(source.okAt), SQLValue(source.etag), SQLValue(source.failStreak),
+                SQLValue(source.missingStreak), SQLValue(source.quietStreak), SQLValue(source.restUntil),
+                SQLValue(source.lastError), .id(source.id),
+            ])
     }
 
-    private static func source(_ row: Row) throws(StoreError) -> Source {
-        let r = RowReader(row: row, table: "source")
-        var source = Source(
-            id: try r.uuid("id"), kind: try r.value("kind", as: SourceKind.self), config: try r.string("config"),
-            enabled: try r.bool("enabled"), lastRunAt: r.optionalDate("last_run_at"),
-            health: try r.value("health", as: SourceHealth.self), emptyRuns: try r.int("empty_runs"))
-        source.updatedHLC = try r.hlc("updated_hlc")
-        return source
+    public func setStatus(_ status: Source.Status, for id: UUID) async throws {
+        let resume = status == .watching
+        try await db.execute(
+            "UPDATE source SET status = ?, missing_streak = CASE WHEN ? THEN 0 ELSE missing_streak END, rest_until = CASE WHEN ? THEN NULL ELSE rest_until END WHERE id = ?",
+            [.text(status.rawValue), SQLValue(resume), SQLValue(resume), .id(id)])
+    }
+
+    /// Every board answers in full on its next read: after a change to what a fetch keeps.
+    public func forgetETags() async throws {
+        try await db.execute("UPDATE source SET etag = NULL")
+    }
+
+    private func insert(_ source: Source) async throws {
+        try await db.execute(Self.insertSQL, Self.values(source))
+    }
+
+    static let insertSQL = """
+        INSERT INTO source (id, kind, slug, name, region, origin, status, added_at, checked_at, ok_at, etag, fail_streak,
+            missing_streak, quiet_streak, rest_until, last_error)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+    static func values(_ source: Source) -> [SQLValue] {
+        [
+            .id(source.id), .text(source.kind.rawValue), .text(source.slug), .text(source.name),
+            SQLValue(source.region),
+            .text(source.origin.rawValue), .text(source.status.rawValue), SQLValue(source.addedAt),
+            SQLValue(source.checkedAt),
+            SQLValue(source.okAt), SQLValue(source.etag), SQLValue(source.failStreak), SQLValue(source.missingStreak),
+            SQLValue(source.quietStreak), SQLValue(source.restUntil), SQLValue(source.lastError),
+        ]
+    }
+
+    /// The same board whatever the case of its slug; SmartRecruiters ids keep theirs.
+    static func slug(_ slug: String, _ kind: SourceKind) -> String {
+        kind == .smartRecruiters ? slug : slug.lowercased()
+    }
+
+    static func source(_ row: Row) throws(SQLError) -> Source {
+        Source(
+            id: try row.uuid("id", table: table), kind: try row.value("kind", as: SourceKind.self, table: table),
+            slug: row.string("slug") ?? "", name: row.string("name") ?? "", region: row.string("region"),
+            origin: try row.value("origin", as: Source.Origin.self, table: table),
+            status: try row.value("status", as: Source.Status.self, table: table),
+            addedAt: try row.requiredDate("added_at", table: table), checkedAt: row.date("checked_at"),
+            okAt: row.date("ok_at"),
+            etag: row.string("etag"), failStreak: row.int("fail_streak") ?? 0,
+            missingStreak: row.int("missing_streak") ?? 0,
+            quietStreak: row.int("quiet_streak") ?? 0, restUntil: row.date("rest_until"),
+            lastError: row.string("last_error"))
     }
 }

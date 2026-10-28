@@ -1,6 +1,6 @@
 import Foundation
 
-/// Prepares a posting for `analyzeJob` (SPEC §5.5, "Posting cleanup before sending"): boilerplate
+/// Prepares a posting for `analyzeJob`: boilerplate
 /// sections and paragraphs go (equal-opportunity statements, benefits), and a posting still over
 /// the limit keeps its requirements first, then its responsibilities, then the rest.
 public enum PostingCleaner {

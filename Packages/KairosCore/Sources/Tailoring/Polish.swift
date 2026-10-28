@@ -1,26 +1,6 @@
 import Foundation
-import Store
 
-/// Canadian spelling for Canadian jobs, US spelling for US jobs (SPEC §5.9).
-public enum SpellingLocale: String, Sendable, Codable, CaseIterable {
-    case canada = "en-CA"
-    case unitedStates = "en-US"
-
-    /// Canadian unless the job is in the US.
-    public init(country: Country?) {
-        self = country == .unitedStates ? .unitedStates : .canada
-    }
-
-    /// The line writers' instructions end with.
-    var instruction: String {
-        switch self {
-        case .canada: "Spelling: Canadian spelling (colour, centre, travelled, modelling; -ize as in optimize)."
-        case .unitedStates: "Spelling: American spelling (color, center, traveled, modeling)."
-        }
-    }
-}
-
-/// The last pass over written text (SPEC §5.3, Polish), in code: AI-sounding phrases swapped,
+/// The last pass over written text, in code: AI-sounding phrases swapped,
 /// opening verbs varied, bullets cut to length and ended cleanly, spelling for the job's country.
 /// Running it twice changes nothing more.
 public struct Polish: Sendable {
@@ -153,7 +133,7 @@ public struct Polish: Sendable {
         for locale in SpellingLocale.allCases {
             guard
                 let url = Bundle.module.url(
-                    forResource: locale.rawValue, withExtension: "json", subdirectory: "Spelling"),
+                    forResource: locale.rawValue, withExtension: "json", subdirectory: "Resources/Spelling"),
                 let data = try? Data(contentsOf: url), let table = try? JSONDecoder().decode(Table.self, from: data)
             else { continue }
             tables[locale] = table.words

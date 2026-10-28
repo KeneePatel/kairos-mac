@@ -1,5 +1,5 @@
-// Harvard resume (polish P5, set to Harvard's own guides in P5b), the template builds use.
-// Everything comes from JSON (`--input data=<file>`, SPEC §5.6): Kairos never writes Typst
+// Harvard resume, set to Harvard's own guides: the template builds use.
+// Everything comes from JSON (`--input data=<file>`): Kairos never writes Typst
 // source, so nothing in a resume is ever read as markup.
 //
 // From Harvard's Mignone Center: "a common, easy to read font", no text boxes, colour or shading,
@@ -9,7 +9,7 @@
 // Liberation Serif, metric-compatible with the Times New Roman of Harvard's own sample.
 //
 // Which sections appear, their order, the dates' wording and the contact order are decided in
-// Swift (`ResumeDocument(_:for:)`); this file only lays them out.
+// Swift (`ResumeDocument`); this file only lays them out.
 
 #let data = json(sys.inputs.at("data"))
 #let settings = data.at("style", default: (:))
@@ -59,11 +59,13 @@
   let contact = data.header.at("contact", default: ())
   if contact.len() > 0 {
     linebreak()
-    let items = contact.map(item => {
+    // Each separator stays with the item before it, so a line that wraps never opens with "|".
+    let items = contact.enumerate().map(((index, item)) => {
       let url = opt(item, "url")
-      box(if url != none { link(url, item.text) } else { item.text })
+      let text = if url != none { link(url, item.text) } else { item.text }
+      box(if index < contact.len() - 1 { text + [ |] } else { text })
     })
-    items.join([ | ])
+    items.join([ ])
   }
 })
 
@@ -77,19 +79,22 @@
 #let row(left, right) = grid(columns: (1fr, auto), column-gutter: 1em, left, if right != none { right } else { [] })
 
 // Organization and place, then title and dates (education: school and place, then degree and
-// graduation). A project is one line, "Name | stack", with its dates.
+// graduation). A project is one line, "Name | stack", with its dates. A title with a url (a
+// project's page in the master resume export) is a link, set like the text around it.
 #let entry(kind, item) = block(above: 0.8em, below: 0.3em, {
   let organization = opt(item, "subtitle")
+  let url = opt(item, "url")
+  let title = if url != none { link(url, item.title) } else { item.title }
   if kind == "projects" {
-    let head = text(weight: "bold", item.title)
+    let head = text(weight: "bold", title)
     if organization != none { head = head + [ | ] + emph(organization) }
     row(head, opt(item, "dates"))
   } else if organization != none {
     row(text(weight: "bold", organization), opt(item, "location"))
     v(0.5em, weak: true)
-    row(if kind == "experience" { emph(item.title) } else { item.title }, opt(item, "dates"))
+    row(if kind == "experience" { emph(title) } else { title }, opt(item, "dates"))
   } else {
-    row(if kind == "certifications" { item.title } else { text(weight: "bold", item.title) }, opt(item, "dates"))
+    row(if kind == "certifications" { title } else { text(weight: "bold", title) }, opt(item, "dates"))
   }
   let bullets = item.at("bullets", default: ())
   if bullets.len() > 0 { block(above: 0.45em, list(..bullets)) }

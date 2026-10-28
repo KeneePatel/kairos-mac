@@ -1,35 +1,8 @@
+import AI
 import Foundation
-import LLM
-import MasterResume
+import Resume
 
-/// Stretch mode (SPEC §5.3, ADR-008): off until you turn it on. A synced setting.
-public struct StretchSettings: Codable, Sendable, Equatable {
-    public var enabled: Bool
-    /// The most gap bullets one role gets. Each role gets as many as fit, up to this.
-    public var perRole: Int
-
-    public static let storageKey = "stretch_mode"
-    /// SPEC §5.3's limit: 0 to 2 per role.
-    public static let maxPerRole = 2
-
-    public init(enabled: Bool = false, perRole: Int = 1) {
-        self.enabled = enabled
-        self.perRole = perRole
-    }
-
-    /// `perRole` within 0 to 2, whatever was stored.
-    public var limit: Int { min(Self.maxPerRole, max(0, perRole)) }
-
-    private enum CodingKeys: String, CodingKey { case enabled, perRole }
-
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
-        perRole = try container.decodeIfPresent(Int.self, forKey: .perRole) ?? 1
-    }
-}
-
-/// What `gapBullets` gets (SPEC §5.5 catalog): the requirements no bullet shows that one of your
+/// What `gapBullets` gets: the requirements no bullet shows that one of your
 /// Can-discuss skills answers, the roles it may add to, your skill names and the cap per role.
 /// Prompts call roles "e1" and requirements "r1".
 public struct GapBulletsInput: Sendable {
@@ -116,7 +89,7 @@ public struct GapBulletsOutput: Decodable, Sendable, Equatable {
 /// `gapBullets` (Stretch mode only): up to the cap per role of bullets the master resume doesn't
 /// back, each covering one uncovered requirement with a Can-discuss skill. The stretch verifier
 /// checks every one against the hard limits; they come back flagged (`gap`, `verified: false`).
-public struct GapBulletsTask: LLMTask {
+public struct GapBulletsTask: AITask {
     public static let id = TaskID.gapBullets
     public static let promptVersion = 1
     public static let outputSchema = JSONSchema.object([
@@ -133,7 +106,7 @@ public struct GapBulletsTask: LLMTask {
     public init() {}
 
     public func messages(for input: GapBulletsInput, budget: TokenBudget) -> [ChatMessage] {
-        let instructions = PromptLibrary.instructions(for: Self.id, version: Self.promptVersion) ?? ""
+        let instructions = Prompts.text(Self.id, version: Self.promptVersion, in: .module)
         let requirements = input.targets.enumerated().map { index, target in
             "[r\(index + 1)] \(target.requirement) (answer with: \(target.skills.joined(separator: " or ")))"
         }
@@ -168,7 +141,7 @@ public struct GapBulletsTask: LLMTask {
 
     /// Roles and requirements given, the cap per role, each requirement once, the length, a
     /// Can-discuss skill that answers it, and the stretch verifier. None at all is a fine reply.
-    public func check(_ output: GapBulletsOutput, for input: GapBulletsInput) throws {
+    public func check(_ output: GapBulletsOutput, for input: GapBulletsInput) throws(AIError) {
         var problems: [String] = []
         var counts: [String: Int] = [:]
         var covered: Set<String> = []
@@ -209,7 +182,7 @@ public struct GapBulletsTask: LLMTask {
             problems.append("\(role) has \(count) bullets; the limit is \(input.perRole) per role.")
         }
         if !problems.isEmpty {
-            throw LLMError.invalidOutput(problems.prefix(6).joined(separator: " "))
+            throw .invalidOutput(problems.prefix(6).joined(separator: " "))
         }
     }
 

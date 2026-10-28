@@ -4,10 +4,10 @@ import Synchronization
 /// Runs the bundled `typst` binary to turn a template plus JSON content into a PDF.
 ///
 /// Content goes in as a JSON file the template reads with `json(sys.inputs.at("data"))`, so nothing the
-/// model writes is ever spliced into Typst source and nothing needs escaping (ADR-004).
+/// model writes is ever spliced into Typst source and nothing needs escaping.
 public struct TypstRunner: Sendable {
     public let executable: URL
-    /// The only text fonts typst may use besides its built-in ones (`Fonts/`, Source Serif 4).
+    /// The only text fonts typst may use besides its built-in ones (`Fonts/`, Liberation Serif).
     public let fonts: URL?
     public let timeout: Duration
 
@@ -213,14 +213,12 @@ public enum RenderError: Error, Equatable, Sendable {
     case launch(String)
     case compile(String)
     case timedOut
-}
 
-extension TypstRunner {
-    /// The spike template shipped with this module (T06).
-    public static func spikeTemplate() throws(RenderError) -> String {
-        guard let url = Bundle.module.url(forResource: "spike", withExtension: "typ", subdirectory: "Templates"),
-            let text = try? String(contentsOf: url, encoding: .utf8)
-        else { throw .workspace("spike template missing from the bundle") }
-        return text
+    public var message: String {
+        switch self {
+        case .workspace(let reason), .launch(let reason): "The PDF maker couldn't run (\(reason))."
+        case .compile(let reason): "The PDF couldn't be made: \(reason)"
+        case .timedOut: "Making the PDF took too long, so it was stopped."
+        }
     }
 }

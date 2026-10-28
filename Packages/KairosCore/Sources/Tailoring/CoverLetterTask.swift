@@ -1,54 +1,8 @@
+import AI
 import Foundation
-import LLM
-import MasterResume
+import Resume
 
-/// A cover letter as a build stores and renders it (SPEC §5.3, Cover letter). The model writes only
-/// the paragraphs; code adds the header, date, greeting and sign-off from your master resume.
-public struct CoverLetter: Codable, Sendable, Equatable {
-    /// Your name and contact line, as on the resume.
-    public var header: TailoredResume.Header
-    public var date: String
-    public var company: String
-    public var jobTitle: String
-    public var greeting: String
-    public var paragraphs: [String]
-    public var closing: String
-    public var signature: String
-
-    public init(
-        header: TailoredResume.Header, date: String, company: String, jobTitle: String, greeting: String,
-        paragraphs: [String], closing: String, signature: String
-    ) {
-        self.header = header
-        self.date = date
-        self.company = company
-        self.jobTitle = jobTitle
-        self.greeting = greeting
-        self.paragraphs = paragraphs
-        self.closing = closing
-        self.signature = signature
-    }
-}
-
-/// The `build.cover_letter` column: asked for when the build was queued, then written or not.
-public struct CoverLetterRecord: Codable, Sendable, Equatable {
-    public enum Status: String, Codable, Sendable { case requested, done, failed }
-
-    public var status: Status
-    public var letter: CoverLetter?
-    /// Why there's no letter, in words.
-    public var error: String?
-
-    public init(status: Status, letter: CoverLetter? = nil, error: String? = nil) {
-        self.status = status
-        self.letter = letter
-        self.error = error
-    }
-
-    public static let requested = CoverLetterRecord(status: .requested)
-}
-
-/// What `coverLetter` gets (SPEC §5.5 catalog): the job's title, company and requirements, the
+/// What `coverLetter` gets: the job's title, company and requirements, the
 /// build's selected entries with their bullets, your Proven skill names and total years. Never your
 /// name or contact details.
 public struct CoverLetterInput: Sendable {
@@ -78,7 +32,7 @@ public struct CoverLetterOutput: Decodable, Sendable, Equatable {
 
 /// `coverLetter` (optional per build): three to five paragraphs from the selected entries. Every
 /// claim goes through the verifier's letter rules; code adds everything around the paragraphs.
-public struct CoverLetterTask: LLMTask {
+public struct CoverLetterTask: AITask {
     public static let id = TaskID.coverLetter
     public static let promptVersion = 1
     public static let outputSchema = JSONSchema.object([
@@ -91,7 +45,7 @@ public struct CoverLetterTask: LLMTask {
     public init() {}
 
     public func messages(for input: CoverLetterInput, budget: TokenBudget) -> [ChatMessage] {
-        let instructions = PromptLibrary.instructions(for: Self.id, version: Self.promptVersion) ?? ""
+        let instructions = Prompts.text(Self.id, version: Self.promptVersion, in: .module)
         let entries = input.entries.map { selected in
             let bullets = selected.bullets.map { ranked in
                 "- \(ranked.bullet.text)"
@@ -125,7 +79,7 @@ public struct CoverLetterTask: LLMTask {
 
     /// Paragraph count and length; no greeting, sign-off, contact details or placeholders, since
     /// code adds those; and every paragraph through the verifier's letter rules.
-    public func check(_ output: CoverLetterOutput, for input: CoverLetterInput) throws {
+    public func check(_ output: CoverLetterOutput, for input: CoverLetterInput) throws(AIError) {
         let paragraphs = Self.cleaned(output)
         var problems: [String] = []
         if !Self.paragraphCount.contains(paragraphs.count) {
@@ -156,7 +110,7 @@ public struct CoverLetterTask: LLMTask {
             }
         }
         if !problems.isEmpty {
-            throw LLMError.invalidOutput(problems.prefix(6).joined(separator: " "))
+            throw .invalidOutput(problems.prefix(6).joined(separator: " "))
         }
     }
 

@@ -1,6 +1,6 @@
 import Foundation
 
-/// How many years of experience a posting requires (SPEC §5.2): the largest minimum among its
+/// How many years of experience a posting requires : the largest minimum among its
 /// required mentions, in English or French. Mentions in preferred or nice-to-have sentences and
 /// sections don't count, nor do years that aren't about experience ("founded 12 years ago"). Nil
 /// when it can't tell, which keeps the job.

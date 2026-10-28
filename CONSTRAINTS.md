@@ -1,6 +1,6 @@
 # Constraints
 
-Last reviewed: 2026-10-18 by Kenee Patel. Drafted from `SPEC.md` §14 using the constraint-driven-development defaults, which were shown and unchanged across three spec reviews.
+Last reviewed: 2026-10-18 by Kenee Patel. Drafted from the first spec's §14 (now `docs/archive/SPEC-v1.md`) using the constraint-driven-development defaults, which were shown and unchanged across three spec reviews. The 2026-10-28 rebuild (ADR-019) renamed the modules the coverage rule names; the rules and numbers are unchanged.
 
 Read this before writing code. Do not weaken it to make a change pass. Tightening a rule needs no discussion; loosening one needs the owner's approval in the pull request.
 
@@ -21,7 +21,7 @@ Read this before writing code. Do not weaken it to make a change pass. Tightenin
 | Format | Zero findings | `swift format lint --strict --recursive Packages App` | Every change, CI |
 | Warnings | Zero warnings in Swift 6 language mode | `swift build --package-path Packages/KairosCore -Xswiftc -warnings-as-errors` | Every change, CI |
 | Tests | All pass with networking blocked | `swift test --package-path Packages/KairosCore` | Task end, CI |
-| Coverage | Changed lines ≥ 80% covered in `Store`, `MasterResume`, `LLM`, `Screening`, `Tailoring`, `Account`, `Sync` | `swift test --package-path Packages/KairosCore --enable-code-coverage` then `scripts/coverage-diff.sh` | Task end, CI |
+| Coverage | Changed lines ≥ 80% covered in `Store`, `Resume`, `AI`, `Screening`, `Tailoring`, `Engine` | `swift test --package-path Packages/KairosCore --enable-code-coverage` then `scripts/coverage-diff.sh` | Task end, CI |
 | Floor guard | Exit 0 | `swift scripts/floor-guard.swift --base origin/main` | Task end, CI |
 | Dependencies | 0 resolved Swift packages; bundled binaries = `typst` only; no npm packages in `Web/` | `scripts/check-deps.sh` | Every change, CI |
 | Design tokens | No hard-coded colours: no hex literals, `Color(red:` or `NSColor(` values in `App/`, and no hex in `Web/` outside the generated tokens file | `scripts/check-design.sh` | Every change, CI |
@@ -40,7 +40,7 @@ Every row names the command that produces its verdict. Gitleaks is the external 
 
 | Metric | Today | Direction |
 |--------|-------|-----------|
-| Project line coverage (KairosCore) | 87.2% of 570 lines (2026-10-19, T09). The gated live keychain test is off in this run, so `Secrets` shows 24% | Must not fall (tolerance 0.5%) |
+| Project line coverage (KairosCore) | 87.2% of 570 lines (2026-10-19, T09). The rebuild's changed lines in the gated modules: 89.2% of 6,105 (2026-10-28, `scripts/coverage-diff.sh origin/main`) | Must not fall (tolerance 0.5%) |
 | App bundle size | 43 MB on disk, debug build with typst bundled (2026-10-19, T06) | Must not grow by more than 5 MB in a release without a stated reason |
 
 ## Exceptions

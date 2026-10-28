@@ -1,175 +1,315 @@
-import MasterResume
+import Engine
+import Render
+import Resume
+import Store
 import SwiftUI
+import Tailoring
 
-/// The master resume: every section on one scrolling page, with build readiness in the inspector.
+/// The master resume: everything you've done, the only source resumes are written from. Contact,
+/// About you, each kind of entry and Skills as hairline sections; readiness in the inspector.
 struct MasterResumeView: View {
-    @Environment(ResumeModel.self) private var model
-    @Environment(AISettingsModel.self) private var ai
+    @Environment(AppModel.self) private var model
+    @State private var header = ResumeHeader()
     @State private var editing: ResumeEntry?
-    @State private var importing: ImportSession?
+    @State private var importing = false
     @State private var importingGitHub = false
-    @State private var deleting: ResumeEntry?
-    @State private var showsReadiness = true
+    @State private var inspector = true
+    @State private var newSkill = ""
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.space6) {
-                VStack(alignment: .leading, spacing: Spacing.space1) {
-                    Text("Master resume").font(TypeStyle.pageTitle).foregroundStyle(Color(.ink))
-                    Text(
-                        "Version \(model.resume.version) · the only source for every resume Kairos builds · nothing here is invented into a resume"
-                    )
-                    .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                HStack {
+                    VStack(alignment: .leading, spacing: Spacing.space1) {
+                        Text("Master resume").font(TypeStyle.pageTitle)
+                        Text("Version \(model.resume.version) · resumes only claim what's here")
+                            .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                    }
+                    Spacer()
+                    Menu("Import") {
+                        Button("From a resume…") { importing = true }
+                        Button("A project from GitHub…") { importingGitHub = true }
+                    }
+                    .fixedSize()
+                    Button("Export PDF…") { exportPDF() }
                 }
-                if let error = model.saveError {
-                    Label(error, systemImage: "exclamationmark.triangle.fill")
-                        .font(TypeStyle.callout).foregroundStyle(Color(.error))
-                }
-                ContactSection()
-                Divider()
-                EntrySection(
-                    title: "Experience", kinds: [.experience, .project], editing: $editing, deleting: $deleting)
-                EntrySection(title: "Education", kinds: [.education], editing: $editing, deleting: $deleting)
-                Divider()
-                SkillsSection()
-                Divider()
-                AdditionalSections(editing: $editing, deleting: $deleting)
+                contact
+                about
+                ForEach(EntryKind.allCases, id: \.self) { kind in entries(kind) }
+                skills
             }
-            .padding(.horizontal, Spacing.space7)
-            .padding(.vertical, Spacing.space6)
-            .frame(maxWidth: 920, alignment: .leading)
+            .padding(Spacing.space7)
+            .frame(maxWidth: Spacing.formWidth + 120, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Color(.surface))
-        .navigationTitle("Master resume")
+        .inspector(isPresented: $inspector) {
+            ReadinessInspector().inspectorColumnWidth(min: 240, ideal: 280, max: 340)
+        }
         .toolbar {
-            ToolbarItem {
-                Menu {
-                    Button("From a resume…") { importing = ImportSession(router: ai.router()) }
-                    Button("From GitHub…") { importingGitHub = true }
-                } label: {
-                    Label("Import", systemImage: "square.and.arrow.down").labelStyle(.titleAndIcon)
-                }
-                .help("Draft entries from a resume or from your GitHub repos")
+            Button {
+                inspector.toggle()
+            } label: {
+                Label("Readiness", systemImage: "sidebar.trailing")
             }
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    ForEach([EntryKind.experience, .project, .education], id: \.self) { kind in
-                        Button(kind.itemName) { editing = ResumeEntry(fields: kind.blank()) }
+        }
+        .navigationTitle("Master resume")
+        .sheet(item: $editing) { entry in
+            EntryEditor(entry: entry) { saved in
+                save(saved)
+            } delete: {
+                delete(entry.id)
+            }
+        }
+        .sheet(isPresented: $importing) { ImportResumeSheet() }
+        .sheet(isPresented: $importingGitHub) { GitHubImportSheet() }
+        .task(id: model.resume.version) { header = model.resume.header }
+    }
+
+    // MARK: - Sections
+
+    private var contact: some View {
+        PaneSection(title: "Contact") {
+            Grid(alignment: .leading, horizontalSpacing: Spacing.space3, verticalSpacing: Spacing.space2) {
+                field("Name", $header.fullName)
+                field("Email", $header.email)
+                field("Phone", $header.phone)
+                field("LinkedIn", $header.linkedInURL)
+                field(
+                    "GitHub",
+                    Binding(get: { header.gitHubURL ?? "" }, set: { header.gitHubURL = $0.isEmpty ? nil : $0 }))
+                field(
+                    "Portfolio",
+                    Binding(get: { header.portfolioURL ?? "" }, set: { header.portfolioURL = $0.isEmpty ? nil : $0 }))
+                field("City", Binding(get: { header.city ?? "" }, set: { header.city = $0.isEmpty ? nil : $0 }))
+                field(
+                    "Province or state",
+                    Binding(get: { header.region ?? "" }, set: { header.region = $0.isEmpty ? nil : $0 }))
+            }
+            issues
+        }
+    }
+
+    @ViewBuilder private var issues: some View {
+        let validation = Validator.validate(header)
+        ForEach(validation.issues, id: \.field) { issue in
+            Label(issue.message, systemImage: "exclamationmark.triangle.fill")
+                .font(TypeStyle.callout).foregroundStyle(issue.field.isOptional ? Color(.inkSecondary) : Color(.maybe))
+        }
+    }
+
+    private var about: some View {
+        PaneSection(title: "About you") {
+            Grid(alignment: .leading, horizontalSpacing: Spacing.space3, verticalSpacing: Spacing.space2) {
+                field("Headline", $header.headline)
+                GridRow {
+                    Text("Years of experience").font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                    TextField("", value: $header.totalYears, format: .number).frame(width: 80)
+                        .onSubmit(saveHeader)
+                }
+            }
+            Text("Highlights").font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+            TextEditor(text: $header.highlights)
+                .font(TypeStyle.body).frame(minHeight: 70).scrollContentBackground(.hidden).padding(Spacing.space2)
+                .background(RoundedRectangle(cornerRadius: Radius.field).fill(Color(.surfaceSunken)))
+            HStack {
+                Spacer()
+                Button("Save contact and about") { saveHeader() }
+                    .disabled(header == model.resume.header)
+                    .keyboardShortcut("s", modifiers: .command)
+            }
+        }
+    }
+
+    private func field(_ label: String, _ text: Binding<String>) -> some View {
+        GridRow {
+            Text(label).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+            TextField(label, text: text).labelsHidden().onSubmit(saveHeader)
+        }
+    }
+
+    @ViewBuilder private func entries(_ kind: EntryKind) -> some View {
+        let entries = model.resume.entries(kind)
+        if !entries.isEmpty || [.experience, .project, .education].contains(kind) {
+            PaneSection(title: kind.title) {
+                ForEach(entries) { entry in
+                    Button {
+                        editing = entry
+                    } label: {
+                        VStack(alignment: .leading, spacing: Spacing.space1) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(entry.fields.headline).font(TypeStyle.headline).foregroundStyle(Color(.ink))
+                                Spacer()
+                                Text(entry.period).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                                    .monospacedDigit()
+                            }
+                            ForEach(entry.bullets) { bullet in
+                                HStack(alignment: .firstTextBaseline, spacing: Spacing.space2) {
+                                    Text("•").foregroundStyle(Color(.inkSecondary))
+                                    Text(bullet.text).foregroundStyle(Color(.ink2)).fixedSize(
+                                        horizontal: false, vertical: true)
+                                }
+                                .font(TypeStyle.body)
+                            }
+                        }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                     Divider()
-                    ForEach(EntryKind.additional, id: \.self) { kind in
-                        Button(kind.itemName) { editing = ResumeEntry(fields: kind.blank()) }
-                    }
-                } label: {
-                    Label("Add entry", systemImage: "plus").labelStyle(.titleAndIcon)
                 }
-                .menuStyle(.button)
-                .buttonStyle(.borderedProminent)
+                Button("Add \(kind.title.lowercased())") { editing = Self.blank(kind) }
+                    .buttonStyle(.plain).foregroundStyle(Color(.accentText)).font(TypeStyle.callout)
             }
         }
-        .sheet(item: $editing) { entry in EntryEditor(entry: entry) }
-        .sheet(item: $importing) { session in ImportReviewView(session: session) }
-        .sheet(isPresented: $importingGitHub) { GitHubImportView() }
-        .confirmationDialog(
-            "Delete this \(deleting?.kind.itemName.lowercased() ?? "entry")?",
-            isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting
-        ) { entry in
-            Button("Delete", role: .destructive) { Task { await model.deleteEntry(entry.id) } }
-        } message: { entry in
+    }
+
+    private var skills: some View {
+        PaneSection(title: "Skills", trailing: "\(model.resume.provenSkills.count) proven") {
             Text(
-                "“\(entry.summary.title)” and its bullets leave your master resume. Resumes already built keep their copy."
+                "Proven skills are backed by your work; resumes may claim them. Can discuss skills only appear in Stretch builds, on the list to be ready to discuss. Click a skill to switch it."
             )
+            .font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).fixedSize(horizontal: false, vertical: true)
+            FlowLayout {
+                ForEach(model.resume.skills) { skill in
+                    SkillChip(name: skill.name, proven: skill.level == .proven)
+                        .onTapGesture { toggle(skill) }
+                        .contextMenu { Button("Remove \(skill.name)", role: .destructive) { remove(skill) } }
+                        .help(
+                            skill.level == .proven
+                                ? "Proven: click to make it Can discuss" : "Can discuss: click to make it Proven")
+                }
+            }
+            HStack {
+                TextField("Add a skill", text: $newSkill).onSubmit(addSkill).frame(maxWidth: 260)
+                Button("Add", action: addSkill).disabled(newSkill.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
         }
-        .inspector(isPresented: $showsReadiness) {
-            ReadinessPanel(resume: model.resume, readiness: model.readiness)
-                .inspectorColumnWidth(min: 260, ideal: 300, max: 360)
+    }
+
+    static func blank(_ kind: EntryKind) -> ResumeEntry {
+        let fields: EntryFields =
+            switch kind {
+            case .experience: .experience(.init(employer: "", title: ""))
+            case .project: .project(.init(name: ""))
+            case .education:
+                .education(.init(institution: "", credential: "", field: "", location: "", honours: "", coursework: []))
+            case .certification: .certification(.init(name: ""))
+            case .award: .award(.init(title: ""))
+            case .volunteering: .volunteering(.init(title: ""))
+            case .publication: .publication(.init(title: ""))
+            case .language: .language(.init(language: "", proficiency: .professional))
+            case .custom: .custom(.init(section: "", title: ""))
+            }
+        return ResumeEntry(fields: fields)
+    }
+
+    // MARK: - Saving
+
+    private var store: ResumeRepository? { model.workspace?.store.resume }
+
+    private func saveHeader() {
+        let cleaned = Validator.validate(header).header
+        Task {
+            _ = try? await store?.saveHeader(cleaned)
+            await model.reload()
+        }
+    }
+
+    private func save(_ entry: ResumeEntry) {
+        Task {
+            _ = try? await store?.saveEntry(entry)
+            await model.reload()
+        }
+    }
+
+    private func delete(_ id: UUID) {
+        Task {
+            _ = try? await store?.deleteEntry(id)
+            await model.reload()
+        }
+    }
+
+    private func toggle(_ skill: Skill) {
+        var skills = model.resume.skills
+        guard let index = skills.firstIndex(where: { $0.id == skill.id }) else { return }
+        skills[index].level = skill.level == .proven ? .canDiscuss : .proven
+        saveSkills(skills)
+    }
+
+    private func remove(_ skill: Skill) {
+        saveSkills(model.resume.skills.filter { $0.id != skill.id })
+    }
+
+    private func addSkill() {
+        let name = newSkill.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty,
+            !model.resume.skills.contains(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame })
+        else { return }
+        newSkill = ""
+        saveSkills(model.resume.skills + [Skill(name: name)])
+    }
+
+    private func saveSkills(_ skills: [Skill]) {
+        Task {
+            _ = try? await store?.saveSkills(skills)
+            await model.reload()
+        }
+    }
+
+    /// Your whole master resume as a PDF, in the Harvard template.
+    private func exportPDF() {
+        guard let renderer = model.workspace?.renderer else {
+            model.notice = AppModel.Notice(
+                title: "Can't make a PDF", message: "The PDF maker is missing from this copy of Kairos.")
+            return
+        }
+        let resume = model.resume
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.pdf]
+        panel.nameFieldStringValue =
+            "\(resume.header.fullName.isEmpty ? "Master" : resume.header.fullName) - Master Resume.pdf"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        Task {
+            do {
+                let pdf = try await renderer.render(ResumeDocument(FullResume(resume)))
+                try pdf.data.write(to: url, options: .atomic)
+            } catch {
+                model.notice = AppModel.Notice(title: "The PDF couldn't be made", message: "\(error)")
+            }
         }
     }
 }
 
-/// "Ready to build", or what's left, plus a count of what the resume holds. Missing items use the
-/// dashed grey circle (the design's Missing mark); warnings never block.
-struct ReadinessPanel: View {
-    let resume: MasterResume
-    let readiness: BuildReadiness
+/// What still stands between the master resume and a build, and what's worth a look.
+struct ReadinessInspector: View {
+    @Environment(AppModel.self) private var model
 
     var body: some View {
+        let readiness = Validator.readiness(model.resume, now: YearMonth.containing(Date()))
         ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.space5) {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: Spacing.space2) {
-                        Image(systemName: readiness.isReady ? "checkmark.circle.fill" : "circle.dashed")
-                            .foregroundStyle(Color(readiness.isReady ? .yesSolid : .inkSecondary))
-                            .accessibilityHidden(true)
-                        Text(readiness.isReady ? "Ready to build" : "Not ready to build yet")
-                            .font(TypeStyle.title2).foregroundStyle(Color(.ink))
-                    }
-                    Text(
-                        "Every resume draws only from this page. Kairos never adds a job, skill or number you haven't written here."
-                    )
-                    .font(TypeStyle.callout).foregroundStyle(Color(.ink2))
-                    .fixedSize(horizontal: false, vertical: true)
-                    ForEach(Array(readiness.missing.enumerated()), id: \.offset) { _, requirement in
-                        Label {
-                            Text(requirement.message).foregroundStyle(Color(.ink))
-                        } icon: {
-                            Image(systemName: "circle.dashed").foregroundStyle(Color(.inkSecondary))
-                        }
-                        .font(TypeStyle.callout)
-                    }
-                    ForEach(readiness.warnings, id: \.self) { warning in
-                        Label {
-                            Text(warning).foregroundStyle(Color(.ink))
-                        } icon: {
-                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color(.maybe))
-                        }
-                        .font(TypeStyle.callout)
-                    }
+            VStack(alignment: .leading, spacing: Spacing.space4) {
+                Label(
+                    readiness.isReady ? "Ready to build" : "Not ready yet",
+                    systemImage: readiness.isReady ? "checkmark.circle.fill" : "circle.dashed"
+                )
+                .font(TypeStyle.headline)
+                .foregroundStyle(readiness.isReady ? Color(.yes) : Color(.maybe))
+                ForEach(Array(readiness.missing.enumerated()), id: \.offset) { _, missing in
+                    Text(missing.message).font(TypeStyle.callout).foregroundStyle(Color(.ink))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: Radius.group).fill(Color(.surfaceRaised)))
-
-                VStack(alignment: .leading, spacing: Spacing.space3) {
-                    fact("Contact", contactStatus)
-                    fact("Experience", experienceSummary)
-                    fact("Skills", "\(proven) Proven, \(resume.skills.count - proven) Can discuss")
-                    fact("Other entries", "\(otherEntries)")
+                ForEach(readiness.warnings, id: \.self) { warning in
+                    Text(warning).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                Divider()
+                FactRow(label: "Entries", value: "\(model.resume.entries.count)")
+                FactRow(label: "Bullets", value: "\(model.resume.entries.reduce(0) { $0 + $1.bullets.count })")
+                FactRow(label: "Proven skills", value: "\(model.resume.provenSkills.count)")
+                FactRow(label: "Can discuss", value: "\(model.resume.canDiscussSkills.count)")
             }
             .padding(Spacing.space5)
-        }
-        .background(Color(.surface))
-    }
-
-    private var proven: Int { resume.skills.count { $0.level == .proven } }
-    private var otherEntries: Int { resume.entries.count { EntryKind.additional.contains($0.kind) } }
-
-    private var contactStatus: String {
-        let validation = Validator.validate(resume.header)
-        let blocking = validation.blocking.count
-        var status = blocking == 0 ? "Complete." : "\(blocking) to fill in or fix."
-        let leftOff = [ResumeField.gitHub, .portfolio].filter { validation.issue(for: $0) != nil }
-            .map { $0 == .gitHub ? "GitHub" : "Portfolio" }
-        if !leftOff.isEmpty {
-            status += " \(leftOff.joined(separator: " and ")) left off until fixed."
-        }
-        return status
-    }
-
-    private var experienceSummary: String {
-        let roles = resume.entries(.experience).count
-        let projects = resume.entries(.project).count
-        let bullets = resume.entries.reduce(0) { $0 + $1.bullets.count }
-        return
-            "\(roles) role\(roles == 1 ? "" : "s"), \(projects) project\(projects == 1 ? "" : "s") · \(bullets) bullet\(bullets == 1 ? "" : "s")"
-    }
-
-    private func fact(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(TypeStyle.headline).foregroundStyle(Color(.ink))
-            Text(value).font(TypeStyle.callout).foregroundStyle(Color(.inkSecondary)).monospacedDigit()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

@@ -1,5 +1,5 @@
-// Cover letter (T38; set to Harvard's guides with the resume in polish P5b). Everything comes
-// from JSON (`--input data=<file>`, SPEC §5.6): Kairos never writes Typst source, so nothing in a
+// Cover letter, set to Harvard's guides like the resume. Everything comes
+// from JSON (`--input data=<file>`): Kairos never writes Typst source, so nothing in a
 // letter is ever read as markup. The header follows harvard.typ: Liberation Serif at one size, the
 // name in bold, then one contact line (place, phone, email, links). Harvard's letter template sets
 // no letterhead, so the name keeps the case you typed it in.

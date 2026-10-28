@@ -1,4 +1,4 @@
-// This Mac's signing (copy to Local.xcconfig, which git ignores; docs/signing.md, step 3).
+// This Mac's signing (copy to Local.xcconfig, which git ignores; docs/guides/signing.md, step 3).
 // Every build signed with this certificate keeps the same code identity, so the Keychain asks for
 // your password at most once per saved key ("Always Allow"), then never again across rebuilds.
 

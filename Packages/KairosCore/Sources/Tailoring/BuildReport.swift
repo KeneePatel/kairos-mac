@@ -1,5 +1,5 @@
 import Foundation
-import MasterResume
+import Resume
 
 /// A build's report card: what made the page, how well it fills it, and whether the writing kept
 /// your facts. Code only, so builds can be compared before and after a change to the pipeline.

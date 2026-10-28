@@ -1,13 +1,13 @@
 import Foundation
 
-/// How well a build answers the posting (SPEC §5.3, Match score), out of 100, in code. Each section
+/// How well a build answers the posting, out of 100, in code. Each section
 /// gets its own score and the findings a rewrite should fix.
 public struct MatchScore: Codable, Sendable, Equatable {
     public enum Section: String, Codable, Sendable, CaseIterable {
         case summary, skills, experience, projects
     }
 
-    /// Points per component; the maximums are SPEC §5.3's starting weights.
+    /// Points per component; the maximums are the weights the first Kairos tuned.
     public struct Breakdown: Codable, Sendable, Equatable {
         /// Of 40.
         public var mustHaves: Double
@@ -191,19 +191,5 @@ public struct MatchScore: Codable, Sendable, Equatable {
             }
         }
         return issues
-    }
-}
-
-/// Requirements a resume can't show with a bullet: work authorization, clearance, languages,
-/// degrees, travel, licences. The profile and screening judge those.
-enum Requirements {
-    static func isCondition(_ text: String) -> Bool {
-        let lower = text.lowercased()
-        return [
-            "authoriz", "authoris", "entitled to work", "eligible to work", "right to work", "sponsor", "citizen",
-            "permanent resident", "work permit", "visa", "clearance", "reliability status", "french", "english",
-            "bilingual", "language", "degree", "bachelor", "master's", "phd", "diploma", "travel", "driver", "licence",
-            "license",
-        ].contains { lower.contains($0) }
     }
 }

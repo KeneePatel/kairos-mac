@@ -1,256 +1,124 @@
 import Foundation
+import KairosKit
+import SQL
 
-/// Where an application stands (SPEC story 6). The last four close it.
-public enum ApplicationStatus: String, Sendable, CaseIterable, Codable {
-    case applied, screen, interview, offer
-    case accepted, rejected, ghosted, withdrawn
-
-    public var isClosed: Bool { [.accepted, .rejected, .ghosted, .withdrawn].contains(self) }
-
-    /// Where it sits on Applied and the Interviews board (ADR-016).
-    public var stage: ApplicationStage {
-        switch self {
-        case .applied: .waiting
-        case .screen, .interview, .offer: .inProgress
-        case .accepted, .rejected, .ghosted, .withdrawn: .closed
-        }
-    }
-}
-
-/// Sent and waiting for a reply, moving (a screen, an interview, an offer), or closed. Applied's
-/// table shows each apart; the Interviews board holds only the moving ones (ADR-016).
-public enum ApplicationStage: String, Sendable, CaseIterable {
-    case waiting, inProgress, closed
-}
-
-/// A job you applied to, in `application`.
-public struct Application: Sendable, Equatable, Identifiable {
-    public let id: UUID
-    public let jobID: JobID
-    public var buildID: UUID?
-    public var appliedAt: Date
-    public var channel: String?
-    public var status: ApplicationStatus
-    /// When it reached `status`.
-    public var statusAt: Date
-    /// The follow-up reminder, if you set one.
-    public var nextActionAt: Date?
-    public var nextAction: String?
-    public var notes: String
-
-    public init(
-        id: UUID, jobID: JobID, buildID: UUID? = nil, appliedAt: Date, channel: String? = nil,
-        status: ApplicationStatus = .applied, statusAt: Date, nextActionAt: Date? = nil, nextAction: String? = nil,
-        notes: String = ""
-    ) {
-        self.id = id
-        self.jobID = jobID
-        self.buildID = buildID
-        self.appliedAt = appliedAt
-        self.channel = channel
-        self.status = status
-        self.statusAt = statusAt
-        self.nextActionAt = nextActionAt
-        self.nextAction = nextAction
-        self.notes = notes
-    }
-
-    /// Days at Applied before Kairos offers to close an application as No reply: twice the two weeks
-    /// after which replies are rare (`docs/research/application-tracking.md`).
-    public static let silentAfterDays = 30
-
-    /// Still Applied, `silentAfterDays` or more after its last change.
-    public func isSilent(at now: Date) -> Bool {
-        status == .applied && now.timeIntervalSince(statusAt) >= Double(Self.silentAfterDays) * 86_400
-    }
-}
-
-/// One line of an application's timeline, in `application_event`: a status it reached, or a note.
-public struct ApplicationEvent: Sendable, Equatable, Identifiable {
-    public enum Kind: Sendable, Equatable {
-        case status(ApplicationStatus)
-        case note
-    }
-
-    public let id: UUID
-    public let applicationID: UUID
-    public let kind: Kind
-    public let at: Date
-    public let note: String?
-
-    public init(id: UUID, applicationID: UUID, kind: Kind, at: Date, note: String? = nil) {
-        self.id = id
-        self.applicationID = applicationID
-        self.kind = kind
-        self.at = at
-        self.note = note
-    }
-}
-
-/// Applications and their timelines. Every status change appends an event, and events are never
-/// edited (SPEC §6.4, 6), so the timeline is the history as it happened.
+/// Jobs you applied to, and what happened since.
 public struct ApplicationRepository: Sendable {
-    public let db: Database
+    let db: Database
 
-    public init(_ db: Database) {
-        self.db = db
-    }
+    static let table = "application"
 
-    /// Records that you applied to `job`, with its first timeline line, and marks the job applied.
-    /// Applying again to the same job returns the application already there.
-    @discardableResult
-    public func apply(job: JobID, build: UUID? = nil, channel: String? = nil, at date: Date) async throws
-        -> Application
-    {
-        if let existing = try await application(for: job) { return existing }
-        let application = Application(
-            id: UUID.v7(), jobID: job, buildID: build, appliedAt: date, channel: channel, statusAt: date)
-        try await db.write { connection, stamp in
-            try connection.execute(
-                """
-                INSERT INTO application (id, job_id, build_id, applied_at, channel, status, status_at, updated_hlc)
-                VALUES (?, ?, ?, ?, ?, 'applied', ?, ?)
-                """,
-                [
-                    .text(application.id.lowercased), .text(job.rawValue), SQLValue(build?.lowercased),
-                    SQLValue(date), SQLValue(channel), SQLValue(date), .text(stamp.hlc.description),
-                ])
-            try Self.append(.status(.applied), to: application.id, at: date, note: nil, in: connection, stamp: stamp)
-            try connection.execute(
-                "UPDATE job SET state = 'applied', updated_hlc = ? WHERE id = ?",
-                [.text(stamp.hlc.description), .text(job.rawValue)])
-        }
-        return application
-    }
-
-    /// Every application, the one that moved most recently first.
-    public func applications() async throws -> [Application] {
-        try await db.query("SELECT * FROM application WHERE deleted = 0 ORDER BY status_at DESC, rowid DESC")
-            .map(Self.application)
-    }
-
-    public func application(for job: JobID) async throws -> Application? {
-        try await db.query("SELECT * FROM application WHERE job_id = ? AND deleted = 0", [.text(job.rawValue)])
-            .first.map(Self.application)
+    /// Every application, the latest first.
+    public func all() async throws -> [Application] {
+        try await db.query("SELECT * FROM application ORDER BY applied_at DESC, id DESC").map(Self.application)
     }
 
     public func application(_ id: UUID) async throws -> Application? {
-        try await db.query("SELECT * FROM application WHERE id = ? AND deleted = 0", [.text(id.lowercased)])
-            .first.map(Self.application)
+        try await db.first("SELECT * FROM application WHERE id = ?", [.id(id)]).map(Self.application)
     }
 
-    /// Moves the application on (or back), appending a timeline line with your note.
-    public func setStatus(_ status: ApplicationStatus, for id: UUID, at date: Date, note: String? = nil)
-        async throws
-    {
-        try await setStatus(status, for: [id], at: date, note: note)
+    public func application(forJob jobID: String) async throws -> Application? {
+        try await db.first("SELECT * FROM application WHERE job_id = ?", [.text(jobID)]).map(Self.application)
     }
 
-    /// Moves several at once, in one write, each with its own timeline line: the silent ones to No
-    /// reply, or a selection in Applied (ADR-016).
-    public func setStatus(_ status: ApplicationStatus, for ids: [UUID], at date: Date, note: String? = nil)
-        async throws
-    {
-        guard !ids.isEmpty else { return }
-        try await db.write { connection, stamp in
-            for id in ids {
-                try connection.execute(
-                    "UPDATE application SET status = ?, status_at = ?, updated_hlc = ? WHERE id = ?",
-                    [.text(status.rawValue), SQLValue(date), .text(stamp.hlc.description), .text(id.lowercased)])
-                try Self.append(
-                    .status(status), to: id, at: date, note: Self.trimmed(note), in: connection, stamp: stamp)
+    /// Records that you applied. One application per job: applying again returns the one there is.
+    @discardableResult
+    public func apply(_ application: Application) async throws -> Application {
+        let values = Self.values(application)
+        let event = ApplicationEvent(
+            applicationID: application.id, kind: application.status.rawValue, at: application.appliedAt)
+        return try await db.transaction { connection in
+            if let existing = try connection.first(
+                "SELECT * FROM application WHERE job_id = ?", [.text(application.jobID)])
+            {
+                return try Self.application(existing)
             }
+            try connection.execute(Self.insertSQL, values)
+            try Self.insert(event, in: connection)
+            return application
         }
     }
 
-    /// Adds a line to the timeline without changing the status: "30 min call with the recruiter".
-    public func addNote(_ note: String, to id: UUID, at date: Date) async throws {
-        guard let note = Self.trimmed(note) else { return }
-        try await db.write { connection, stamp in
-            try Self.append(.note, to: id, at: date, note: note, in: connection, stamp: stamp)
-        }
-    }
-
-    /// Sets the follow-up reminder, or clears it with nil.
-    public func setFollowUp(_ date: Date?, _ text: String?, for id: UUID) async throws {
-        try await db.write { connection, stamp in
+    /// Writes back what you changed; a new status adds a line to its timeline.
+    public func save(_ application: Application, note: String? = nil, at now: Date = Date()) async throws {
+        var updated = application
+        updated.updatedAt = now
+        try await db.transaction { [updated] connection in
+            guard
+                let row = try connection.first(
+                    "SELECT status, status_at FROM application WHERE id = ?", [.id(updated.id)])
+            else { return }
+            var saved = updated
+            saved.statusAt = row.date("status_at") ?? updated.statusAt
+            if row.string("status") != updated.status.rawValue {
+                saved.statusAt = now
+                try Self.insert(
+                    ApplicationEvent(applicationID: updated.id, kind: updated.status.rawValue, at: now, note: note),
+                    in: connection)
+            } else if let note, !note.isEmpty {
+                try Self.insert(
+                    ApplicationEvent(applicationID: updated.id, kind: "note", at: now, note: note), in: connection)
+            }
             try connection.execute(
-                "UPDATE application SET next_action_at = ?, next_action = ?, updated_hlc = ? WHERE id = ?",
+                """
+                UPDATE application SET build_id = ?, applied_at = ?, channel = ?, status = ?, status_at = ?,
+                    follow_up_at = ?, next_step = ?, notes = ?, updated_at = ?
+                WHERE id = ?
+                """,
                 [
-                    SQLValue(date), SQLValue(date == nil ? nil : Self.trimmed(text)), .text(stamp.hlc.description),
-                    .text(id.lowercased),
+                    .id(saved.buildID), SQLValue(saved.appliedAt), SQLValue(saved.channel),
+                    .text(saved.status.rawValue),
+                    SQLValue(saved.statusAt), SQLValue(saved.followUpAt), SQLValue(saved.nextStep), .text(saved.notes),
+                    SQLValue(saved.updatedAt), .id(saved.id),
                 ])
         }
     }
 
-    public func setNotes(_ notes: String, for id: UUID) async throws {
-        try await db.write { connection, stamp in
-            try connection.execute(
-                "UPDATE application SET notes = ?, updated_hlc = ? WHERE id = ?",
-                [.text(notes), .text(stamp.hlc.description), .text(id.lowercased)])
-        }
+    public func events(of id: UUID) async throws -> [ApplicationEvent] {
+        try await db.query("SELECT * FROM application_event WHERE application_id = ? ORDER BY at, id", [.id(id)])
+            .compactMap { row in
+                guard let eventID = row.string("id").flatMap(UUID.init(uuidString:)), let kind = row.string("kind"),
+                    let at = row.date("at")
+                else { return nil }
+                return ApplicationEvent(id: eventID, applicationID: id, kind: kind, at: at, note: row.string("note"))
+            }
     }
 
-    /// The timeline, oldest first.
-    public func events(for id: UUID) async throws -> [ApplicationEvent] {
-        try await db.query(
-            "SELECT * FROM application_event WHERE application_id = ? AND deleted = 0 ORDER BY at, rowid",
-            [.text(id.lowercased)]
-        ).map { row in
-            let reader = RowReader(row: row, table: "application_event")
-            let kind = try reader.string("kind")
-            return ApplicationEvent(
-                id: try reader.uuid("id"), applicationID: try reader.uuid("application_id"),
-                kind: kind == "note" ? .note : .status(try reader.value("kind", as: ApplicationStatus.self)),
-                at: try reader.date("at"), note: row.string("note"))
-        }
-    }
-
-    /// Forgets an application (a tombstone, so the deletion syncs); the job goes back to new.
+    /// Forgets an application ("I didn't apply"), with its timeline.
     public func delete(_ id: UUID) async throws {
-        guard let application = try await application(id) else { return }
-        try await db.write { connection, stamp in
-            try connection.execute(
-                "UPDATE application SET deleted = 1, updated_hlc = ? WHERE id = ?",
-                [.text(stamp.hlc.description), .text(id.lowercased)])
-            try connection.execute(
-                "UPDATE application_event SET deleted = 1, updated_hlc = ? WHERE application_id = ?",
-                [.text(stamp.hlc.description), .text(id.lowercased)])
-            try connection.execute(
-                "UPDATE job SET state = 'new', updated_hlc = ? WHERE id = ? AND state = 'applied'",
-                [.text(stamp.hlc.description), .text(application.jobID.rawValue)])
-        }
+        try await db.execute("DELETE FROM application WHERE id = ?", [.id(id)])
     }
 
-    private static func append(
-        _ kind: ApplicationEvent.Kind, to id: UUID, at date: Date, note: String?, in connection: Connection,
-        stamp: WriteStamp
-    ) throws {
-        let name: String
-        switch kind {
-        case .status(let status): name = status.rawValue
-        case .note: name = "note"
-        }
+    // MARK: - Rows
+
+    static let insertSQL = """
+        INSERT INTO application (id, job_id, build_id, applied_at, channel, status, status_at, follow_up_at, next_step,
+            notes, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+    static func values(_ application: Application) -> [SQLValue] {
+        [
+            .id(application.id), .text(application.jobID), .id(application.buildID), SQLValue(application.appliedAt),
+            SQLValue(application.channel), .text(application.status.rawValue), SQLValue(application.statusAt),
+            SQLValue(application.followUpAt), SQLValue(application.nextStep), .text(application.notes),
+            SQLValue(application.updatedAt),
+        ]
+    }
+
+    static func insert(_ event: ApplicationEvent, in connection: Connection) throws {
         try connection.execute(
-            "INSERT INTO application_event (id, application_id, kind, at, note, updated_hlc) VALUES (?, ?, ?, ?, ?, ?)",
-            [
-                .text(UUID.v7().lowercased), .text(id.lowercased), .text(name), SQLValue(date), SQLValue(note),
-                .text(stamp.hlc.description),
-            ])
+            "INSERT INTO application_event (id, application_id, kind, at, note) VALUES (?, ?, ?, ?, ?)",
+            [.id(event.id), .id(event.applicationID), .text(event.kind), SQLValue(event.at), SQLValue(event.note)])
     }
 
-    private static func trimmed(_ text: String?) -> String? {
-        guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
-        return text
-    }
-
-    private static func application(_ row: Row) throws -> Application {
-        let reader = RowReader(row: row, table: "application")
+    static func application(_ row: Row) throws(SQLError) -> Application {
+        let appliedAt = try row.requiredDate("applied_at", table: table)
         return Application(
-            id: try reader.uuid("id"), jobID: JobID(rawValue: try reader.string("job_id")),
-            buildID: row.string("build_id").flatMap(UUID.init(uuidString:)), appliedAt: try reader.date("applied_at"),
-            channel: row.string("channel"), status: try reader.value("status", as: ApplicationStatus.self),
-            statusAt: try reader.date("status_at"), nextActionAt: reader.optionalDate("next_action_at"),
-            nextAction: row.string("next_action"), notes: row.string("notes") ?? "")
+            id: try row.uuid("id", table: table), jobID: try row.required("job_id", table: table),
+            buildID: row.string("build_id").flatMap(UUID.init(uuidString:)), appliedAt: appliedAt,
+            channel: row.string("channel"), status: try row.value("status", as: Application.Status.self, table: table),
+            statusAt: row.date("status_at") ?? appliedAt, followUpAt: row.date("follow_up_at"),
+            nextStep: row.string("next_step"), notes: row.string("notes") ?? "", updatedAt: row.date("updated_at"))
     }
 }

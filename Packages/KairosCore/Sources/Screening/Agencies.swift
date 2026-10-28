@@ -1,7 +1,7 @@
 import Foundation
-import Store
+import Jobs
 
-/// Staffing agencies, recruiters and contractor marketplaces (job collection v3, C3): their
+/// Staffing agencies, recruiters and contractor marketplaces: their
 /// postings repeat employers' jobs or hide the employer, so the prefilter leaves them out unless
 /// Settings, Search says otherwise. Named ones first, then names that say what they are, then
 /// postings written for "our client".

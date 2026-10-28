@@ -1,6 +1,6 @@
 #!/usr/bin/env swift  // Turns design/kairos/tokens.json into code once, so no view holds a raw value:  //   - one Asset Catalog colour set per colour token (Any and Dark appearances),
 //     plus AccentColor, so SwiftUI's generated symbols give Color(.inkSecondary)
-//   - App/Kairos/DesignTokens.swift with type styles, spacing and radii
+//   - App/Kairos/Design/DesignTokens.swift with type styles, spacing and radii
 //   - AppIcon and the menu bar template image from design/kairos/logo
 // Output is deterministic: run it twice and the second run changes nothing.
 //
@@ -22,7 +22,7 @@ while !fm.fileExists(atPath: root.appendingPathComponent("design/kairos/tokens.j
 }
 let design = root.appendingPathComponent("design/kairos")
 let assets = root.appendingPathComponent("App/Kairos/Assets.xcassets")
-let swiftOut = root.appendingPathComponent("App/Kairos/DesignTokens.swift")
+let swiftOut = root.appendingPathComponent("App/Kairos/Design/DesignTokens.swift")
 
 // MARK: - read tokens.json
 

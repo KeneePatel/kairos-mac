@@ -1,50 +1,5 @@
 import Foundation
-import MasterResume
-
-/// A bullet a writer produced (SPEC §5.3, Write): its text and the master-resume bullets it cites.
-public struct TailoredBullet: Codable, Sendable, Equatable {
-    public var text: String
-    public var sourceIDs: [UUID]
-    /// A stretch-mode bullet covering a requirement the master resume doesn't.
-    public var gap: Bool
-    /// How well its sources matched the job (the selector's score): page fitting drops the lowest.
-    public var rank: Double
-    /// The requirement a gap bullet answers, for "Be ready to discuss".
-    public var covers: String?
-
-    /// Backed by your master resume. A gap bullet isn't, so it's stored `verified: false` and listed
-    /// to prepare (SPEC §5.3, Flagging); the PDF never marks it.
-    public var verified: Bool { !gap }
-
-    public init(text: String, sourceIDs: [UUID], gap: Bool = false, rank: Double = 0, covers: String? = nil) {
-        self.text = text
-        self.sourceIDs = sourceIDs
-        self.gap = gap
-        self.rank = rank
-        self.covers = covers
-    }
-
-    private enum CodingKeys: String, CodingKey { case text, sourceIDs, gap, rank, covers, verified }
-
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        text = try container.decode(String.self, forKey: .text)
-        sourceIDs = try container.decodeIfPresent([UUID].self, forKey: .sourceIDs) ?? []
-        gap = try container.decodeIfPresent(Bool.self, forKey: .gap) ?? false
-        rank = try container.decodeIfPresent(Double.self, forKey: .rank) ?? 0
-        covers = try container.decodeIfPresent(String.self, forKey: .covers)
-    }
-
-    public func encode(to encoder: any Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(text, forKey: .text)
-        try container.encode(sourceIDs, forKey: .sourceIDs)
-        try container.encode(gap, forKey: .gap)
-        try container.encode(rank, forKey: .rank)
-        try container.encodeIfPresent(covers, forKey: .covers)
-        try container.encode(verified, forKey: .verified)
-    }
-}
+import Resume
 
 /// A rule the verifier enforces. Raw values are what reports and stored builds use.
 public enum VerificationRule: String, Sendable, CaseIterable, Codable {
@@ -61,7 +16,7 @@ public enum VerificationRule: String, Sendable, CaseIterable, Codable {
     case personalField = "personal_field"
 }
 
-public struct Violation: Sendable, Equatable {
+public struct Violation: Sendable, Equatable, Codable {
     public let rule: VerificationRule
     /// The bullet or field that broke it.
     public let text: String
@@ -69,7 +24,7 @@ public struct Violation: Sendable, Equatable {
     public let detail: String
 }
 
-/// Checks every claim in a build against the master resume (SPEC §5.3, Verify). Code decides, not
+/// Checks every claim in a build against the master resume. Code decides, not
 /// the model.
 ///
 /// - Strict mode: a bullet cites existing master-resume bullets; it names only technologies in
@@ -185,7 +140,7 @@ public struct Verifier: Sendable {
             + hiringCompany(in: text)
     }
 
-    /// A cover letter's text (SPEC §5.3, Cover letter): the summary's rules, except that it may name
+    /// A cover letter's text: the summary's rules, except that it may name
     /// the company you're writing to (never its products), and it may not claim a degree,
     /// certification or licence your master resume doesn't list.
     public func check(letter text: String) -> [Violation] {
@@ -274,7 +229,7 @@ public struct Verifier: Sendable {
     }
 
     /// A gap bullet cites nothing, so it may not claim a credential (unless it names one of yours
-    /// exactly), a title or a promotion: those are hard limits (SPEC §5.3).
+    /// exactly), a title or a promotion: those are hard limits.
     private func inventedClaims(in text: String) -> [Violation] {
         var violations = inventedCredential(in: text)
         if text.contains(Self.titleClaim) {
@@ -305,7 +260,7 @@ public struct Verifier: Sendable {
         /(?i)\bpromoted\b|\bas (?:a |an |the )?(?:senior|lead|staff|principal|team lead|tech lead|technical lead|head of|engineering manager|manager|director)\b/
     }
 
-    /// North American resumes leave these out (SPEC §5.3, hard limits).
+    /// North American resumes leave these out.
     private func personalFields(in text: String) -> [Violation] {
         let patterns: [(String, Regex<Substring>)] = [
             ("date of birth", /(?i)\b(?:date of birth|d\.?o\.?b\.?|born (?:on|in))\b/),
@@ -338,50 +293,5 @@ public struct Verifier: Sendable {
     private static func normalized(_ text: String) -> String {
         text.lowercased().replacing("–", with: "-").replacing("—", with: "-")
             .split(whereSeparator: \.isWhitespace).joined(separator: " ")
-    }
-}
-
-/// Numbers in text: "4.2M" is 4,200,000, "40%" is 40, "30+" is 30. Digits inside a name ("p99",
-/// "S3") and years written as dates ("2022") aren't claims of their own.
-enum Numbers {
-    struct Mention {
-        let value: Double
-        let range: Range<String.Index>
-    }
-
-    static func mentions(in text: String) -> [Mention] {
-        let pattern =
-            /(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(\s*(?:million|billion|thousand|[kmbx])(?![A-Za-z]))?(?![A-Za-z0-9])/
-            .ignoresCase()
-        return text.matches(of: pattern).compactMap { match in
-            let range = match.range
-            if range.lowerBound > text.startIndex {
-                let before = text[text.index(before: range.lowerBound)]
-                if before.isLetter || before.isNumber || before == "." { return nil }
-            }
-            guard let whole = Double(match.output.1.replacing(",", with: "") + (match.output.2 ?? ""))
-            else { return nil }
-            let suffix = match.output.3.map { $0.trimmingCharacters(in: .whitespaces).lowercased() } ?? ""
-            if suffix.isEmpty, match.output.2 == nil, (1950...2100).contains(whole) { return nil }  // a year
-            let scale: Double =
-                switch suffix {
-                case "k", "thousand": 1_000
-                case "m", "million": 1_000_000
-                case "b", "billion": 1_000_000_000
-                default: 1
-                }
-            return Mention(value: whole * scale, range: range)
-        }
-    }
-
-    static func values(in text: String) -> [Double] {
-        mentions(in: text).map(\.value)
-    }
-
-    /// "5 years", "8+ yrs": claims about experience, judged against your total years.
-    static func yearsClaims(in text: String) -> [Mention] {
-        text.matches(of: /(\d{1,2})\s*\+?\s*(?:years?|yrs?)\b/.ignoresCase()).compactMap { match in
-            Double(match.output.1).map { Mention(value: $0, range: match.range) }
-        }
     }
 }

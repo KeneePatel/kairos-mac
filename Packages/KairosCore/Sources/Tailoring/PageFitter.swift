@@ -1,6 +1,6 @@
 import Foundation
 
-/// Fits a resume to its page budget by what each line is worth (resume v2 plan, phase 1), from the
+/// Fits a resume to its page budget by what each line is worth, from the
 /// template's measurements:
 /// - Over the budget, it cuts whatever costs the least per line saved: one bullet, a whole
 ///   project, or a whole role none of whose bullets answers the posting, except your most recent
@@ -15,7 +15,7 @@ struct PageFitter {
     let budget: Int
     /// You allow two pages when needed (`PageSettings`): the fitter decides between one and two.
     var allowingTwo = false
-    let measure: BuildLoop.Measure
+    let measure: Tailor.Measure
 
     /// A bullet ranked at or under this answers no requirement: its only credit is for a number.
     static let irrelevant = 0.25
@@ -234,22 +234,11 @@ struct PageFitter {
         var resume = resume
         var layout = layout
         var dropped = alreadyDropped
-        while layout.pages > budget, BuildLoop.dropLowest(&resume) {
+        while layout.pages > budget, Tailor.dropLowest(&resume) {
             progress(.fitting(pages: layout.pages))
             dropped += 1
             layout = try await measure(resume)
         }
         return Result(resume: resume, layout: layout, dropped: dropped, budget: budget)
     }
-}
-
-extension TailoredResume {
-    /// A role or project by its master-resume entry.
-    func entry(_ id: UUID) -> Entry? {
-        (experience + projects).first { $0.entryID == id }
-    }
-}
-
-extension Array {
-    subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
 }

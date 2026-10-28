@@ -5,7 +5,7 @@ import Testing
 
 /// A page as the template would measure it: a 10-line header, the fitter's own heading sizes, and
 /// a line per 100 characters of bullet.
-private func page(holding linesPerPage: Double) -> BuildLoop.Measure {
+private func page(holding linesPerPage: Double) -> Tailor.Measure {
     { resume in
         func measured(_ entries: [TailoredResume.Entry]) -> [[PageLayout.Bullet]] {
             entries.map {

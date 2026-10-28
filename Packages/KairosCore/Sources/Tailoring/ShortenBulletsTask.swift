@@ -1,9 +1,9 @@
+import AI
 import Foundation
-import LLM
-import MasterResume
+import Resume
 
 /// Bullets that run a few words onto another line, each with the most characters it may keep
-/// (resume v2 plan, phase 1). Prompts call them "s1", "s2".
+///. Prompts call them "s1", "s2".
 public struct ShortenBulletsInput: Sendable {
     public struct Item: Sendable, Equatable {
         /// Where it sits: "experience" or "projects", the entry's place, the bullet's place.
@@ -62,7 +62,7 @@ public struct ShortenBulletsOutput: Decodable, Sendable, Equatable {
 /// `shortenBullets`: each short-wrap bullet cut to fit a line fewer, keeping every number and
 /// claim. Code checks the lengths, the numbers and the verifier's rules, so a reply that loses a
 /// fact never lands.
-public struct ShortenBulletsTask: LLMTask {
+public struct ShortenBulletsTask: AITask {
     public static let id = TaskID.shortenBullets
     public static let promptVersion = 1
     public static let outputSchema = JSONSchema.object([
@@ -76,7 +76,7 @@ public struct ShortenBulletsTask: LLMTask {
     public init() {}
 
     public func messages(for input: ShortenBulletsInput, budget: TokenBudget) -> [ChatMessage] {
-        let instructions = PromptLibrary.instructions(for: Self.id, version: Self.promptVersion) ?? ""
+        let instructions = Prompts.text(Self.id, version: Self.promptVersion, in: .module)
         let bullets = input.items.enumerated().map { index, item in
             "[\(input.id(index))] (at most \(item.limit) characters) \(item.text)"
         }
@@ -90,7 +90,7 @@ public struct ShortenBulletsTask: LLMTask {
 
     /// Every bullet answered, and at least one that passes; a reply that fixes none goes back for
     /// repair. A bullet that fails on its own keeps its original words (`applying`).
-    public func check(_ output: ShortenBulletsOutput, for input: ShortenBulletsInput) throws {
+    public func check(_ output: ShortenBulletsOutput, for input: ShortenBulletsInput) throws(AIError) {
         var missing: [String] = []
         var failures: [String] = []
         var passing = 0
@@ -105,7 +105,7 @@ public struct ShortenBulletsTask: LLMTask {
             if found.isEmpty { passing += 1 } else { failures += found.map { "\(id) \($0)" } }
         }
         if !missing.isEmpty || passing == 0 {
-            throw LLMError.invalidOutput((missing + failures).prefix(6).joined(separator: " "))
+            throw .invalidOutput((missing + failures).prefix(6).joined(separator: " "))
         }
     }
 

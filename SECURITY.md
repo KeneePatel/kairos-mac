@@ -8,12 +8,13 @@ Include what you found, how to reproduce it, and what an attacker could do with 
 
 ## What's in scope
 
-- The macOS app and its handling of API keys, session tokens and the local database
-- The Supabase backend: database policies, functions and storage rules in `Backend/`
-- The phone web app in `Web/`
+- The macOS app and its handling of API keys and the local database
+- What the app sends to job boards and AI providers
 
-## How Kairos handles secrets
+## How Kairos handles secrets and data
 
-- API keys and sign-in sessions live only in the macOS Keychain, never in files, the database or logs.
-- The app ships only Supabase's publishable key, which is safe to expose. Every user's data is protected by row-level security on the server.
-- Work-authorization details never leave the Mac.
+- API keys live in `api-keys.json` in the app's container, readable only by your user (mode 600) and left out of backups, or in the macOS Keychain. Never in the database, logs or test output.
+- Everything else stays on the Mac: there are no accounts and no server.
+- What reaches an AI provider: job postings, and your resume with your name, email, phone, links and work status removed. Never your keys, contact details or work authorization.
+- The AI call log keeps codes and counts, never prompt or reply text. Logs carry ids and counts only.
+- Typst, the one bundled binary, runs inside the app's sandbox with a timeout.
