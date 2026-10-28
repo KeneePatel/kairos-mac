@@ -94,6 +94,24 @@ public struct JobRepository: Sendable {
         )?.int("n") ?? 0
     }
 
+    /// Open listings per source, for Sources.
+    public func openListingCounts() async throws -> [UUID: Int] {
+        var result: [UUID: Int] = [:]
+        for row in try await db.query(
+            "SELECT source_id, count(*) AS n FROM listing WHERE closed_at IS NULL GROUP BY source_id")
+        {
+            if let id = row.string("source_id").flatMap(UUID.init(uuidString:)) { result[id] = row.int("n") ?? 0 }
+        }
+        return result
+    }
+
+    /// The jobs a source lists now.
+    public func jobIDs(listedBy source: UUID) async throws -> [String] {
+        try await db.query(
+            "SELECT DISTINCT job_id FROM listing WHERE source_id = ? AND closed_at IS NULL", [.id(source)]
+        ).compactMap { $0.string("job_id") }
+    }
+
     // MARK: - Clearing and retention
 
     /// Jobs you've acted on: saved, built a resume for, or applied to. Clearing and retention keep them.

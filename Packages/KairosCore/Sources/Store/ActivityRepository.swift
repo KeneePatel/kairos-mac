@@ -169,6 +169,14 @@ public struct ActivityRepository: Sendable {
         return result
     }
 
+    /// A source's latest reads, newest first.
+    public func reads(of source: UUID, limit: Int = 20) async throws -> [FetchLogEntry] {
+        try await db.query(
+            "SELECT * FROM fetch_log WHERE source_id = ? ORDER BY at DESC, id DESC LIMIT ?",
+            [.id(source), SQLValue(limit)]
+        ).compactMap(Self.entry)
+    }
+
     /// Jobs each source added since `start`, for Sources.
     public func added(since start: Date) async throws -> [UUID: Int] {
         var result: [UUID: Int] = [:]
