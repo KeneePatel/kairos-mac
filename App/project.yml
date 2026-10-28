@@ -33,21 +33,25 @@ targets:
         attributes: [CodeSignOnCopy]
     dependencies:
       - package: KairosCore
-        product: Store
-      - package: KairosCore
-        product: Render
+        product: KairosKit
       - package: KairosCore
         product: Secrets
       - package: KairosCore
-        product: JobSources
+        product: AI
       - package: KairosCore
-        product: Pipeline
+        product: Jobs
       - package: KairosCore
-        product: MasterResume
-      - package: KairosCore
-        product: LLM
+        product: Resume
       - package: KairosCore
         product: Screening
+      - package: KairosCore
+        product: Tailoring
+      - package: KairosCore
+        product: Render
+      - package: KairosCore
+        product: Store
+      - package: KairosCore
+        product: Engine
     configFiles:
       Debug: Config/Signing.xcconfig
       Release: Config/Signing.xcconfig
