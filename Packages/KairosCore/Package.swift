@@ -34,9 +34,9 @@ let package = Package(
         .target(name: "KairosKit", swiftSettings: strict),
         .target(name: "SQL", swiftSettings: strict),
         .target(name: "Secrets", swiftSettings: strict),
-        .target(name: "AI", dependencies: ["KairosKit", "Secrets"], resources: [.copy("Prompts")], swiftSettings: strict),
+        .target(name: "AI", dependencies: ["KairosKit", "Secrets"], swiftSettings: strict),
         .target(name: "Jobs", dependencies: ["KairosKit"], resources: [.copy("Resources")], swiftSettings: strict),
-        .target(name: "Resume", dependencies: ["KairosKit", "AI"], swiftSettings: strict),
+        .target(name: "Resume", dependencies: ["KairosKit", "AI"], resources: [.copy("Resources")], swiftSettings: strict),
         .target(
             name: "Screening", dependencies: ["KairosKit", "Jobs", "Resume", "AI"], resources: [.copy("Resources")],
             swiftSettings: strict),
@@ -65,7 +65,9 @@ let package = Package(
             swiftSettings: strict),
 
         // Shared by the test targets: a scripted HTTP client, fixtures, sample data. Never shipped.
-        .target(name: "TestKit", dependencies: ["KairosKit", "Resume"], path: "Tests/TestKit", swiftSettings: strict),
+        .target(
+            name: "TestKit", dependencies: ["KairosKit", "AI", "Secrets", "Resume"], path: "Tests/TestKit",
+            swiftSettings: strict),
         .testTarget(name: "KairosKitTests", dependencies: ["KairosKit", "TestKit"], swiftSettings: strict),
         .testTarget(name: "SQLTests", dependencies: ["SQL"], swiftSettings: strict),
         .testTarget(name: "SecretsTests", dependencies: ["Secrets"], swiftSettings: strict),
