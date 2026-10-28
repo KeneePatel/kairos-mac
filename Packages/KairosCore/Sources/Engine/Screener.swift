@@ -132,9 +132,14 @@ public struct Screener: Sendable {
         run.finishedAt = clock.now
         run.error = Task.isCancelled ? "Stopped." : progress.stopped
         try await store.activity.finish(run)
+        Self.log.info(
+            "screening \(run.id.lowercased, privacy: .public): \(progress.total) jobs, \(progress.filtered) filtered, \(progress.analyzed) analysed, \(progress.failed) failed, \(progress.waiting) waiting"
+        )
         report(progress)
         return run
     }
+
+    static let log = Log.logger("screening")
 
     /// Screens one job again from scratch: the prefilter (unless you brought it back), then a fresh
     /// analysis, never a stored or cached one.

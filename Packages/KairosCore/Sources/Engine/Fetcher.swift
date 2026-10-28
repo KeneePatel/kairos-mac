@@ -134,9 +134,15 @@ public struct Fetcher: Sendable {
         run.finishedAt = clock.now
         run.error = Task.isCancelled ? "Stopped." : nil
         try await store.activity.finish(run)
+        let seconds = Int(run.finishedAt?.timeIntervalSince(run.startedAt) ?? 0)
+        Self.log.info(
+            "fetch \(run.id.lowercased, privacy: .public) \(run.error == nil ? "finished" : "stopped", privacy: .public) in \(seconds) s: \(progress.done) sources, \(progress.failures.count) failed, \(progress.stats.added ?? 0) added, \(progress.stats.unchanged ?? 0) unchanged, \(progress.stats.resting ?? 0) resting"
+        )
         report(progress)
         return run
     }
+
+    static let log = Log.logger("fetch")
 
     // MARK: - Planning
 

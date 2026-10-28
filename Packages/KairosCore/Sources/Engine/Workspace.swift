@@ -18,6 +18,8 @@ public struct Workspace: Sendable {
     public let builds: BuildQueue
     public let clock: any WallClock
 
+    static let log = Log.logger("workspace")
+
     /// Database backups kept; older ones go.
     public static let backupsKept = 10
 
@@ -57,11 +59,18 @@ public struct Workspace: Sendable {
         let importer = LegacyImport(store: store, folder: folder)
         if (try? await importer.isPending()) == true {
             do {
-                preparation.imported = try await importer.run(at: clock.now)
+                let report = try await importer.run(at: clock.now)
+                preparation.imported = report
+                Self.log.info(
+                    "imported the first Kairos: \(report.jobs) jobs, \(report.builds) builds, \(report.files) files (\(report.missingFiles) missing), \(report.applications) applications"
+                )
             } catch let error as LegacyImport.ImportError {
                 preparation.importError = error.message
             } catch {
                 preparation.importError = "The first Kairos's data couldn't be imported: \(error)"
+            }
+            if let failure = preparation.importError {
+                Self.log.error("the first Kairos's data wasn't imported: \(failure, privacy: .public)")
             }
         }
         if (try? await store.sources.all().isEmpty) == true {

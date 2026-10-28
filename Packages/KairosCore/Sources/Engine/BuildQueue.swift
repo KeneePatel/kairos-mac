@@ -123,14 +123,23 @@ public actor BuildQueue {
     }
 
     private func process(_ id: UUID) async {
+        let started = ContinuousClock.now
+        Self.log.info("build \(id.lowercased, privacy: .public) started")
         do {
             let deadline = self.deadline
             let build = try await Deadline.run(deadline, failing: BuildError.tookTooLong(deadline)) {
                 try await self.build(id)
             }
             if try await save(build) { continuation.yield(.finished(id)) }
+            Self.log.info(
+                "build \(id.lowercased, privacy: .public) finished in \(ContinuousClock.now - started, privacy: .public)"
+            )
         } catch {
             let message = Self.message(for: error)
+            // The reason is Kairos's own words, never a prompt, a reply or a key.
+            Self.log.error(
+                "build \(id.lowercased, privacy: .public) ended after \(ContinuousClock.now - started, privacy: .public): \(message, privacy: .public)"
+            )
             if var build = try? await store.builds.build(id), build.status == .running {
                 build.status = .failed
                 build.error = message
@@ -251,6 +260,8 @@ public actor BuildQueue {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return cleaned.isEmpty ? "Kairos" : String(cleaned.prefix(80))
     }
+
+    static let log = Log.logger("builds")
 
     static func message(for error: any Error) -> String {
         switch error {
