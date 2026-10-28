@@ -161,7 +161,9 @@ public struct ImportGitHubRepoTask: AITask {
 
     public func check(_ output: Output, for input: Input) throws(AIError) {
         if output.name.tidied.isEmpty { throw .invalidOutput("the project has no name") }
-        if ContactRedactor.containsContactDetails(([output.name, output.role ?? ""] + output.bullets).joined(separator: "\n")) {
+        if ContactRedactor.containsContactDetails(
+            ([output.name, output.role ?? ""] + output.bullets).joined(separator: "\n"))
+        {
             throw .invalidOutput("the reply contains contact details, which must be left out")
         }
     }

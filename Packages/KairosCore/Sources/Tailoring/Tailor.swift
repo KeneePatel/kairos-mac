@@ -60,7 +60,8 @@ public enum CoverLetterProblem: Sendable, Equatable, Codable {
         switch self {
         case .checks(let found):
             "The cover letter didn't pass its checks after a second try, so it was left out. What the checks found: \(found.prefix(300))"
-        case .unavailable(let reason): "The cover letter was left out because no model could write it: the last one \(reason)."
+        case .unavailable(let reason):
+            "The cover letter was left out because no model could write it: the last one \(reason)."
         }
     }
 }
@@ -95,7 +96,9 @@ public struct Tailor: Sendable {
     public let selector: Selector
     public let context: AIContext
 
-    public init(router: AIRouter, master: MasterResume, selector: Selector = Selector(), context: AIContext = AIContext()) {
+    public init(
+        router: AIRouter, master: MasterResume, selector: Selector = Selector(), context: AIContext = AIContext()
+    ) {
         self.router = router
         self.master = master
         self.selector = selector
@@ -103,7 +106,9 @@ public struct Tailor: Sendable {
     }
 
     /// `measure` renders the resume and measures how it fills its pages; without it nothing is fitted.
-    public func run(_ request: BuildRequest, measure: Measure? = nil, progress: @Sendable (BuildStep) -> Void = { _ in })
+    public func run(
+        _ request: BuildRequest, measure: Measure? = nil, progress: @Sendable (BuildStep) -> Void = { _ in }
+    )
         async throws -> BuildOutcome
     {
         progress(.selecting)
@@ -114,19 +119,26 @@ public struct Tailor: Sendable {
         let brief = WriterBrief(
             jobTitle: request.jobTitle, requirements: request.requirements, locale: request.locale,
             lineCharacters: request.lineCharacters)
-        let experienceInput = WriteSectionInput(brief: brief, entries: selection.experience, skills: selection.skills, verifier: verifier)
-        let projectsInput = WriteSectionInput(brief: brief, entries: selection.projects, skills: selection.skills, verifier: verifier)
+        let experienceInput = WriteSectionInput(
+            brief: brief, entries: selection.experience, skills: selection.skills, verifier: verifier)
+        let projectsInput = WriteSectionInput(
+            brief: brief, entries: selection.projects, skills: selection.skills, verifier: verifier)
         let polish = Polish(locale: request.locale)
         let lite = request.mode == .lite
 
         progress(.writing)
         async let experienceBullets = section(WriteExperienceTask(), experienceInput, lite: lite)
         async let projectBullets = section(WriteProjectsTask(), projectsInput, lite: lite)
-        let summaryInput = WriteSummaryInput(brief: brief, selection: selection, totalYears: master.header.totalYears, verifier: verifier)
+        let summaryInput = WriteSummaryInput(
+            brief: brief, selection: selection, totalYears: master.header.totalYears, verifier: verifier)
         async let summaryText = request.summary ? optional(WriteSummaryTask(), summaryInput)?.summary : nil
         let skillsInput = WriteSkillsInput(brief: brief, skills: selection.skills)
-        async let skillGroups = optional(WriteSkillsTask(), skillsInput).map { WriteSkillsTask.groups($0, input: skillsInput) }
-        let written = try await (experience: experienceBullets, projects: projectBullets, summary: summaryText, skills: skillGroups)
+        async let skillGroups = optional(WriteSkillsTask(), skillsInput).map {
+            WriteSkillsTask.groups($0, input: skillsInput)
+        }
+        let written = try await (
+            experience: experienceBullets, projects: projectBullets, summary: summaryText, skills: skillGroups
+        )
 
         var fellBack: [MatchScore.Section] = []
         if written.experience.fellBack { fellBack.append(.experience) }
@@ -135,7 +147,8 @@ public struct Tailor: Sendable {
         if written.skills == nil { fellBack.append(.skills) }
 
         let ranks = Dictionary(
-            (selection.experience + selection.projects).flatMap(\.bullets).map { ($0.bullet.id, $0.score) }, uniquingKeysWith: max)
+            (selection.experience + selection.projects).flatMap(\.bullets).map { ($0.bullet.id, $0.score) },
+            uniquingKeysWith: max)
         var resume = TailoredResume(
             header: TailoredResume.Header(master.header), summary: written.summary.map(polish.text),
             skills: written.skills ?? [SkillGroup(label: "Skills", skills: selection.skills.map(\.name))],
@@ -145,11 +158,16 @@ public struct Tailor: Sendable {
             languages: request.requirements.asksForLanguages ? languages() : nil)
 
         if request.mode == .stretch {
-            let input = GapBulletsInput(brief: brief, written: resume, master: master, perRole: request.gapBulletsPerRole, verifier: verifier)
+            let input = GapBulletsInput(
+                brief: brief, written: resume, master: master, perRole: request.gapBulletsPerRole, verifier: verifier)
             if !input.isEmpty {
                 progress(.gapBullets)
-                if let added = try await optional(GapBulletsTask(), input).map({ GapBulletsTask.written($0, input: input) }) {
-                    resume.experience = resume.experience.map { Self.adding(added[$0.entryID] ?? [], to: $0, polish: polish) }
+                if let added = try await optional(GapBulletsTask(), input).map({
+                    GapBulletsTask.written($0, input: input)
+                }) {
+                    resume.experience = resume.experience.map {
+                        Self.adding(added[$0.entryID] ?? [], to: $0, polish: polish)
+                    }
                 }
             }
         }
@@ -158,7 +176,8 @@ public struct Tailor: Sendable {
         // fewer, keeping every number and claim, before the fitter decides what stays.
         if let measure, !lite {
             let input = ShortenBulletsInput(
-                resume, layout: try await measure(resume), lineCharacters: request.lineCharacters, locale: request.locale,
+                resume, layout: try await measure(resume), lineCharacters: request.lineCharacters,
+                locale: request.locale,
                 verifier: verifier)
             if !input.items.isEmpty {
                 progress(.shortening)
@@ -172,8 +191,10 @@ public struct Tailor: Sendable {
         var dropped = 0
         var budget = request.pageBudget
         if let measure {
-            let fitted = try await PageFitter(budget: request.pageBudget, allowingTwo: request.twoPagesWhenNeeded, measure: measure)
-                .fit(resume, progress: progress)
+            let fitted = try await PageFitter(
+                budget: request.pageBudget, allowingTwo: request.twoPagesWhenNeeded, measure: measure
+            )
+            .fit(resume, progress: progress)
             resume = fitted.resume
             layout = fitted.layout
             dropped = fitted.dropped
@@ -190,11 +211,16 @@ public struct Tailor: Sendable {
                 skills: selection.skills, totalYears: master.header.totalYears,
                 verifier: Verifier(resume: master, companyProducts: request.companyProducts))
             do {
-                let result = try await router.run(Redacted(CoverLetterTask(), header: master.header), input: input, context: context)
+                let result = try await router.run(
+                    Redacted(CoverLetterTask(), header: master.header), input: input, context: context)
                 letter = CoverLetterTask.letter(result.output, input: input, header: resume.header, date: selector.now)
             } catch {
                 if error.stopsEverything { throw error }
-                if case .invalidOutput(let found) = error { problem = .checks(found) } else { problem = .unavailable(error.reason) }
+                if case .invalidOutput(let found) = error {
+                    problem = .checks(found)
+                } else {
+                    problem = .unavailable(error.reason)
+                }
             }
         }
         return BuildOutcome(
@@ -241,14 +267,18 @@ public struct Tailor: Sendable {
 
     // MARK: - Assembly
 
-    private func entries(_ written: [WrittenEntry], from selected: [SelectedEntry], polish: Polish, ranks: [UUID: Double])
+    private func entries(
+        _ written: [WrittenEntry], from selected: [SelectedEntry], polish: Polish, ranks: [UUID: Double]
+    )
         -> [TailoredResume.Entry]
     {
         selected.compactMap { chosen in
             guard let entry = written.first(where: { $0.entryID == chosen.entry.id }) else { return nil }
             let texts = entry.verbatim ? entry.bullets.map(\.text) : polish.bullets(entry.bullets.map(\.text))
             let bullets = zip(entry.bullets, texts).map { bullet, text in
-                TailoredBullet(text: text, sourceIDs: bullet.sourceIDs, gap: bullet.gap, rank: bullet.sourceIDs.compactMap { ranks[$0] }.max() ?? 0)
+                TailoredBullet(
+                    text: text, sourceIDs: bullet.sourceIDs, gap: bullet.gap,
+                    rank: bullet.sourceIDs.compactMap { ranks[$0] }.max() ?? 0)
             }
             switch chosen.entry.fields {
             case .experience(let role):
@@ -260,7 +290,8 @@ public struct Tailor: Sendable {
                 return TailoredResume.Entry(
                     entryID: chosen.entry.id, title: project.name,
                     organization: project.tech.isEmpty ? nil : project.tech.joined(separator: ", "),
-                    dates: DisplayDates.range(chosen.entry), period: TailoredResume.Period(chosen.entry), bullets: bullets)
+                    dates: DisplayDates.range(chosen.entry), period: TailoredResume.Period(chosen.entry),
+                    bullets: bullets)
             default:
                 return nil
             }
@@ -268,7 +299,8 @@ public struct Tailor: Sendable {
     }
 
     /// Gap bullets go after a role's own, polished so none opens on a verb the role already used.
-    static func adding(_ gaps: [TailoredBullet], to entry: TailoredResume.Entry, polish: Polish) -> TailoredResume.Entry {
+    static func adding(_ gaps: [TailoredBullet], to entry: TailoredResume.Entry, polish: Polish) -> TailoredResume.Entry
+    {
         guard !gaps.isEmpty else { return entry }
         var entry = entry
         let polished = polish.bullets(entry.bullets.map(\.text) + gaps.map(\.text)).suffix(gaps.count)
@@ -287,7 +319,8 @@ public struct Tailor: Sendable {
             let title = [school.credential, school.field, school.honours].filter { !$0.isEmpty }.joined(separator: ", ")
             return TailoredResume.Entry(
                 entryID: entry.id, title: title.isEmpty ? school.institution : title,
-                organization: title.isEmpty ? nil : school.institution, location: school.location.isEmpty ? nil : school.location,
+                organization: title.isEmpty ? nil : school.institution,
+                location: school.location.isEmpty ? nil : school.location,
                 dates: DisplayDates.range(entry, monthNames: false), period: TailoredResume.Period(entry))
         }
     }
@@ -299,7 +332,8 @@ public struct Tailor: Sendable {
         let named = Set(job.certificationAsks.flatMap { Keywords.terms(in: $0) })
         let wanted = named.isEmpty ? Set((job.musts + job.nices).flatMap { Keywords.terms(in: $0) }) : named
         return master.entries(.certification).compactMap { entry in
-            guard case .certification(let certificate) = entry.fields, !Keywords.terms(in: certificate.name).isDisjoint(with: wanted)
+            guard case .certification(let certificate) = entry.fields,
+                !Keywords.terms(in: certificate.name).isDisjoint(with: wanted)
             else { return nil }
             return TailoredResume.Entry(
                 entryID: entry.id, title: certificate.name, dates: entry.start.map { "\($0.year)" },
@@ -318,7 +352,8 @@ public struct Tailor: Sendable {
         var lowest: (section: Int, entry: Int, bullet: Int, rank: Double)?
         for (section, entries) in [resume.experience, resume.projects].enumerated() {
             for (entryIndex, entry) in entries.enumerated() where entry.bullets.count > 1 {
-                for (bulletIndex, bullet) in entry.bullets.enumerated() where lowest.map({ bullet.rank <= $0.rank }) ?? true {
+                for (bulletIndex, bullet) in entry.bullets.enumerated()
+                where lowest.map({ bullet.rank <= $0.rank }) ?? true {
                     lowest = (section, entryIndex, bulletIndex, bullet.rank)
                 }
             }

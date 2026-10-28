@@ -36,8 +36,9 @@ public struct Salary: Codable, Sendable, Equatable, Hashable {
     /// The source's own words, when it gave words rather than numbers: "$120K – $150K".
     public var text: String?
 
-    public init(min: Double? = nil, max: Double? = nil, currency: String? = nil, period: Period? = nil, text: String? = nil)
-    {
+    public init(
+        min: Double? = nil, max: Double? = nil, currency: String? = nil, period: Period? = nil, text: String? = nil
+    ) {
         self.min = min
         self.max = max
         self.currency = currency
@@ -258,7 +259,9 @@ public struct SearchTurn: Sendable, Equatable, Hashable {
         guard count > 0 else { return [] }
         return Array(
             turns.enumerated().sorted { a, b in
-                let (la, lb) = (lastSearched[a.element.key] ?? .distantPast, lastSearched[b.element.key] ?? .distantPast)
+                let (la, lb) = (
+                    lastSearched[a.element.key] ?? .distantPast, lastSearched[b.element.key] ?? .distantPast
+                )
                 return la != lb ? la < lb : a.offset < b.offset
             }.prefix(count).map(\.element))
     }

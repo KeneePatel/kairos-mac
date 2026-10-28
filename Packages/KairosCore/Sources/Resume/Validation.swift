@@ -159,12 +159,15 @@ public enum Validator {
             entry.bullets.contains { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         }
         if !hasBullet { missing.append(.experienceBullet) }
-        let proven = resume.skills.count { $0.level == .proven && !$0.name.trimmingCharacters(in: .whitespaces).isEmpty }
+        let proven = resume.skills.count {
+            $0.level == .proven && !$0.name.trimmingCharacters(in: .whitespaces).isEmpty
+        }
         if proven < provenSkillsNeeded { missing.append(.provenSkills(have: proven, need: provenSkillsNeeded)) }
 
         var warnings: [String] = []
         if header.issue(for: .gitHub) != nil {
-            warnings.append("Your GitHub link is left off resumes until it's a profile address, like https://github.com/your-name.")
+            warnings.append(
+                "Your GitHub link is left off resumes until it's a profile address, like https://github.com/your-name.")
         }
         if header.issue(for: .portfolio) != nil {
             warnings.append("Your portfolio is left off resumes until its address starts with https://.")

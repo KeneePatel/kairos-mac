@@ -70,7 +70,8 @@ struct WriterCheckTests {
         let brief = WriterBrief(jobTitle: "Backend Developer", requirements: backend, locale: .canada)
         return WriteSectionInput(
             brief: brief, entries: selection.experience, skills: selection.skills,
-            verifier: Verifier(resume: Sample.resume, hiringCompany: "Northline Freight", companyProducts: ["FreightOS"]))
+            verifier: Verifier(
+                resume: Sample.resume, hiringCompany: "Northline Freight", companyProducts: ["FreightOS"]))
     }
 
     @Test func aWriterMayNotInventCiteAcrossRolesOrNameTheHiringCompany() {
@@ -82,7 +83,8 @@ struct WriterCheckTests {
                                     {"text":"Wrote Go services","source_ids":["b4"]}]}
             ]}
             """#
-        guard case .failure(let problem) = OutputCheck.output(from: reply, task: WriteExperienceTask(), input: input) else {
+        guard case .failure(let problem) = OutputCheck.output(from: reply, task: WriteExperienceTask(), input: input)
+        else {
             Issue.record("the reply should fail")
             return
         }
@@ -92,7 +94,8 @@ struct WriterCheckTests {
     }
 
     @Test func messagesUseShortIDsNeverUUIDs() {
-        let messages = WriteExperienceTask().messages(for: Self.experienceInput(), budget: TaskProfile.of(.writeExperience).budget)
+        let messages = WriteExperienceTask().messages(
+            for: Self.experienceInput(), budget: TaskProfile.of(.writeExperience).budget)
         let data = messages[1].content
         #expect(data.contains("<role id=\"e1\">") && data.contains("[b1]") && data.contains("<layout>"))
         #expect(!data.contains(Sample.id(11).uuidString) && !data.contains(Sample.id(11).lowercased))
@@ -100,23 +103,32 @@ struct WriterCheckTests {
     }
 
     @Test func skillsMayOnlyBeYourProvenOnes() {
-        let input = WriteSkillsInput(brief: WriterBrief(jobTitle: "Dev", requirements: backend, locale: .canada), skills: Sample.resume.skills)
-        guard case .failure = OutputCheck.output(from: #"{"groups":[{"label":"Languages","skills":["Go","Rust"]}]}"#, task: WriteSkillsTask(), input: input)
+        let input = WriteSkillsInput(
+            brief: WriterBrief(jobTitle: "Dev", requirements: backend, locale: .canada), skills: Sample.resume.skills)
+        guard
+            case .failure = OutputCheck.output(
+                from: #"{"groups":[{"label":"Languages","skills":["Go","Rust"]}]}"#, task: WriteSkillsTask(),
+                input: input)
         else {
             Issue.record("Rust is Can discuss, not Proven")
             return
         }
-        guard case .success(let output) = OutputCheck.output(from: #"{"groups":[{"label":"Languages","skills":["go","Python"]}]}"#, task: WriteSkillsTask(), input: input)
+        guard
+            case .success(let output) = OutputCheck.output(
+                from: #"{"groups":[{"label":"Languages","skills":["go","Python"]}]}"#, task: WriteSkillsTask(),
+                input: input)
         else {
             Issue.record("proven skills in any case pass")
             return
         }
-        #expect(WriteSkillsTask.groups(output, input: input) == [SkillGroup(label: "Languages", skills: ["Go", "Python"])])
+        #expect(
+            WriteSkillsTask.groups(output, input: input) == [SkillGroup(label: "Languages", skills: ["Go", "Python"])])
     }
 
     @Test func aLetterLeavesGreetingsSignOffsAndContactsToCode() {
         let input = CoverLetterInput(
-            brief: WriterBrief(jobTitle: "Backend Developer", requirements: backend, locale: .canada), company: "Northline Freight",
+            brief: WriterBrief(jobTitle: "Backend Developer", requirements: backend, locale: .canada),
+            company: "Northline Freight",
             entries: [], skills: [], totalYears: 5, verifier: Verifier(resume: Sample.resume))
         let body = String(repeating: "I build reliable services in Go and care about shipping them well. ", count: 6)
         let reply = #"{"paragraphs":["Dear team, \#(body)","\#(body)","Reach me at jordan@example.com. Sincerely"]}"#
@@ -137,12 +149,15 @@ struct TailorTests {
           {"id":"e2","bullets":[{"text":"Wrote a Python reconciliation job","source_ids":["b4"]}]}
         ]}
         """#
-    static let projectsReply = #"{"entries":[{"id":"e1","bullets":[{"text":"Built a budgeting app in Swift","source_ids":["b1"]}]}]}"#
-    static let skillsReply = #"{"groups":[{"label":"Languages","skills":["Go","Python","Swift"]},{"label":"Data","skills":["PostgreSQL","Kafka"]}]}"#
+    static let projectsReply =
+        #"{"entries":[{"id":"e1","bullets":[{"text":"Built a budgeting app in Swift","source_ids":["b1"]}]}]}"#
+    static let skillsReply =
+        #"{"groups":[{"label":"Languages","skills":["Go","Python","Swift"]},{"label":"Data","skills":["PostgreSQL","Kafka"]}]}"#
 
     static func request(_ mode: BuildMode = .strict, letter: Bool = false) -> BuildRequest {
         BuildRequest(
-            jobTitle: "Backend Developer II", company: "Northline Freight", requirements: backend, locale: .canada, mode: mode,
+            jobTitle: "Backend Developer II", company: "Northline Freight", requirements: backend, locale: .canada,
+            mode: mode,
             coverLetter: letter)
     }
 
@@ -152,11 +167,14 @@ struct TailorTests {
             .writeSkills: [.json(Self.skillsReply)],
         ])
         let steps = Locked<[BuildStep]>([])
-        let outcome = try await Tailor(router: scriptedRouter(chat), master: Sample.resume, selector: Selector(now: fixedNow))
-            .run(Self.request(), progress: { step in steps.withLock { $0.append(step) } })
+        let outcome = try await Tailor(
+            router: scriptedRouter(chat), master: Sample.resume, selector: Selector(now: fixedNow)
+        )
+        .run(Self.request(), progress: { step in steps.withLock { $0.append(step) } })
         let resume = outcome.resume
         #expect(steps.value == [.selecting, .writing])
-        #expect(resume.header.name == "Jordan Rivera" && resume.header.contact.first?.text == "jordan.rivera@example.com")
+        #expect(
+            resume.header.name == "Jordan Rivera" && resume.header.contact.first?.text == "jordan.rivera@example.com")
         #expect(resume.experience.map(\.title) == ["Software Developer, Backend", "Junior Developer"])
         let first = try #require(resume.experience.first?.bullets.first)
         #expect(first.text == "Built an event pipeline in Go and Kafka." && first.verified && first.rank > 0)
@@ -178,8 +196,10 @@ struct TailorTests {
     @Test func aWriterThatFailsFallsBackToYourWords() async throws {
         let chat = ScriptedChat([.writeProjects: [.json(Self.projectsReply)], .writeSkills: [.json(Self.skillsReply)]])
         chat.always(.writeExperience, .json(#"{"entries":[]}"#))
-        let outcome = try await Tailor(router: scriptedRouter(chat), master: Sample.resume, selector: Selector(now: fixedNow))
-            .run(Self.request())
+        let outcome = try await Tailor(
+            router: scriptedRouter(chat), master: Sample.resume, selector: Selector(now: fixedNow)
+        )
+        .run(Self.request())
         #expect(outcome.fellBack == [.experience])
         let bullets = outcome.resume.experience[0].bullets.map(\.text)
         #expect(bullets.contains("Built an event pipeline in Go handling 4.2M events a day with p99 under 120 ms."))
@@ -187,10 +207,15 @@ struct TailorTests {
 
     @Test func liteModeCopiesYourBulletsWithoutWriterCalls() async throws {
         let chat = ScriptedChat([.writeSkills: [.json(Self.skillsReply)]])
-        let outcome = try await Tailor(router: scriptedRouter(chat), master: Sample.resume, selector: Selector(now: fixedNow))
-            .run(Self.request(.lite))
+        let outcome = try await Tailor(
+            router: scriptedRouter(chat), master: Sample.resume, selector: Selector(now: fixedNow)
+        )
+        .run(Self.request(.lite))
         #expect(chat.asked.map(\.request.task) == [.writeSkills])
-        #expect(outcome.resume.experience[0].bullets.allSatisfy { Sample.resume.bulletsByID[$0.sourceIDs[0]]?.bullet.text == $0.text })
+        #expect(
+            outcome.resume.experience[0].bullets.allSatisfy {
+                Sample.resume.bulletsByID[$0.sourceIDs[0]]?.bullet.text == $0.text
+            })
     }
 
     @Test func aLetterIsWrittenOrLeftOutWithItsReason() async throws {
@@ -200,8 +225,10 @@ struct TailorTests {
             .writeExperience: [.json(Self.experienceReply)], .writeProjects: [.json(Self.projectsReply)],
             .writeSkills: [.json(Self.skillsReply)], .coverLetter: [.json(try ["paragraphs": paragraphs].jsonText())],
         ])
-        let outcome = try await Tailor(router: scriptedRouter(chat), master: Sample.resume, selector: Selector(now: fixedNow))
-            .run(Self.request(letter: true))
+        let outcome = try await Tailor(
+            router: scriptedRouter(chat), master: Sample.resume, selector: Selector(now: fixedNow)
+        )
+        .run(Self.request(letter: true))
         let letter = try #require(outcome.coverLetter)
         #expect(letter.greeting == "Dear Northline Freight hiring team," && letter.signature == "Jordan Rivera")
         #expect(letter.paragraphs.count == 3 && letter.date == "October 28, 2026")
@@ -211,8 +238,10 @@ struct TailorTests {
             .writeSkills: [.json(Self.skillsReply)],
         ])
         failing.always(.coverLetter, .error(.server(status: 503)))
-        let without = try await Tailor(router: scriptedRouter(failing), master: Sample.resume, selector: Selector(now: fixedNow))
-            .run(Self.request(letter: true))
+        let without = try await Tailor(
+            router: scriptedRouter(failing), master: Sample.resume, selector: Selector(now: fixedNow)
+        )
+        .run(Self.request(letter: true))
         #expect(without.coverLetter == nil && without.coverLetterProblem == .unavailable("was overloaded (503)"))
     }
 
@@ -234,7 +263,8 @@ struct TailorTests {
     }
 
     @Test func oldBuildsStillDecode() throws {
-        let stored = #"{"header":{"name":"Jordan Rivera","contact":[{"text":"jordan@example.com","url":"mailto:jordan@example.com"}]},"skills":[{"label":"Languages","skills":["Go"]}],"experience":[{"entryID":"00000000-0000-7000-8000-000000000001","title":"Developer","bullets":[{"text":"Built X.","sourceIDs":["00000000-0000-7000-8000-000000000011"],"gap":false,"rank":2.25,"verified":true}]}],"projects":[],"education":[],"certifications":[]}"#
+        let stored =
+            #"{"header":{"name":"Jordan Rivera","contact":[{"text":"jordan@example.com","url":"mailto:jordan@example.com"}]},"skills":[{"label":"Languages","skills":["Go"]}],"experience":[{"entryID":"00000000-0000-7000-8000-000000000001","title":"Developer","bullets":[{"text":"Built X.","sourceIDs":["00000000-0000-7000-8000-000000000011"],"gap":false,"rank":2.25,"verified":true}]}],"projects":[],"education":[],"certifications":[]}"#
         let resume = try TailoredResume.fromJSON(stored)
         #expect(resume.experience[0].bullets[0].sourceIDs == [Sample.id(11)] && resume.experience[0].period == nil)
     }

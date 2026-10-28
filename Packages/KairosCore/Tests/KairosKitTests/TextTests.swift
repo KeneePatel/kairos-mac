@@ -73,7 +73,8 @@ struct HTMLToMarkdownTests {
     }
 
     @Test func blocksComeBackOutForViews() {
-        let html = "<h2>About</h2><p>We build.</p><ul><li>Go</li><li>Rust<ul><li>async</li></ul></li></ul><hr><ol><li>One</li></ol>"
+        let html =
+            "<h2>About</h2><p>We build.</p><ul><li>Go</li><li>Rust<ul><li>async</li></ul></li></ul><hr><ol><li>One</li></ol>"
         #expect(
             MarkdownBlock.parse(HTMLToMarkdown.convert(html)) == [
                 .heading(level: 2, text: "About"), .paragraph("We build."),

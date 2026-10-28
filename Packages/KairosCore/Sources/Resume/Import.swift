@@ -93,7 +93,8 @@ public struct ImportResumeTask: AITask {
                 .array(
                     of: .object([
                         .required("title", .string(maxLength: 200)), .required("employer", .string(maxLength: 200)),
-                        .optional("location", .string(maxLength: 120)), .optional("employment_type", .string(maxLength: 40)),
+                        .optional("location", .string(maxLength: 120)),
+                        .optional("employment_type", .string(maxLength: 40)),
                         .optional("start", month), .optional("end", month), .optional("current", .boolean),
                         .required("bullets", bullets),
                     ]), maxItems: 40)),
@@ -109,7 +110,8 @@ public struct ImportResumeTask: AITask {
                 "education",
                 .array(
                     of: .object([
-                        .required("institution", .string(maxLength: 200)), .optional("credential", .string(maxLength: 120)),
+                        .required("institution", .string(maxLength: 200)),
+                        .optional("credential", .string(maxLength: 120)),
                         .optional("field", .string(maxLength: 120)), .optional("location", .string(maxLength: 120)),
                         .optional("honours", .string(maxLength: 200)), .optional("coursework", names),
                         .optional("start", month), .optional("end", month),
@@ -133,7 +135,8 @@ public struct ImportResumeTask: AITask {
                 .array(
                     of: .object([
                         .required("language", .string(maxLength: 60)),
-                        .required("proficiency", .enumeration(EntryFields.Language.Proficiency.allCases.map(\.rawValue))),
+                        .required(
+                            "proficiency", .enumeration(EntryFields.Language.Proficiency.allCases.map(\.rawValue))),
                     ]), maxItems: 20)),
             .optional(
                 "other",
@@ -179,7 +182,8 @@ public struct ImportResumeTask: AITask {
     /// "YYYY-MM", or a year alone when the resume gives no month: January, marked as a guess.
     static func date(_ text: String) -> (month: YearMonth, guessed: Bool)? {
         if let month = YearMonth(text) { return (month, false) }
-        guard text.count == 4, text.allSatisfy(\.isASCII), let year = Int(text), let month = YearMonth(year: year, month: 1)
+        guard text.count == 4, text.allSatisfy(\.isASCII), let year = Int(text),
+            let month = YearMonth(year: year, month: 1)
         else { return nil }
         return (month, true)
     }
@@ -236,7 +240,9 @@ public struct ImportDraft: Sendable, Equatable {
             add(
                 ResumeEntry(
                     fields: .project(
-                        .init(name: project.name.tidied, role: project.role ?? "", tech: project.tech ?? [], projectURL: project.url)),
+                        .init(
+                            name: project.name.tidied, role: project.role ?? "", tech: project.tech ?? [],
+                            projectURL: project.url)),
                     start: date(project.start), end: current ? nil : date(project.end), isCurrent: current,
                     bullets: bullets(project.bullets)))
         }
@@ -250,7 +256,10 @@ public struct ImportDraft: Sendable, Equatable {
                             coursework: school.coursework ?? [])), start: date(school.start), end: date(school.end)))
         }
         for cert in output.certifications ?? [] {
-            add(ResumeEntry(fields: .certification(.init(name: cert.name.tidied, issuer: cert.issuer ?? "")), start: date(cert.date)))
+            add(
+                ResumeEntry(
+                    fields: .certification(.init(name: cert.name.tidied, issuer: cert.issuer ?? "")),
+                    start: date(cert.date)))
         }
         for language in output.languages ?? [] {
             let level = EntryFields.Language.Proficiency(rawValue: language.proficiency) ?? .professional
@@ -268,7 +277,8 @@ public struct ImportDraft: Sendable, Equatable {
         skills = output.skills.compactMap { draft in
             let name = draft.name.tidied
             guard !name.isEmpty, seen.insert(name.lowercased()).inserted else { return nil }
-            return Skill(name: name, category: draft.category ?? "", level: SkillLevel(rawValue: draft.level) ?? .canDiscuss)
+            return Skill(
+                name: name, category: draft.category ?? "", level: SkillLevel(rawValue: draft.level) ?? .canDiscuss)
         }
     }
 }

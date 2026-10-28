@@ -35,10 +35,15 @@ struct BoardReaderTests {
             Self.light: .json(try Self.lightList(), headers: ["ETag": "W/\"v1\""]),
             Self.light + "/4012001002?pay_transparency=true": .json(detail?.text ?? ""),
         ])
-        let result = try await GreenhouseReader(board: acme, http: http, clock: ManualWallClock(isoDate("2026-10-20T00:00:00Z")))
-            .read(ReadRequest(roles: software))
+        let result = try await GreenhouseReader(
+            board: acme, http: http, clock: ManualWallClock(isoDate("2026-10-20T00:00:00Z"))
+        )
+        .read(ReadRequest(roles: software))
         #expect(result.complete && result.etag == "W/\"v1\"" && result.requests == 2)
-        #expect(result.postings.map(\.title) == ["Backend Engineer, Platform", "Développeur(se) mobile", "Site Reliability Engineer"])
+        #expect(
+            result.postings.map(\.title) == [
+                "Backend Engineer, Platform", "Développeur(se) mobile", "Site Reliability Engineer",
+            ])
         #expect(result.postings.map(\.textOmitted) == [false, true, true])
         let first = result.postings[0]
         #expect(first.company == "Acme Robotics" && first.location == "Toronto, ON")
@@ -66,7 +71,9 @@ struct BoardReaderTests {
         #expect(http.requests.first?.headers["If-None-Match"] == "W/\"v1\"")
     }
 
-    @Test(arguments: ["", "acme/../admin", "acme?x=1", "..", "acme robotics", "acmé", String(repeating: "a", count: 101)])
+    @Test(arguments: [
+        "", "acme/../admin", "acme?x=1", "..", "acme robotics", "acmé", String(repeating: "a", count: 101),
+    ])
     func refusesASlugThatCouldLeaveItsPath(_ slug: String) async {
         let http = FakeHTTP()
         await #expect(throws: SourceError.invalidConfiguration("Greenhouse board token: \(slug)")) {
@@ -116,8 +123,10 @@ struct BoardReaderTests {
     @Test func ashbyLeavesOutUnlistedJobs() async throws {
         let url = "https://api.ashbyhq.com/posting-api/job-board/acmerobotics?includeCompensation=true"
         let http = FakeHTTP([url: try .fixture("boards/ashby_job_board.json")])
-        let result = try await AshbyReader(board: Board(kind: .ashby, slug: "acmerobotics", name: "Acme Robotics"), http: http)
-            .read(ReadRequest())
+        let result = try await AshbyReader(
+            board: Board(kind: .ashby, slug: "acmerobotics", name: "Acme Robotics"), http: http
+        )
+        .read(ReadRequest())
         #expect(result.postings.map(\.title) == ["Staff Data Engineer", "Solutions Engineer"])
         let first = result.postings[0]
         #expect(first.location == "Toronto, ON" && first.otherLocations == ["Remote (Canada)", "Remote (US)"])
@@ -138,7 +147,10 @@ struct BoardReaderTests {
         let board = Board(kind: .smartRecruiters, slug: "AcmeRobotics", name: "")
         let result = try await SmartRecruitersReader(board: board, http: http)
             .read(ReadRequest(roles: software, knownURLs: [known]))
-        #expect(result.postings.map(\.title) == ["Backend Developer", "Warehouse Associate", "Senior SDE, Robotics Platform"])
+        #expect(
+            result.postings.map(\.title) == [
+                "Backend Developer", "Warehouse Associate", "Senior SDE, Robotics Platform",
+            ])
         #expect(result.postings.map(\.textOmitted) == [false, true, true])
         #expect(result.requests == 3)
         let text = result.postings[0].descriptionHTML
@@ -149,11 +161,13 @@ struct BoardReaderTests {
 
     @Test func workableRecruiteeBambooPersonioAndTeamtailor() async throws {
         let http = FakeHTTP([
-            "https://apply.workable.com/api/v1/widget/accounts/acme?details=true": try .fixture("boards/workable_widget.json"),
+            "https://apply.workable.com/api/v1/widget/accounts/acme?details=true": try .fixture(
+                "boards/workable_widget.json"),
             "https://acme.recruitee.com/api/offers/": try .fixture("boards/recruitee_offers.json"),
             "https://acme.bamboohr.com/careers/list": try .fixture("boards/bamboohr_list.json"),
             "https://acme.bamboohr.com/careers/761/detail": try .fixture("boards/bamboohr_detail.json"),
-            "https://acme.jobs.personio.de/xml?language=en": try .fixture("boards/personio_feed.xml", headers: ["ETag": "p1"]),
+            "https://acme.jobs.personio.de/xml?language=en": try .fixture(
+                "boards/personio_feed.xml", headers: ["ETag": "p1"]),
             "https://acme.teamtailor.com/jobs.rss": try .fixture("boards/teamtailor_jobs.rss"),
         ])
         func board(_ kind: SourceKind) -> Board { Board(kind: kind, slug: "acme", name: "") }
@@ -215,11 +229,14 @@ struct SearchReaderTests {
         }
         let reader = HimalayasReader(key: "him-key", http: http, clock: ManualWallClock(now))
         let result = try await reader.read(
-            ReadRequest(roles: RoleMatcher(families: [], extra: ["backend engineer"]), countries: [.canada], maxAgeDays: 30))
+            ReadRequest(
+                roles: RoleMatcher(families: [], extra: ["backend engineer"]), countries: [.canada], maxAgeDays: 30))
         #expect(result.postings.map(\.title) == ["Backend Engineer"] && !result.complete)
         let posting = try #require(result.postings.first)
         #expect(posting.location == "Remote - Canada" && posting.workplace == .remote && posting.countryHint == "CA")
-        #expect(posting.applyURL?.absoluteString == "https://boards.greenhouse.io/acme/jobs/1" && posting.via == "Himalayas")
+        #expect(
+            posting.applyURL?.absoluteString == "https://boards.greenhouse.io/acme/jobs/1" && posting.via == "Himalayas"
+        )
         #expect(posting.salary?.max == 120_000 && posting.salary?.period == .year)
         #expect(http.requests.first?.headers["Authorization"] == "Bearer him-key")
     }
@@ -229,7 +246,9 @@ struct SearchReaderTests {
         let http = FakeHTTP { request in
             request.url.host() == "serpapi.com" ? try? .fixture("boards/serpapi_google_jobs.json") : nil
         }
-        let turn = SearchTurn(phrase: "software developer", place: Place(city: "Toronto", region: "Ontario", country: .canada), country: .canada)
+        let turn = SearchTurn(
+            phrase: "software developer", place: Place(city: "Toronto", region: "Ontario", country: .canada),
+            country: .canada)
         let result = try await GoogleJobsReader(key: "serp-key", http: http, clock: ManualWallClock(now))
             .read(ReadRequest(budget: 1, turns: [turn]))
         #expect(result.requests == 1 && result.postings.count == 5)
@@ -277,10 +296,12 @@ struct SearchReaderTests {
             _ = try await HimalayasReader(key: nil, http: FakeHTTP()).read(ReadRequest())
         }
         guard case .failure = Readers.search(.googleJobs, keys: .init(), http: FakeHTTP()) else {
-            Issue.record("Google Jobs without a key"); return
+            Issue.record("Google Jobs without a key")
+            return
         }
         guard case .success = Readers.search(.himalayas, keys: .init(), http: FakeHTTP()) else {
-            Issue.record("Himalayas works without a key"); return
+            Issue.record("Himalayas works without a key")
+            return
         }
     }
 }

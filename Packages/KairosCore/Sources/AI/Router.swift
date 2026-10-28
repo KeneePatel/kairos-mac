@@ -182,7 +182,8 @@ public actor AIRouter {
                 continue
             }
             if !isLast, let until = troubled[ref], until > clock.now {
-                context.events?(.failed(task: T.id, model: ref, reason: "was skipped after failing a moment ago", detail: nil))
+                context.events?(
+                    .failed(task: T.id, model: ref, reason: "was skipped after failing a moment ago", detail: nil))
                 continue
             }
             context.events?(.asking(task: T.id, model: ref, fallback: position > 0))
@@ -192,11 +193,13 @@ public actor AIRouter {
                     task, input: input, messages: messages, on: ref, provider: provider, profile: profile,
                     failFast: !isLast, fellBack: position > 0, context: context)
                 troubled[ref] = nil
-                await cache?.store(json, task: T.id, inputHash: inputHash, promptVersion: T.promptVersion, model: ref.model)
+                await cache?.store(
+                    json, task: T.id, inputHash: inputHash, promptVersion: T.promptVersion, model: ref.model)
                 let seconds = clock.now.timeIntervalSince(started)
                 context.events?(.answered(task: T.id, model: ref, seconds: seconds, cached: false))
                 return AIResult(
-                    output: output, model: ref, inputTokens: tokens.input, outputTokens: tokens.output, seconds: seconds,
+                    output: output, model: ref, inputTokens: tokens.input, outputTokens: tokens.output,
+                    seconds: seconds,
                     cached: false, repaired: repaired, fellBack: position > 0, json: json)
             } catch {
                 if error.stopsEverything { throw error }
@@ -230,7 +233,8 @@ public actor AIRouter {
         var tokens: (input: Int?, output: Int?) = (nil, nil)
         for attempt in 0..<2 {
             let request = ChatRequest(
-                task: T.id, model: ref.model, messages: messages, schema: T.outputSchema, temperature: profile.temperature,
+                task: T.id, model: ref.model, messages: messages, schema: T.outputSchema,
+                temperature: profile.temperature,
                 maxOutputTokens: profile.budget.output, timeoutSeconds: profile.timeoutSeconds)
             let (response, keyName, milliseconds) = try await call(
                 request, provider: provider, ref: ref, failFast: failFast, fellBack: fellBack, context: context)
@@ -289,7 +293,8 @@ public actor AIRouter {
             let mode = max(modes[modeKey] ?? provider.preset.structuredOutput, provider.preset.structuredOutput)
             let result: Result<(ChatResponse, StructuredOutput), AIError>
             do {
-                result = .success(try await service.complete(request, provider: provider, key: pool[index].value, mode: mode))
+                result = .success(
+                    try await service.complete(request, provider: provider, key: pool[index].value, mode: mode))
             } catch {
                 result = .failure(error)
             }

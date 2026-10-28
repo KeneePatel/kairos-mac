@@ -106,7 +106,9 @@ public struct JobRequirements: Sendable, Equatable {
         self.init(
             musts: shown.filter { $0.kind == .must }.map(\.text), nices: shown.filter { $0.kind == .nice }.map(\.text),
             domains: analysis.domains, asksForLanguages: analysis.requirements.contains { $0.category == .language },
-            certificationAsks: analysis.requirements.map(\.text).filter { $0.localizedCaseInsensitiveContains("certif") })
+            certificationAsks: analysis.requirements.map(\.text).filter {
+                $0.localizedCaseInsensitiveContains("certif")
+            })
     }
 }
 
@@ -218,7 +220,8 @@ public struct TailoredResume: Codable, Sendable, Equatable {
         public init?(_ entry: ResumeEntry) {
             func month(_ value: YearMonth?) -> Month? { value.map { Month(year: $0.year, month: $0.month) } }
             guard entry.start != nil || entry.end != nil || entry.isCurrent else { return nil }
-            self.init(start: month(entry.start), end: entry.isCurrent ? nil : month(entry.end), isCurrent: entry.isCurrent)
+            self.init(
+                start: month(entry.start), end: entry.isCurrent ? nil : month(entry.end), isCurrent: entry.isCurrent)
         }
     }
 
@@ -258,7 +261,8 @@ public struct TailoredResume: Codable, Sendable, Equatable {
     public var languages: String?
 
     public init(
-        header: Header, summary: String? = nil, skills: [SkillGroup] = [], experience: [Entry] = [], projects: [Entry] = [],
+        header: Header, summary: String? = nil, skills: [SkillGroup] = [], experience: [Entry] = [],
+        projects: [Entry] = [],
         education: [Entry] = [], certifications: [Entry] = [], languages: String? = nil
     ) {
         self.header = header
@@ -292,7 +296,10 @@ extension TailoredResume.Header {
         var contact: [TailoredResume.ContactLine] = []
         if !header.email.isEmpty { contact.append(.init(text: header.email, url: "mailto:\(header.email)")) }
         if !header.phone.isEmpty {
-            contact.append(.init(text: Self.displayPhone(header.phone), url: "tel:" + (header.phone.hasPrefix("+") ? "+" : "") + header.phone.filter(\.isNumber)))
+            contact.append(
+                .init(
+                    text: Self.displayPhone(header.phone),
+                    url: "tel:" + (header.phone.hasPrefix("+") ? "+" : "") + header.phone.filter(\.isNumber)))
         }
         for url in [header.linkedInURL, header.gitHubURL ?? "", header.portfolioURL ?? ""] where !url.isEmpty {
             contact.append(.init(text: Self.displayURL(url), url: url))

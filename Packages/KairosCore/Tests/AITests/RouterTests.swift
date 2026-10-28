@@ -65,7 +65,14 @@ struct RouterTests {
         events = recorder.value
         #expect(result.model.model == "model-b" && result.fellBack)
         #expect(chat.asked.map(\.request.model) == ["model-a", "model-a", "model-b"])
-        #expect(events.contains { if case .failed(_, let ref, _, let detail) = $0 { ref.model == "model-a" && detail != nil } else { false } })
+        #expect(
+            events.contains {
+                if case .failed(_, let ref, _, let detail) = $0 {
+                    ref.model == "model-a" && detail != nil
+                } else {
+                    false
+                }
+            })
     }
 
     @Test func aCutOffReplyIsRepairedNotTrusted() async throws {
@@ -139,7 +146,8 @@ struct RouterTests {
             providers: [AISettings.Provider(id: "g", presetID: "gemini", keyNames: ["k1"])],
             routes: [EchoTask.id.rawValue: [ModelRef(provider: "g", model: "model-a")]])
         let router = AIRouter(
-            settings: settings, secrets: MemorySecretStore([SecretKey("k1"): "key-1"]), service: chat, clock: TestClock())
+            settings: settings, secrets: MemorySecretStore([SecretKey("k1"): "key-1"]), service: chat,
+            clock: TestClock())
         _ = try await router.run(EchoTask(), input: ["Ada"])
         _ = try await router.run(EchoTask(), input: ["Ada", "b"])
         #expect(chat.asked.map(\.mode) == [.jsonMode, .jsonMode])
@@ -149,9 +157,10 @@ struct RouterTests {
 
 @Suite("AI router: keys")
 struct RouterKeyTests {
-    static func router(_ chat: ScriptedChat, keys: [String], log: MemoryCallLog? = nil, clock: TestClock = TestClock(),
-        models: [String] = ["gemini-flash-latest"]) -> AIRouter
-    {
+    static func router(
+        _ chat: ScriptedChat, keys: [String], log: MemoryCallLog? = nil, clock: TestClock = TestClock(),
+        models: [String] = ["gemini-flash-latest"]
+    ) -> AIRouter {
         let names = keys.indices.map { "llm.gemini.k\($0)" }
         let settings = AISettings(
             providers: [AISettings.Provider(id: "gemini", presetID: "gemini", keyNames: names)],
@@ -203,7 +212,9 @@ struct RouterKeyTests {
     @Test func withoutAKeyThereIsNothingToRun() async throws {
         let chat = ScriptedChat()
         let router = Self.router(chat, keys: [])
-        await #expect(throws: AIError.noKey(provider: "Google Gemini")) { _ = try await router.run(EchoTask(), input: ["Ada"]) }
+        await #expect(throws: AIError.noKey(provider: "Google Gemini")) {
+            _ = try await router.run(EchoTask(), input: ["Ada"])
+        }
         #expect(await router.canRun(EchoTask.id) == false)
         #expect(chat.asked.isEmpty)
     }

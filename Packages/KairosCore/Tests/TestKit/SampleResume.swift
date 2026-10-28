@@ -30,17 +30,22 @@ public enum Sample {
             ResumeEntry(
                 id: id(1),
                 fields: .experience(
-                    .init(employer: "Harbourline Logistics", title: "Software Developer, Backend", location: "Toronto, ON")),
+                    .init(
+                        employer: "Harbourline Logistics", title: "Software Developer, Backend", location: "Toronto, ON"
+                    )),
                 start: YearMonth("2022-03"), isCurrent: true,
                 bullets: [
                     ResumeBullet(
-                        id: id(11), text: "Built an event pipeline in Go handling 4.2M events a day with p99 under 120 ms.",
+                        id: id(11),
+                        text: "Built an event pipeline in Go handling 4.2M events a day with p99 under 120 ms.",
                         metrics: ["4.2M events a day"], skills: ["Go", "Kafka"]),
                     ResumeBullet(
-                        id: id(12), text: "Onboarded 11 carriers in 4 days instead of 3 weeks by designing a gRPC integration kit.",
+                        id: id(12),
+                        text: "Onboarded 11 carriers in 4 days instead of 3 weeks by designing a gRPC integration kit.",
                         skills: ["gRPC"]),
                     ResumeBullet(
-                        id: id(13), text: "Moved 40 services to Kubernetes with zero-downtime deploys and PostgreSQL failover.",
+                        id: id(13),
+                        text: "Moved 40 services to Kubernetes with zero-downtime deploys and PostgreSQL failover.",
                         metrics: ["40 services"], skills: ["Kubernetes", "PostgreSQL"]),
                 ]),
             ResumeEntry(
@@ -49,26 +54,38 @@ public enum Sample {
                 start: YearMonth("2020-06"), end: YearMonth("2022-02"),
                 bullets: [
                     ResumeBullet(
-                        id: id(21), text: "Wrote the Python reconciliation job that matched 98% of payouts without review.",
+                        id: id(21),
+                        text: "Wrote the Python reconciliation job that matched 98% of payouts without review.",
                         metrics: ["98%"], skills: ["Python", "PostgreSQL"]),
-                    ResumeBullet(id: id(22), text: "Added contract tests to 6 payment APIs, catching 3 breaking changes before release.",
+                    ResumeBullet(
+                        id: id(22),
+                        text: "Added contract tests to 6 payment APIs, catching 3 breaking changes before release.",
                         metrics: ["6 payment APIs", "3 breaking changes"], skills: ["Python"]),
                 ]),
             ResumeEntry(
-                id: id(3), fields: .project(.init(name: "Ledger", role: "Creator", tech: ["Swift", "SQLite"], repoURL: "https://github.com/jrivera/ledger")),
+                id: id(3),
+                fields: .project(
+                    .init(
+                        name: "Ledger", role: "Creator", tech: ["Swift", "SQLite"],
+                        repoURL: "https://github.com/jrivera/ledger")),
                 start: YearMonth("2023-01"), end: YearMonth("2023-06"),
                 bullets: [
-                    ResumeBullet(id: id(31), text: "Built a budgeting app in Swift with an SQLite store and 200 unit tests.",
+                    ResumeBullet(
+                        id: id(31), text: "Built a budgeting app in Swift with an SQLite store and 200 unit tests.",
                         metrics: ["200 unit tests"], skills: ["Swift", "SQLite"])
                 ]),
             ResumeEntry(
                 id: id(4),
                 fields: .education(
-                    .init(institution: "University of Waterloo", credential: "BMath", field: "Computer Science", location: "Waterloo, ON",
+                    .init(
+                        institution: "University of Waterloo", credential: "BMath", field: "Computer Science",
+                        location: "Waterloo, ON",
                         honours: "Dean's List")),
                 start: YearMonth("2016-09"), end: YearMonth("2020-04")),
             ResumeEntry(
-                id: id(5), fields: .certification(.init(name: "AWS Certified Solutions Architect – Associate", issuer: "Amazon Web Services")),
+                id: id(5),
+                fields: .certification(
+                    .init(name: "AWS Certified Solutions Architect – Associate", issuer: "Amazon Web Services")),
                 start: YearMonth("2023-09")),
             ResumeEntry(id: id(6), fields: .language(.init(language: "English", proficiency: .native))),
             ResumeEntry(id: id(7), fields: .language(.init(language: "French", proficiency: .conversational))),

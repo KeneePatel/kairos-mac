@@ -104,7 +104,9 @@ public struct ProviderPreset: Sendable, Equatable, Identifiable {
         maxTokensField: "max_tokens",
         defaultModels: [.flash: "gemini-flash-latest", .flashLite: "gemini-flash-lite-latest"], requestsPerMinute: 10,
         timeoutSeconds: 120,
-        dailyRequests: [DailyRequests(family: "flash-lite", requests: 500), DailyRequests(family: "flash", requests: 20)],
+        dailyRequests: [
+            DailyRequests(family: "flash-lite", requests: 500), DailyRequests(family: "flash", requests: 20),
+        ],
         quotaDayZone: "America/Los_Angeles")
 
     /// JSON mode until a model refuses it (T20: `qwen3.5:4B` answers 501 and drops to prompt-only).

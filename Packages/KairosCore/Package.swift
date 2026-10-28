@@ -36,7 +36,8 @@ let package = Package(
         .target(name: "Secrets", swiftSettings: strict),
         .target(name: "AI", dependencies: ["KairosKit", "Secrets"], swiftSettings: strict),
         .target(name: "Jobs", dependencies: ["KairosKit"], resources: [.copy("Resources")], swiftSettings: strict),
-        .target(name: "Resume", dependencies: ["KairosKit", "AI"], resources: [.copy("Resources")], swiftSettings: strict),
+        .target(
+            name: "Resume", dependencies: ["KairosKit", "AI"], resources: [.copy("Resources")], swiftSettings: strict),
         .target(
             name: "Screening", dependencies: ["KairosKit", "Jobs", "Resume", "AI"], resources: [.copy("Resources")],
             swiftSettings: strict),
@@ -73,7 +74,8 @@ let package = Package(
         .testTarget(name: "SecretsTests", dependencies: ["Secrets"], swiftSettings: strict),
         .testTarget(name: "AITests", dependencies: ["AI", "KairosKit", "Secrets", "TestKit"], swiftSettings: strict),
         .testTarget(name: "JobsTests", dependencies: ["Jobs", "KairosKit", "TestKit"], swiftSettings: strict),
-        .testTarget(name: "ResumeTests", dependencies: ["Resume", "AI", "KairosKit", "TestKit"], swiftSettings: strict),
+        .testTarget(
+            name: "ResumeTests", dependencies: ["Resume", "AI", "KairosKit", "TestKit"], swiftSettings: strict),
         .testTarget(
             name: "ScreeningTests", dependencies: ["Screening", "Jobs", "Resume", "AI", "KairosKit", "TestKit"],
             swiftSettings: strict),

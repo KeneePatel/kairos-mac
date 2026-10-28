@@ -1,5 +1,5 @@
-import Foundation
 import AI
+import Foundation
 import Resume
 
 /// What `gapBullets` gets: the requirements no bullet shows that one of your

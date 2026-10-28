@@ -207,7 +207,8 @@ public struct GoogleJobsReader: JobReader {
             location: remote && location.localizedCaseInsensitiveContains("anywhere")
                 ? "Remote - \(country.name)" : location,
             postedAt: posted,
-            descriptionHTML: "<p>" + HTMLEntities.escape(job.description ?? "").replacing("\n", with: "</p><p>") + "</p>"
+            descriptionHTML: "<p>" + HTMLEntities.escape(job.description ?? "").replacing("\n", with: "</p><p>")
+                + "</p>"
                 + highlights,
             countryHint: country.rawValue, workplace: remote ? .remote : nil, salary: pay.map { Salary(text: $0) },
             applyURL: Self.applyLink(page: page, options: options, company: job.companyName, via: job.via),
@@ -365,7 +366,8 @@ public struct AdzunaReader: JobReader {
         ]
         if let maxAgeDays { items.append(("max_days_old", String(maxAgeDays))) }
         items.append(("content-type", "application/json"))
-        let unreserved = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~/")
+        let unreserved = CharacterSet(
+            charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~/")
         let query = items.map { "\($0)=\($1.addingPercentEncoding(withAllowedCharacters: unreserved) ?? "")" }
         let code = country.rawValue.lowercased()
         guard

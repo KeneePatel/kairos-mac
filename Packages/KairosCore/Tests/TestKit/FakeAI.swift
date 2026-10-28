@@ -129,7 +129,8 @@ public actor MemoryResultCache: AIResultCache {
 /// A router over scripted replies: one provider ("p", no key needed) whose chain for every task is
 /// `models`, or a custom chain.
 public func scriptedRouter(
-    _ chat: ScriptedChat, models: [String] = ["model-a"], log: (any AICallLog)? = nil, cache: (any AIResultCache)? = nil,
+    _ chat: ScriptedChat, models: [String] = ["model-a"], log: (any AICallLog)? = nil,
+    cache: (any AIResultCache)? = nil,
     clock: TestClock = TestClock(), budget: AISettings.Budget = AISettings.Budget()
 ) -> AIRouter {
     let routes = Dictionary(

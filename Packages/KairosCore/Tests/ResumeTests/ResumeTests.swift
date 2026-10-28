@@ -20,11 +20,18 @@ struct ModelTests {
     @Test func entryFieldsKeepTheFirstKairossJSON() throws {
         let stored = #"{"employer":"Acme","employmentType":"Full-time","location":"Halifax, NS","title":"Developer"}"#
         let fields = try EntryFields.decode(kind: .experience, json: stored)
-        #expect(fields == .experience(.init(employer: "Acme", title: "Developer", location: "Halifax, NS", employmentType: "Full-time")))
+        #expect(
+            fields
+                == .experience(
+                    .init(employer: "Acme", title: "Developer", location: "Halifax, NS", employmentType: "Full-time")))
         #expect(try fields.json() == stored)
-        let project = try EntryFields.decode(kind: .project, json: #"{"name":"Kairos","repoURL":"https://github.com/x/kairos","role":"","tech":["Swift"]}"#)
+        let project = try EntryFields.decode(
+            kind: .project,
+            json: #"{"name":"Kairos","repoURL":"https://github.com/x/kairos","role":"","tech":["Swift"]}"#)
         #expect(project.headline == "Kairos")
-        #expect(throws: (any Error).self) { try EntryFields.decode(kind: .experience, json: #"{"name":"no employer"}"#) }
+        #expect(throws: (any Error).self) {
+            try EntryFields.decode(kind: .experience, json: #"{"name":"no employer"}"#)
+        }
     }
 
     @Test func theSampleHasWhatTestsNeed() {
@@ -51,11 +58,14 @@ struct ValidationTests {
     }
 
     @Test func profileLinksTakeOneForm() {
-        #expect(Validator.linkedInProfile("ca.linkedin.com/in/jordan-rivera/?trk=x") == "https://www.linkedin.com/in/jordan-rivera")
+        #expect(
+            Validator.linkedInProfile("ca.linkedin.com/in/jordan-rivera/?trk=x")
+                == "https://www.linkedin.com/in/jordan-rivera")
         #expect(Validator.linkedInProfile("https://www.linkedin.com/company/acme") == nil)
         #expect(Validator.gitHubProfile("github.com/jrivera/") == "https://github.com/jrivera")
         #expect(Validator.gitHubProfile("https://github.com/jrivera/ledger") == nil)
-        #expect(Validator.httpsURL("jordan.dev") == "https://jordan.dev" && Validator.httpsURL("http://jordan.dev") == nil)
+        #expect(
+            Validator.httpsURL("jordan.dev") == "https://jordan.dev" && Validator.httpsURL("http://jordan.dev") == nil)
         #expect(PhoneNumber.display("+14165550123") == "416-555-0123")
     }
 
@@ -66,7 +76,8 @@ struct ValidationTests {
         header.phone = "416 555 0123"
         header.gitHubURL = "github.com/jrivera"
         let validation = Validator.validate(header)
-        #expect(validation.header.phone == "+14165550123" && validation.header.gitHubURL == "https://github.com/jrivera")
+        #expect(
+            validation.header.phone == "+14165550123" && validation.header.gitHubURL == "https://github.com/jrivera")
         #expect(validation.issues.map(\.field) == [.email, .linkedIn, .totalYears])
         #expect(validation.issue(for: .email)?.kind == .invalid && validation.issue(for: .linkedIn)?.kind == .missing)
     }
@@ -110,9 +121,12 @@ struct RedactionTests {
     }
 
     @Test func workStatusStaysOnThisMac() {
-        let text = "Canadian citizen; no sponsorship required. Built a visa portal. Eligible to work in Canada. Secret clearance."
+        let text =
+            "Canadian citizen; no sponsorship required. Built a visa portal. Eligible to work in Canada. Secret clearance."
         let redacted = ContactRedactor.redactWorkStatus(text)
-        #expect(!redacted.localizedCaseInsensitiveContains("citizen") && !redacted.localizedCaseInsensitiveContains("clearance"))
+        #expect(
+            !redacted.localizedCaseInsensitiveContains("citizen")
+                && !redacted.localizedCaseInsensitiveContains("clearance"))
         #expect(redacted.contains("Built a visa portal"))
     }
 }
@@ -137,7 +151,8 @@ struct ImportTests {
         let result = try await scriptedRouter(chat).run(ImportResumeTask(), input: text)
         let draft = ImportDraft(result.output)
         #expect(draft.entries.map(\.kind) == [.experience, .project, .education, .language])
-        #expect(draft.entries[0].isCurrent && draft.entries[0].bullets.map(\.text) == ["Built an event pipeline in Go."])
+        #expect(
+            draft.entries[0].isCurrent && draft.entries[0].bullets.map(\.text) == ["Built an event pipeline in Go."])
         #expect(draft.monthsToCheck == [draft.entries[1].id])  // "2023" became January, to check
         #expect(draft.skills.map(\.name) == ["Go", "Rust"] && draft.skills[1].level == .canDiscuss)
         let prompt = try #require(chat.asked.first?.request.messages)
@@ -146,13 +161,15 @@ struct ImportTests {
 
     @Test func aReplyWithContactDetailsOrBadDatesIsRefused() {
         let task = ImportResumeTask()
-        let leak = #"{"experience":[{"title":"Dev","employer":"Acme","bullets":["Reach me at jo@example.com"]}],"projects":[],"education":[],"skills":[]}"#
+        let leak =
+            #"{"experience":[{"title":"Dev","employer":"Acme","bullets":["Reach me at jo@example.com"]}],"projects":[],"education":[],"skills":[]}"#
         guard case .failure(let problem) = OutputCheck.output(from: leak, task: task, input: "") else {
             Issue.record("a leaked email should fail")
             return
         }
         #expect(problem.description.contains("contact details"))
-        let badDate = #"{"experience":[{"title":"Dev","employer":"Acme","start":"March 2020","bullets":[]}],"projects":[],"education":[],"skills":[]}"#
+        let badDate =
+            #"{"experience":[{"title":"Dev","employer":"Acme","start":"March 2020","bullets":[]}],"projects":[],"education":[],"skills":[]}"#
         guard case .failure = OutputCheck.output(from: badDate, task: task, input: "") else {
             Issue.record("a month in words should fail")
             return
@@ -160,12 +177,15 @@ struct ImportTests {
     }
 
     @Test func importWaitsForTheContactFields() {
-        #expect(throws: ImportError.self) { try ResumeImporter.prepare(String(repeating: "x", count: 100), header: ResumeHeader()) }
+        #expect(throws: ImportError.self) {
+            try ResumeImporter.prepare(String(repeating: "x", count: 100), header: ResumeHeader())
+        }
         #expect(throws: ImportError.emptyText) { try ResumeImporter.prepare("short", header: Sample.header) }
     }
 
     @Test func gitHubRepositoriesBecomeProjects() async throws {
-        let repos = #"[{"name":"ledger","full_name":"jrivera/ledger","description":"Budgets. Mail jordan.rivera@example.com","language":"Swift","fork":false,"archived":false,"stargazers_count":3,"html_url":"https://github.com/jrivera/ledger","created_at":"2023-01-05T10:00:00Z","pushed_at":"2026-09-30T10:00:00Z","topics":["swift"]},{"name":"fork","full_name":"jrivera/fork","fork":true,"archived":false,"stargazers_count":0,"html_url":"https://github.com/jrivera/fork","created_at":"2020-01-05T10:00:00Z"}]"#
+        let repos =
+            #"[{"name":"ledger","full_name":"jrivera/ledger","description":"Budgets. Mail jordan.rivera@example.com","language":"Swift","fork":false,"archived":false,"stargazers_count":3,"html_url":"https://github.com/jrivera/ledger","created_at":"2023-01-05T10:00:00Z","pushed_at":"2026-09-30T10:00:00Z","topics":["swift"]},{"name":"fork","full_name":"jrivera/fork","fork":true,"archived":false,"stargazers_count":0,"html_url":"https://github.com/jrivera/fork","created_at":"2020-01-05T10:00:00Z"}]"#
         let http = FakeHTTP([
             "https://api.github.com/users/jrivera/repos?per_page=100&sort=pushed&type=owner": .json(repos),
             "https://api.github.com/repos/jrivera/ledger/languages": .json(#"{"Swift":9000,"C":10}"#),
@@ -177,10 +197,13 @@ struct ImportTests {
         #expect(found.map(\.name) == ["ledger", "fork"])
         let ledger = found[0]
         let input = ImportGitHubRepoTask.Input(
-            repo: ledger, languages: try await client.languages(of: ledger), readme: try await client.readme(of: ledger),
+            repo: ledger, languages: try await client.languages(of: ledger),
+            readme: try await client.readme(of: ledger),
             header: Sample.header)
-        #expect(input.languages == ["Swift", "C"] && !input.readme.contains("Rivera") && !input.description.contains("@"))
-        let output = ImportGitHubRepoTask.Output(name: "Ledger", role: nil, tech: ["Swift"], bullets: ["A budgeting app."])
+        #expect(
+            input.languages == ["Swift", "C"] && !input.readme.contains("Rivera") && !input.description.contains("@"))
+        let output = ImportGitHubRepoTask.Output(
+            name: "Ledger", role: nil, tech: ["Swift"], bullets: ["A budgeting app."])
         let entry = ImportGitHubRepoTask.entry(from: output, repo: ledger, now: isoDate("2026-10-28T00:00:00Z"))
         #expect(entry.isCurrent && entry.start == YearMonth("2023-01"))
         guard case .project(let project) = entry.fields else { return }

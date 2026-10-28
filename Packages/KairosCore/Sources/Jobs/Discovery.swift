@@ -133,7 +133,9 @@ public struct BoardCatalog: Sendable, Equatable {
         }
 
         public var board: Board? {
-            SourceKind(rawValue: kind).flatMap { $0.isBoard ? Board(kind: $0, slug: slug, name: name, region: region) : nil }
+            SourceKind(rawValue: kind).flatMap {
+                $0.isBoard ? Board(kind: $0, slug: slug, name: name, region: region) : nil
+            }
         }
 
         public func lists(in countries: [Country]) -> Bool {
@@ -217,7 +219,8 @@ public enum JobBoards {
 
     /// The link without the `utm_*` and `ref` parameters a search adds.
     public static func stripped(_ url: URL) -> URL {
-        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false), let items = components.queryItems
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+            let items = components.queryItems
         else { return url }
         let kept = items.filter { !$0.name.lowercased().hasPrefix("utm_") && $0.name.lowercased() != "ref" }
         components.queryItems = kept.isEmpty ? nil : kept
@@ -340,7 +343,9 @@ public enum Readers {
     }
 
     /// The reader for a search, or why it can't run.
-    public static func search(_ kind: SourceKind, keys: Keys, http: any HTTPClient, clock: any WallClock = SystemWallClock())
+    public static func search(
+        _ kind: SourceKind, keys: Keys, http: any HTTPClient, clock: any WallClock = SystemWallClock()
+    )
         -> Result<any JobReader, SourceError>
     {
         switch kind {

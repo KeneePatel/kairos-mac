@@ -114,7 +114,8 @@ public final class FileSecretStore: SecretStore {
             try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             let encoder = JSONEncoder()
             encoder.outputFormatting = .sortedKeys
-            let staged = url.deletingLastPathComponent().appending(path: ".\(url.lastPathComponent).\(UUID().uuidString)")
+            let staged = url.deletingLastPathComponent().appending(
+                path: ".\(url.lastPathComponent).\(UUID().uuidString)")
             guard
                 fileManager.createFile(
                     atPath: staged.path, contents: try encoder.encode(entries), attributes: [.posixPermissions: 0o600])

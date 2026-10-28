@@ -117,12 +117,15 @@ public struct UsageBar: Sendable, Equatable, Identifiable {
 
     /// A key's bar for one model on a provider that caps requests a day: the limit a refusal named,
     /// else the usual one marked "about".
-    public static func daily(model: String, use: KeyModelUse, preset: ProviderPreset, dayEnds: Date, now: Date) -> UsageBar? {
+    public static func daily(model: String, use: KeyModelUse, preset: ProviderPreset, dayEnds: Date, now: Date)
+        -> UsageBar?
+    {
         let named = use.limit
         guard let limit = named ?? preset.dailyLimit(for: model), limit > 0 else { return nil }
         let back = use.back ?? dayEnds
         if use.refused, back > now {
-            return UsageBar(label: model, left: 0, detail: "Used up, back at \(back.formatted(date: .omitted, time: .shortened))",
+            return UsageBar(
+                label: model, left: 0, detail: "Used up, back at \(back.formatted(date: .omitted, time: .shortened))",
                 resets: back, usedUp: true)
         }
         let left = max(0, limit - use.calls)
@@ -208,7 +211,8 @@ public struct CreditBalance: Sendable, Equatable {
             let left = max(0, included ?? 0) + bought
             bars.append(
                 UsageBar(
-                    label: "Credits", left: nil, detail: left > 0 ? "\(Self.dollars(left)) left" : "No credits: only free models",
+                    label: "Credits", left: nil,
+                    detail: left > 0 ? "\(Self.dollars(left)) left" : "No credits: only free models",
                     resets: periodEnd))
         }
         for (label, window) in [("This session", session), ("This week", weekly)] {

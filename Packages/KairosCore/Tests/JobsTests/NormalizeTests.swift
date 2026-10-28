@@ -36,7 +36,8 @@ struct NormalizerTests {
         let posting = Posting(
             url: try #require(URL(string: "https://jobs.lever.co/acme/1?lever-source=x")), company: "  Acme   Inc ",
             title: "Backend  Developer", location: "Toronto, ON (Hybrid)",
-            descriptionHTML: "<p>Build <b>Go</b> services.</p>", otherLocations: ["Remote (Canada)", "Toronto, ON (Hybrid)"],
+            descriptionHTML: "<p>Build <b>Go</b> services.</p>",
+            otherLocations: ["Remote (Canada)", "Toronto, ON (Hybrid)"],
             applyURL: URL(string: "https://jobs.lever.co/acme/1?lever-source=x"))
         let listing = try #require(Normalizer.normalize(posting))
         #expect(listing.canonicalURL == "https://jobs.lever.co/acme/1")
@@ -60,7 +61,8 @@ struct NormalizerTests {
         let url = try #require(URL(string: "https://x.example/1"))
         let first = try #require(Normalizer.normalize(Posting(url: url, company: "X", title: "A", location: "Toronto")))
         let edited = try #require(
-            Normalizer.normalize(Posting(url: url, company: "X", title: "A", location: "Toronto", descriptionHTML: "new")))
+            Normalizer.normalize(
+                Posting(url: url, company: "X", title: "A", location: "Toronto", descriptionHTML: "new")))
         #expect(first.id == edited.id && first.contentHash != edited.contentHash)
     }
 }
@@ -68,8 +70,9 @@ struct NormalizerTests {
 @Suite("De-duplication")
 struct DedupTests {
     @Test func keysFoldCompaniesTitlesAndCities() {
-        #expect(DedupKey.make(company: "The Acme Corp.", title: "Sr. Software Eng", city: "Montréal") ==
-            "acme|senior software engineer|montreal")
+        #expect(
+            DedupKey.make(company: "The Acme Corp.", title: "Sr. Software Eng", city: "Montréal")
+                == "acme|senior software engineer|montreal")
         #expect(DedupKey.company("Syndio, Inc.") == "syndio")
     }
 
@@ -115,14 +118,22 @@ struct DiscoveryTests {
     @Test func leverEUAndWhatItCantRead() {
         #expect(ATSDetector.detect("https://jobs.eu.lever.co/acme") == .board(kind: .lever, slug: "acme", region: "eu"))
         guard case .notABoard(let workday) = ATSDetector.detect("https://acme.wd3.myworkdayjobs.com/en-US/careers")
-        else { Issue.record("Workday should be refused"); return }
+        else {
+            Issue.record("Workday should be refused")
+            return
+        }
         #expect(workday.contains("Workday"))
         guard case .notABoard = ATSDetector.detect("https://boards.greenhouse.io/") else {
-            Issue.record("a board address without a company"); return
+            Issue.record("a board address without a company")
+            return
         }
-        guard case .notABoard = ATSDetector.detect("not a url at all") else { Issue.record("not a URL"); return }
+        guard case .notABoard = ATSDetector.detect("not a url at all") else {
+            Issue.record("not a URL")
+            return
+        }
         guard case .notABoard = ATSDetector.detect("https://www.recruitee.com/") else {
-            Issue.record("the vendor's own site"); return
+            Issue.record("the vendor's own site")
+            return
         }
     }
 
@@ -175,7 +186,8 @@ struct SearchTurnTests {
     @Test func everyPhraseInEveryPlaceThenRemoteInEachCountry() {
         let places = [Place(city: "Toronto", region: "Ontario", country: .canada)]
         let turns = SearchTurn.all(phrases: ["qa engineer"], places: places, countries: [.canada, .unitedStates])
-        #expect(turns.map(\.key) == ["qa engineer|toronto|ontario|ca|CA", "qa engineer|remote|CA", "qa engineer|remote|US"])
+        #expect(
+            turns.map(\.key) == ["qa engineer|toronto|ontario|ca|CA", "qa engineer|remote|CA", "qa engineer|remote|US"])
     }
 
     @Test func theLeastRecentlySearchedComeFirst() {

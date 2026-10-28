@@ -33,7 +33,9 @@ struct DatabaseTests {
     @Test func aReusedStatementForgetsItsLastBindings() async throws {
         let db = try Database.inMemory()
         try await db.execute("CREATE TABLE t (a INTEGER, b TEXT)")
-        for index in 0..<50 { try await db.execute("INSERT INTO t VALUES (?, ?)", [.integer(Int64(index)), .text("x\(index)")]) }
+        for index in 0..<50 {
+            try await db.execute("INSERT INTO t VALUES (?, ?)", [.integer(Int64(index)), .text("x\(index)")])
+        }
         #expect(try await db.first("SELECT count(*) AS n, sum(a) AS s FROM t")?.int("n") == 50)
         #expect(try await db.first("SELECT b FROM t WHERE a = ?", [7])?.string("b") == "x7")
         #expect(try await db.first("SELECT b FROM t WHERE a = ?", [8])?.string("b") == "x8")

@@ -45,7 +45,8 @@ public struct GreenhouseReader: JobReader {
         let http = http
         let details = await concurrentMap(wanted, limit: 4) { job -> GreenhousePage.Job? in
             guard let id = job.id,
-                let url = URL(string: "https://boards-api.greenhouse.io/v1/boards/\(slug)/jobs/\(id)?pay_transparency=true")
+                let url = URL(
+                    string: "https://boards-api.greenhouse.io/v1/boards/\(slug)/jobs/\(id)?pay_transparency=true")
             else { return nil }
             return try? await http.getJSON(url, as: GreenhousePage.Job.self)
         }
@@ -110,7 +111,8 @@ public struct LeverReader: JobReader {
 
     public func read(_ request: ReadRequest) async throws(SourceError) -> ReadResult {
         let host = board.region == "eu" ? "api.eu.lever.co" : "api.lever.co"
-        guard BoardSlug.isValid(board.slug), let url = URL(string: "https://\(host)/v0/postings/\(board.slug)?mode=json")
+        guard BoardSlug.isValid(board.slug),
+            let url = URL(string: "https://\(host)/v0/postings/\(board.slug)?mode=json")
         else { throw .invalidConfiguration("Lever company slug: \(board.slug)") }
         let (answer, etag) = try await http.getJSON(url, as: [LeverPosting].self, etag: request.etag)
         guard let postings = answer else { return .notModified(etag: etag) }
@@ -205,7 +207,8 @@ public struct AshbyReader: JobReader {
 
     public func read(_ request: ReadRequest) async throws(SourceError) -> ReadResult {
         guard BoardSlug.isValid(board.slug),
-            let url = URL(string: "https://api.ashbyhq.com/posting-api/job-board/\(board.slug)?includeCompensation=true")
+            let url = URL(
+                string: "https://api.ashbyhq.com/posting-api/job-board/\(board.slug)?includeCompensation=true")
         else { throw .invalidConfiguration("Ashby organization: \(board.slug)") }
         let (answer, etag) = try await http.getJSON(url, as: AshbyBoard.self, etag: request.etag)
         guard let page = answer else { return .notModified(etag: etag) }

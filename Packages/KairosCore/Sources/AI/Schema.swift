@@ -35,7 +35,8 @@ public indirect enum JSONSchema: Equatable, Sendable {
         case .object(let properties):
             let required = properties.filter(\.isRequired).map { quote($0.name) }.joined(separator: ",")
             let fields = properties.map { "\(quote($0.name)):\($0.schema.text)" }.joined(separator: ",")
-            return #"{"type":"object","additionalProperties":false,"required":[\#(required)],"properties":{\#(fields)}}"#
+            return
+                #"{"type":"object","additionalProperties":false,"required":[\#(required)],"properties":{\#(fields)}}"#
         case .array(let items, let maxItems):
             return #"{"type":"array"\#(field("maxItems", maxItems)),"items":\#(items.text)}"#
         case .string(let maxLength):
@@ -58,7 +59,10 @@ public indirect enum JSONSchema: Equatable, Sendable {
     public var withoutItemCounts: JSONSchema {
         switch self {
         case .object(let properties):
-            .object(properties.map { Property(name: $0.name, schema: $0.schema.withoutItemCounts, isRequired: $0.isRequired) })
+            .object(
+                properties.map {
+                    Property(name: $0.name, schema: $0.schema.withoutItemCounts, isRequired: $0.isRequired)
+                })
         case .array(let items, _): .array(of: items.withoutItemCounts)
         case .string, .enumeration, .integer, .number, .boolean: self
         }
@@ -169,7 +173,9 @@ public enum OutputCheck {
         let issues = SchemaValidator.issues(in: value, against: T.outputSchema)
         guard issues.isEmpty else {
             return .failure(
-                Problem(description: "The reply doesn't match the schema: \(issues.map(\.description).joined(separator: "; "))."))
+                Problem(
+                    description:
+                        "The reply doesn't match the schema: \(issues.map(\.description).joined(separator: "; "))."))
         }
         let decoder = JSONDecoder()
         // Schemas name properties in snake_case; output types use camelCase.
@@ -194,7 +200,8 @@ public enum OutputCheck {
     /// Models sometimes wrap JSON in a Markdown fence (Ollama with thinking off, T20), or put a
     /// sentence before it.
     public static func unfenced(_ text: String) -> String {
-        let json = text.replacing(/^\s*```(?:json)?\s*|\s*```\s*$/, with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let json = text.replacing(/^\s*```(?:json)?\s*|\s*```\s*$/, with: "").trimmingCharacters(
+            in: .whitespacesAndNewlines)
         guard (try? JSONValue(parsing: json)) == nil, let first = json.firstIndex(where: { $0 == "{" || $0 == "[" }),
             let last = json.lastIndex(where: { $0 == "}" || $0 == "]" }), first < last
         else { return json }

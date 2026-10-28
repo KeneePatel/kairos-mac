@@ -8,7 +8,8 @@ extension String {
 
     /// Lowercased without accents, for comparing names and titles: "Montréal" and "montreal" match.
     public var folded: String {
-        folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en"))
+        folding(
+            options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en"))
     }
 
     /// Lowercase words of letters and digits; "C++", "C#" and ".NET" keep their marks so tech names
@@ -45,7 +46,8 @@ extension String {
         let haystack = words
         let needle = phrase.words
         guard !needle.isEmpty, needle.count <= haystack.count else { return false }
-        for start in 0...(haystack.count - needle.count) where Array(haystack[start..<(start + needle.count)]) == needle {
+        for start in 0...(haystack.count - needle.count) where Array(haystack[start..<(start + needle.count)]) == needle
+        {
             return true
         }
         return false

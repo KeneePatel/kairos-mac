@@ -1,5 +1,5 @@
-import Foundation
 import AI
+import Foundation
 import Resume
 
 /// What `coverLetter` gets: the job's title, company and requirements, the

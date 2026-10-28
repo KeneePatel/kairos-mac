@@ -86,7 +86,9 @@ public struct AISettings: Codable, Sendable, Equatable {
             }
         }
         return AISettings(
-            providers: [Provider(id: gemini.id, presetID: gemini.id), Provider(id: "ollama-local", presetID: "ollama-local")],
+            providers: [
+                Provider(id: gemini.id, presetID: gemini.id), Provider(id: "ollama-local", presetID: "ollama-local"),
+            ],
             routes: routes)
     }
 
@@ -104,7 +106,9 @@ public struct AISettings: Codable, Sendable, Equatable {
             let routed: (TaskID) -> Bool = { other in other != task && !(saved[other.rawValue] ?? []).isEmpty }
             let sibling =
                 Self.sameData[task].flatMap { routed($0) ? $0 : nil }
-                ?? TaskID.catalog.first { routed($0) && TaskProfile.of($0).modelClass == TaskProfile.of(task).modelClass }
+                ?? TaskID.catalog.first {
+                    routed($0) && TaskProfile.of($0).modelClass == TaskProfile.of(task).modelClass
+                }
             if let route = sibling.flatMap({ routes[$0.rawValue] }) ?? defaults[task.rawValue] {
                 routes[task.rawValue] = route
             }

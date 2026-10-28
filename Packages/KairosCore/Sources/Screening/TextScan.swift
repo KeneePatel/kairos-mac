@@ -155,7 +155,9 @@ enum Signals {
             } else if sentence.contains(#/autorise(?:e|s|es)?\s+a\s+travailler\s+au\s+canada/#) {
                 needs.append(AuthorizationNeed(kind: .authorization, country: .canada))
             }
-            if let match = sentence.firstMatch(of: citizen), TextScan.containsAny(sentence, ["must", "required", "only"]) {
+            if let match = sentence.firstMatch(of: citizen),
+                TextScan.containsAny(sentence, ["must", "required", "only"])
+            {
                 needs.append(AuthorizationNeed(kind: .citizenship, country: country(match.output.country)))
             }
         }
@@ -173,7 +175,8 @@ enum Signals {
         ]
         var needs: [ClearanceNeed] = []
         for sentence in sentences {
-            if TextScan.containsAny(sentence, ["no security clearance", "no clearance", "not require", "not required"]) {
+            if TextScan.containsAny(sentence, ["no security clearance", "no clearance", "not require", "not required"])
+            {
                 continue
             }
             if sentence.contains(obtain) {
@@ -210,7 +213,8 @@ enum Signals {
             "arabic", "tagalog", "italian", "vietnamese",
         ]
         let required = [
-            "required", "requis", "requise", "mandatory", "obligatoire", "essential", "essentiel", "essentielle", "exige",
+            "required", "requis", "requise", "mandatory", "obligatoire", "essential", "essentiel", "essentielle",
+            "exige",
             "exigee", "must", "fluent", "fluency", "proficient", "proficiency", "maitrise", "written and spoken",
             "spoken and written", "parle et ecrit",
         ]

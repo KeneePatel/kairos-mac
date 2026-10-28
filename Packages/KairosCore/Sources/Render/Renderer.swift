@@ -41,8 +41,11 @@ public struct ResumeLayout: Decodable, Sendable, Equatable {
             return (0..<count).map { item in
                 mine.filter { $0.item == item }.sorted { $0.bullet < $1.bullet }.map { bullet in
                     let rest = bullet.width - Double(bullet.lines - 1) * column
-                    let perLine = bullet.characters.flatMap { bullet.width > 0 ? Double($0) * column / bullet.width : nil }
-                    return PageLayout.Bullet(lines: bullet.lines, lastLineFill: min(1, max(0, rest / column)), lineCharacters: perLine)
+                    let perLine = bullet.characters.flatMap {
+                        bullet.width > 0 ? Double($0) * column / bullet.width : nil
+                    }
+                    return PageLayout.Bullet(
+                        lines: bullet.lines, lastLineFill: min(1, max(0, rest / column)), lineCharacters: perLine)
                 }
             }
         }
@@ -113,7 +116,9 @@ public struct ResumeRenderer: Sendable {
 
     private func compile(_ template: String, data: Data, createdAt: Date?) async throws(RenderError) -> RenderedPDF {
         let pdf = try await runner.compile(template: template, data: data, createdAt: createdAt)
-        guard let pages = PDFDocument(data: pdf)?.pageCount else { throw .compile("typst wrote a PDF PDFKit can't read") }
+        guard let pages = PDFDocument(data: pdf)?.pageCount else {
+            throw .compile("typst wrote a PDF PDFKit can't read")
+        }
         return RenderedPDF(data: pdf, pageCount: pages)
     }
 

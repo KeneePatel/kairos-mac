@@ -43,7 +43,9 @@ public struct ScreeningProfile: Sendable, Equatable {
             ContactRedactor.redact(text, header: header).trimmingCharacters(in: .whitespacesAndNewlines)
         }
         func items(_ prefix: String, _ texts: [String]) -> [Item] {
-            texts.map(clean).filter { !$0.isEmpty }.enumerated().map { Item(id: "\(prefix)\($0.offset + 1)", text: $0.element) }
+            texts.map(clean).filter { !$0.isEmpty }.enumerated().map {
+                Item(id: "\(prefix)\($0.offset + 1)", text: $0.element)
+            }
         }
         func dates(_ entry: ResumeEntry) -> String {
             [entry.start?.description, entry.isCurrent ? "present" : entry.end?.description].compactMap { $0 }
@@ -67,8 +69,10 @@ public struct ScreeningProfile: Sendable, Equatable {
                     case .experience(let role):
                         [role.title, role.employer, dates(entry)].filter { !$0.isEmpty }.joined(separator: " · ")
                     case .project(let project):
-                        ([project.name] + (project.tech.isEmpty ? [] : [project.tech.joined(separator: ", ")]) + [dates(entry)])
-                            .filter { !$0.isEmpty }.joined(separator: " · ")
+                        ([project.name] + (project.tech.isEmpty ? [] : [project.tech.joined(separator: ", ")]) + [
+                            dates(entry)
+                        ])
+                        .filter { !$0.isEmpty }.joined(separator: " · ")
                     default: ""
                     }
                 return Entry(id: id, heading: clean(heading), bullets: items("\(id)b", entry.bullets.map(\.text)))
@@ -89,7 +93,9 @@ public struct ScreeningProfile: Sendable, Equatable {
                 ?? "Total years of professional experience: not stated"
         ]
         func list(_ title: String, _ items: [Item]) {
-            if !items.isEmpty { lines.append("\(title): " + items.map { "[\($0.id)] \($0.text)" }.joined(separator: ", ")) }
+            if !items.isEmpty {
+                lines.append("\(title): " + items.map { "[\($0.id)] \($0.text)" }.joined(separator: ", "))
+            }
         }
         list("Skills", skills)
         list("Can discuss (not proven)", canDiscuss)

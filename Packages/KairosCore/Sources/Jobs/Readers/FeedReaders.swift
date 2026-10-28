@@ -29,7 +29,8 @@ public struct PersonioReader: JobReader {
                 let link = URL(string: "https://\(host)/job/\(id)")
             else { return nil }
             let text = position.child("jobDescriptions")?.all("jobDescription").map { section in
-                (section.value("name").map { "<h3>\(HTMLEntities.escape($0))</h3>" } ?? "") + (section.value("value") ?? "")
+                (section.value("name").map { "<h3>\(HTMLEntities.escape($0))</h3>" } ?? "")
+                    + (section.value("value") ?? "")
             }.joined()
             let offices =
                 [position.value("office")]
@@ -38,7 +39,8 @@ public struct PersonioReader: JobReader {
             return Posting(
                 url: link,
                 company: board.name.isEmpty ? (position.value("subcompany") ?? board.slug) : board.name,
-                title: title, location: places.first ?? "", postedAt: position.value("createdAt").flatMap(ISODate.parse),
+                title: title, location: places.first ?? "",
+                postedAt: position.value("createdAt").flatMap(ISODate.parse),
                 descriptionHTML: text ?? "", otherLocations: Array(places.dropFirst()))
         }
         return ReadResult(postings: postings, etag: response.header("ETag"), complete: true)

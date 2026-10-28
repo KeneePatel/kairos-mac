@@ -20,7 +20,9 @@ public enum ContactRedactor {
         // Your portfolio, wherever it's hosted.
         if let host = header.portfolioURL.flatMap({ URL(string: $0.contains("://") ? $0 : "https://" + $0)?.host() }) {
             let bare = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
-            result = replace(#"(?<![\w.-])(?:https?://)?(?:www\.)?"# + NSRegularExpression.escapedPattern(for: bare) + path, in: result)
+            result = replace(
+                #"(?<![\w.-])(?:https?://)?(?:www\.)?"# + NSRegularExpression.escapedPattern(for: bare) + path,
+                in: result)
         }
         result = replace(#"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"#, in: result)
         result = replacePhones(in: result)
@@ -67,11 +69,14 @@ public enum ContactRedactor {
 
     /// Your full name, in either order ("Jordan Rivera", "Rivera, Jordan"), any case.
     private static func replaceName(_ fullName: String, in text: String) -> String {
-        let parts = fullName.split(whereSeparator: \.isWhitespace).map { NSRegularExpression.escapedPattern(for: String($0)) }
+        let parts = fullName.split(whereSeparator: \.isWhitespace).map {
+            NSRegularExpression.escapedPattern(for: String($0))
+        }
         guard !parts.isEmpty else { return text }
         var result = replace(#"\b"# + parts.joined(separator: #"\s+"#) + #"\b"#, in: text)
         if parts.count >= 2, let last = parts.last {
-            result = replace(#"\b"# + last + #",\s*"# + parts.dropLast().joined(separator: #"\s+"#) + #"\b"#, in: result)
+            result = replace(
+                #"\b"# + last + #",\s*"# + parts.dropLast().joined(separator: #"\s+"#) + #"\b"#, in: result)
         }
         return result
     }

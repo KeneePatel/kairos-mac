@@ -20,17 +20,21 @@ private func text(_ pdf: RenderedPDF) -> String {
 private func sampleBuild() -> TailoredResume {
     let master = Sample.resume
     let roles = master.entries(.experience).map { entry -> TailoredResume.Entry in
-        guard case .experience(let role) = entry.fields else { return TailoredResume.Entry(entryID: entry.id, title: "") }
+        guard case .experience(let role) = entry.fields else {
+            return TailoredResume.Entry(entryID: entry.id, title: "")
+        }
         return TailoredResume.Entry(
             entryID: entry.id, title: role.title, organization: role.employer, location: role.location,
             period: TailoredResume.Period(entry),
             bullets: entry.bullets.map { TailoredBullet(text: $0.text, sourceIDs: [$0.id], rank: 2) })
     }
     let school = TailoredResume.Entry(
-        entryID: Sample.id(4), title: "BMath, Computer Science", organization: "University of Waterloo", location: "Waterloo, ON",
+        entryID: Sample.id(4), title: "BMath, Computer Science", organization: "University of Waterloo",
+        location: "Waterloo, ON",
         period: .init(start: .init(year: 2016, month: 9), end: .init(year: 2027, month: 4)))
     return TailoredResume(
-        header: TailoredResume.Header(master.header), skills: [SkillGroup(label: "Languages", skills: ["Go", "Python"])],
+        header: TailoredResume.Header(master.header),
+        skills: [SkillGroup(label: "Languages", skills: ["Go", "Python"])],
         experience: roles, education: [school], languages: "English (native)")
 }
 
@@ -42,13 +46,16 @@ struct RenderTests {
         #expect(document.sections.map(\.kind) == [.education, .skills, .experience])
         #expect(document.sections[0].items[0].dates == "September 2016 – April 2027 (Expected)")
         #expect(document.sections[2].items[0].dates == "March 2022 – Present")
-        #expect(document.sections[1].groups.last == ResumeDocument.Group(label: "Language", items: ["English (native)"]))
+        #expect(
+            document.sections[1].groups.last == ResumeDocument.Group(label: "Language", items: ["English (native)"]))
         #expect(document.header.contact.map(\.kind) == [.location, .phone, .email, .linkedIn, .gitHub])
 
         let pdf = try await renderer().render(document, createdAt: now)
         #expect(pdf.pageCount == 1)
         let printed = text(pdf)
-        #expect(printed.contains("JORDAN RIVERA") && printed.contains("EXPERIENCE") && printed.contains("Harbourline Logistics"))
+        #expect(
+            printed.contains("JORDAN RIVERA") && printed.contains("EXPERIENCE")
+                && printed.contains("Harbourline Logistics"))
         #expect(printed.contains("(416) 555-0123"))
         let layout = try #require(pdf.layout).pageLayout
         #expect(layout.isMeasured && layout.pages == 1 && layout.freeLines > 0)
@@ -59,7 +66,8 @@ struct RenderTests {
 
     @Test func textThatLooksLikeMarkupStaysText() async throws {
         var build = sampleBuild()
-        build.experience[0].bullets[0].text = "Wrote #set page(width: 1pt) and *bold* and $x$ and <label> as plain text."
+        build.experience[0].bullets[0].text =
+            "Wrote #set page(width: 1pt) and *bold* and $x$ and <label> as plain text."
         let pdf = try await renderer().render(ResumeDocument(build))
         #expect(pdf.pageCount == 1 && text(pdf).contains("#set page(width: 1pt)"))
     }
@@ -68,7 +76,8 @@ struct RenderTests {
         let letter = CoverLetter(
             header: TailoredResume.Header(Sample.header), date: "October 28, 2026", company: "Northline Freight",
             jobTitle: "Backend Developer II", greeting: "Dear Northline Freight hiring team,",
-            paragraphs: ["I build reliable services.", "I'd welcome a conversation."], closing: "Sincerely,", signature: "Jordan Rivera")
+            paragraphs: ["I build reliable services.", "I'd welcome a conversation."], closing: "Sincerely,",
+            signature: "Jordan Rivera")
         let pdf = try await renderer().render(letter: LetterDocument(letter))
         let printed = text(pdf)
         #expect(pdf.pageCount == 1 && printed.contains("Re: Backend Developer II") && printed.contains("Sincerely,"))
@@ -101,7 +110,9 @@ struct RenderTests {
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
         let runner = TypstRunner(executable: script, timeout: .milliseconds(300))
         let started = Date()
-        await #expect(throws: RenderError.timedOut) { _ = try await runner.compile(template: "x", data: Data("{}".utf8)) }
+        await #expect(throws: RenderError.timedOut) {
+            _ = try await runner.compile(template: "x", data: Data("{}".utf8))
+        }
         #expect(Date().timeIntervalSince(started) < 5)
     }
 

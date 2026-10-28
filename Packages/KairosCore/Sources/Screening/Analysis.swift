@@ -87,7 +87,8 @@ public struct JobAnalysis: Codable, Sendable, Equatable {
         public var remoteScope: RemoteScope
 
         public init(
-            sponsorship: Sponsorship = .notMentioned, clearance: Clearance = .notMentioned, french: French = .notMentioned,
+            sponsorship: Sponsorship = .notMentioned, clearance: Clearance = .notMentioned,
+            french: French = .notMentioned,
             remoteScope: RemoteScope = .unknown
         ) {
             self.sponsorship = sponsorship
@@ -228,7 +229,10 @@ public struct AnalyzeJobTask: AITask {
         // The posting gets what's left of the input budget, with a little headroom.
         let posting = PostingCleaner.clean(
             input.description, limit: budget.characters(after: instructions.count + profile.count + header.count + 400))
-        return [.system(instructions), .user(Prompts.block("profile", profile) + "\n" + Prompts.block("job_posting", header + posting))]
+        return [
+            .system(instructions),
+            .user(Prompts.block("profile", profile) + "\n" + Prompts.block("job_posting", header + posting)),
+        ]
     }
 
     /// No blank requirement, the title isn't one, every evidence id is in the profile, and a yes or
@@ -245,7 +249,9 @@ public struct AnalyzeJobTask: AITask {
                 problems.append("“\(requirement.text.prefix(40))” cites \(id), which isn't in the profile.")
             }
             if [.yes, .partial].contains(requirement.match), evidence.isEmpty {
-                problems.append("“\(requirement.text.prefix(40))” is \(requirement.match?.rawValue ?? "") but cites no evidence id.")
+                problems.append(
+                    "“\(requirement.text.prefix(40))” is \(requirement.match?.rawValue ?? "") but cites no evidence id."
+                )
             }
         }
         if !problems.isEmpty { throw .invalidOutput(problems.prefix(6).joined(separator: " ")) }
@@ -324,7 +330,9 @@ public struct SuggestEvidenceTask: AITask {
             }
             let question = suggestion.question.trimmingCharacters(in: .whitespaces)
             if !question.hasSuffix("?") { throw .invalidOutput("“\(question.prefix(40))” isn't a question") }
-            if suggestion.angle.trimmingCharacters(in: .whitespaces).isEmpty { throw .invalidOutput("a suggestion has no angle") }
+            if suggestion.angle.trimmingCharacters(in: .whitespaces).isEmpty {
+                throw .invalidOutput("a suggestion has no angle")
+            }
         }
         let texts = output.suggestions.flatMap { [$0.question, $0.angle] } + [output.otherwise]
         if texts.contains(where: { $0.contains(ContactRedactor.marker) }) {

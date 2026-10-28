@@ -126,7 +126,9 @@ public struct SearchPreferences: Codable, Sendable, Equatable {
         let levels = try container.decodeIfPresent([String].self, forKey: .seniority)?.compactMap(Seniority.init)
         seniority = levels.map(Set.init) ?? defaults.seniority
         maxYearsRequired = try container.decodeIfPresent(Int.self, forKey: .maxYearsRequired)
-        countries = try container.decodeIfPresent([String].self, forKey: .countries)?.compactMap(Country.init) ?? defaults.countries
+        countries =
+            try container.decodeIfPresent([String].self, forKey: .countries)?.compactMap(Country.init)
+            ?? defaults.countries
         regions = try container.decodeIfPresent([String: [String]].self, forKey: .regions) ?? [:]
         remoteAllowed = try container.decodeIfPresent(Bool.self, forKey: .remoteAllowed) ?? defaults.remoteAllowed
         blacklist = try container.decodeIfPresent([String].self, forKey: .blacklist) ?? []
@@ -205,7 +207,8 @@ public struct WorkProfile: Codable, Sendable, Equatable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(Dictionary(uniqueKeysWithValues: authorization.map { ($0.key.rawValue, $0.value) }), forKey: .authorization)
+        try container.encode(
+            Dictionary(uniqueKeysWithValues: authorization.map { ($0.key.rawValue, $0.value) }), forKey: .authorization)
         try container.encode(hasClearance, forKey: .hasClearance)
         try container.encodeIfPresent(enrolment, forKey: .enrolment)
     }

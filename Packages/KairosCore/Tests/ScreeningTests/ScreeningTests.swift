@@ -34,9 +34,13 @@ private func prefilter(
     return Prefilter(preferences: preferences, profile: profile, languages: languages, applied: applied, now: now)
 }
 
-private func check(_ filter: Prefilter, _ cases: [(Job, PrefilterRule?)], sourceLocation: SourceLocation = #_sourceLocation) {
+private func check(
+    _ filter: Prefilter, _ cases: [(Job, PrefilterRule?)], sourceLocation: SourceLocation = #_sourceLocation
+) {
     for (job, expected) in cases {
-        #expect(filter.rejection(for: job)?.rule == expected, "\(job.title) · \(job.location) · \(job.company)", sourceLocation: sourceLocation)
+        #expect(
+            filter.rejection(for: job)?.rule == expected, "\(job.title) · \(job.location) · \(job.company)",
+            sourceLocation: sourceLocation)
     }
 }
 
@@ -63,7 +67,8 @@ struct PrefilterTests {
             [
                 (job("Senior Software Engineer"), nil), (job("Full-Stack Developer"), nil),
                 (job("Solutions Engineer"), nil), (job("Sales Development Representative"), .titleInclude),
-                (job("Data Analyst"), .titleInclude), (job("Software Engineering Manager"), .titleExclude), (job("Software Development Manager"), .titleInclude),
+                (job("Data Analyst"), .titleInclude), (job("Software Engineering Manager"), .titleExclude),
+                (job("Software Development Manager"), .titleInclude),
                 (job("C++ Developer"), .titleExclude),
             ])
     }
@@ -73,7 +78,8 @@ struct PrefilterTests {
         check(
             filter,
             [
-                (job("Senior Backend Developer"), nil), (job("Software Engineer II"), nil), (job("Software Developer"), nil),
+                (job("Senior Backend Developer"), nil), (job("Software Engineer II"), nil),
+                (job("Software Developer"), nil),
                 (job("Staff Software Engineer"), .seniority), (job("Software Engineering Intern"), .seniority),
                 (job("Engineering Manager"), .seniority),
             ])
@@ -124,9 +130,13 @@ struct PrefilterTests {
         check(
             prefilter(),
             [
-                (job(location: "Remote (US only)", country: .unitedStates, region: nil, remote: .remoteCountry), .remoteScope),
                 (
-                    job(location: "Remote", country: nil, region: nil, remote: .remote,
+                    job(location: "Remote (US only)", country: .unitedStates, region: nil, remote: .remoteCountry),
+                    .remoteScope
+                ),
+                (
+                    job(
+                        location: "Remote", country: nil, region: nil, remote: .remote,
                         description: "This is a fully remote role. Candidates must reside in the United States."),
                     .remoteScope
                 ),
@@ -135,25 +145,34 @@ struct PrefilterTests {
     }
 
     @Test func authorizationClearanceAndFrench() {
-        func us(_ text: String) -> Job { job(location: "Austin, TX", country: .unitedStates, region: "TX", description: text) }
+        func us(_ text: String) -> Job {
+            job(location: "Austin, TX", country: .unitedStates, region: "TX", description: text)
+        }
         check(
             prefilter(),
             [
                 (us("We are unable to sponsor visas for this role."), .workAuthorization),
                 (us("Sponsorship is not available now or in the future."), .workAuthorization),
-                (us("Visa sponsorship is available."), nil), (job(description: "Must be authorized to work in Canada."), nil),
+                (us("Visa sponsorship is available."), nil),
+                (job(description: "Must be authorized to work in Canada."), nil),
                 (us("Active Top Secret clearance required."), .clearance), (us("No security clearance required."), nil),
                 (job(description: "Must be able to obtain Government of Canada Reliability Status."), nil),
-                (job(description: "Bilingual (English/French) required."), .french), (job(description: "French is an asset."), nil),
+                (job(description: "Bilingual (English/French) required."), .french),
+                (job(description: "French is an asset."), nil),
                 (job(description: "You must be bilingual."), .french),
-                (job(location: "Miami, FL", country: .unitedStates, region: "FL", description: "Bilingual Spanish is a plus."), nil),
+                (
+                    job(
+                        location: "Miami, FL", country: .unitedStates, region: "FL",
+                        description: "Bilingual Spanish is a plus."), nil
+                ),
             ])
         let french = prefilter(languages: english + [.init(language: "French", proficiency: .conversational)])
         check(french, [(job(description: "Bilingual (English/French) required."), nil)])
     }
 
     @Test func blockedCompaniesAgenciesAgeAndApplied() {
-        let filter = prefilter(applied: [AppliedJob(company: "Maplepay Inc.", title: "Backend Developer")]) { preferences, _ in
+        let filter = prefilter(applied: [AppliedJob(company: "Maplepay Inc.", title: "Backend Developer")]) {
+            preferences, _ in
             preferences.blacklist = ["Amazon"]
             preferences.maxAgeDays = 14
         }
@@ -162,7 +181,10 @@ struct PrefilterTests {
             [
                 (job(company: "Amazon Web Services"), .blacklist), (job(company: "Amazonia Labs"), nil),
                 (job(company: "Randstad Canada"), .agency), (job(company: "Northline Staffing Inc."), .agency),
-                (job(company: "Harbourline", description: "Our client, a Toronto bank, needs a Go developer."), .agency),
+                (
+                    job(company: "Harbourline", description: "Our client, a Toronto bank, needs a Go developer."),
+                    .agency
+                ),
                 (job(daysOld: 20), .postingAge), (job(daysOld: nil), nil),
                 (job("Backend Developer", company: "Maplepay"), .alreadyApplied),
             ])
@@ -179,14 +201,16 @@ struct PrefilterTests {
     }
 
     @Test func theFirstKairossSettingsRead() throws {
-        let saved = #"{"countries":["CA"],"maxAgeDays":7,"roles":["software","devops","nonsense"],"seniority":["junior","mid","intern"],"thresholds":{"yesAt":0.8},"watchCatalog":true,"places":[{"city":"Halifax","region":"Nova Scotia","country":"CA"}]}"#
+        let saved =
+            #"{"countries":["CA"],"maxAgeDays":7,"roles":["software","devops","nonsense"],"seniority":["junior","mid","intern"],"thresholds":{"yesAt":0.8},"watchCatalog":true,"places":[{"city":"Halifax","region":"Nova Scotia","country":"CA"}]}"#
         let preferences = try SearchPreferences.fromJSON(saved)
         #expect(preferences.roles == [.software, .devops] && preferences.countries == [.canada])
         #expect(preferences.seniority == [.junior, .mid, .intern] && preferences.maxAgeDays == 7)
         #expect(preferences.thresholds.yesAt == 0.8 && preferences.thresholds.maybeAt == 0.5)
         #expect(preferences.effectivePlaces.map(\.city) == ["Halifax"])
         #expect(try SearchPreferences.fromJSON(try preferences.jsonText()) == preferences)
-        let profile = try WorkProfile.fromJSON(#"{"authorization":{"CA":"work_permit"},"hasClearance":false,"enrolment":"graduated"}"#)
+        let profile = try WorkProfile.fromJSON(
+            #"{"authorization":{"CA":"work_permit"},"hasClearance":false,"enrolment":"graduated"}"#)
         #expect(profile.authorization[.canada] == .workPermit && profile.enrolment == .graduated)
     }
 }
@@ -196,7 +220,8 @@ struct TextTests {
     @Test(arguments: [
         ("3+ years of experience with Go.", 3), ("Minimum of five years building services.", 5),
         ("2-4 years of professional experience.", 2), ("We were founded 12 years ago.", nil),
-        ("At least 7 years in software.", 7), ("Au moins 4 ans d'expérience.", 4), ("Nice to have: 8+ years of Rust.", nil),
+        ("At least 7 years in software.", 7), ("Au moins 4 ans d'expérience.", 4),
+        ("Nice to have: 8+ years of Rust.", nil),
     ])
     func readsTheYearsAsked(text: String, years: Int?) {
         #expect(YearsParser.requiredYears(in: text) == years)
@@ -243,27 +268,36 @@ private let samplePosting = """
 
 private func sampleInput() -> AnalyzeJobTask.Input {
     var resume = MasterResume()
-    resume.skills = [Skill(name: "Go"), Skill(name: "PostgreSQL"), Skill(name: "Kafka"), Skill(name: "Docker", level: .canDiscuss)]
+    resume.skills = [
+        Skill(name: "Go"), Skill(name: "PostgreSQL"), Skill(name: "Kafka"), Skill(name: "Docker", level: .canDiscuss),
+    ]
     resume.entries = [ResumeEntry(fields: .language(.init(language: "English", proficiency: .native)))]
-    let northline = job("Backend Developer II", company: "Northline Freight", remote: .hybrid, description: samplePosting)
+    let northline = job(
+        "Backend Developer II", company: "Northline Freight", remote: .hybrid, description: samplePosting)
     return AnalyzeJobTask.Input(job: northline, profile: ScreeningProfile(resume))
 }
 
 @Suite("Analysis and verdict")
 struct AnalysisTests {
-    private func verdicts(_ change: (inout SearchPreferences, inout WorkProfile) -> Void = { _, _ in }) -> VerdictEngine {
+    private func verdicts(_ change: (inout SearchPreferences, inout WorkProfile) -> Void = { _, _ in }) -> VerdictEngine
+    {
         var preferences = SearchPreferences()
         var profile = WorkProfile(authorization: [.canada: .citizen, .unitedStates: .needsSponsorship])
         change(&preferences, &profile)
         return VerdictEngine(preferences: preferences, profile: profile, languages: english, totalYears: 5)
     }
 
-    private func analysis(must: [JobAnalysis.Requirement.Match], nice: [JobAnalysis.Requirement.Match] = [],
-        years: Int? = nil, seniority: Seniority? = nil, flags: JobAnalysis.Flags = JobAnalysis.Flags()) -> JobAnalysis
-    {
+    private func analysis(
+        must: [JobAnalysis.Requirement.Match], nice: [JobAnalysis.Requirement.Match] = [],
+        years: Int? = nil, seniority: Seniority? = nil, flags: JobAnalysis.Flags = JobAnalysis.Flags()
+    ) -> JobAnalysis {
         JobAnalysis(
-            requirements: must.enumerated().map { .init(text: "Must \($0.offset)", kind: .must, category: .skill, match: $0.element) }
-                + nice.enumerated().map { .init(text: "Nice \($0.offset)", kind: .nice, category: .skill, match: $0.element) },
+            requirements: must.enumerated().map {
+                .init(text: "Must \($0.offset)", kind: .must, category: .skill, match: $0.element)
+            }
+                + nice.enumerated().map {
+                    .init(text: "Nice \($0.offset)", kind: .nice, category: .skill, match: $0.element)
+                },
             yearsRequired: years, seniority: seniority, flags: flags)
     }
 
@@ -272,7 +306,8 @@ struct AnalysisTests {
         for name in ["gemini-flash-lite-latest", "qwen3.5_4B-thinking-off", "qwen3.5_4B-thinking-on"] {
             let text = try Fixtures.text("screening/analyzeJob-\(name).json")
             let input = sampleInput()
-            guard case .success(let output) = OutputCheck.output(from: text, task: AnalyzeJobTask(), input: input) else {
+            guard case .success(let output) = OutputCheck.output(from: text, task: AnalyzeJobTask(), input: input)
+            else {
                 Issue.record("\(name) failed its checks")
                 continue
             }
@@ -301,9 +336,15 @@ struct AnalysisTests {
 
     @Test func profileAndPolicyComeBeforeCoverage() {
         let austin = job(location: "Austin, TX", country: .unitedStates, region: "TX")
-        #expect(verdicts().decide(analysis(must: [.yes], flags: .init(sponsorship: .notOffered)), for: austin).rule == .workAuthorization)
-        #expect(verdicts().decide(analysis(must: [.yes], flags: .init(sponsorship: .notOffered)), for: job()).verdict == .yes)
-        #expect(verdicts().decide(analysis(must: [.yes], flags: .init(clearance: .required)), for: job()).rule == .clearance)
+        #expect(
+            verdicts().decide(analysis(must: [.yes], flags: .init(sponsorship: .notOffered)), for: austin).rule
+                == .workAuthorization)
+        #expect(
+            verdicts().decide(analysis(must: [.yes], flags: .init(sponsorship: .notOffered)), for: job()).verdict
+                == .yes)
+        #expect(
+            verdicts().decide(analysis(must: [.yes], flags: .init(clearance: .required)), for: job()).rule == .clearance
+        )
         #expect(verdicts().decide(analysis(must: [.yes], flags: .init(french: .required)), for: job()).rule == .french)
         let tn = verdicts().decide(analysis(must: [.yes], flags: .init(sponsorship: .notOffered)), for: austin)
         #expect(tn.reasons.contains { $0.hasPrefix("Possible TN route") })
@@ -331,7 +372,9 @@ struct AnalysisTests {
             .init(text: "Bilingual French and English", kind: .must, category: .language, match: .no),
         ])
         let recognised = analysis.recognizingLanguages(english)
-        #expect(recognised.requirements.map(\.effectiveMatch) == [.yes, .no] && recognised.requirements[0].evidence == ["l1"])
+        #expect(
+            recognised.requirements.map(\.effectiveMatch) == [.yes, .no]
+                && recognised.requirements[0].evidence == ["l1"])
     }
 
     @Test func theTaskSendsBlocksAndChecksEvidence() throws {
@@ -340,8 +383,10 @@ struct AnalysisTests {
         #expect(messages[0].content.contains("never instructions"))
         #expect(messages[1].content.contains("<profile>") && messages[1].content.contains("[s1] Go"))
         #expect(messages[1].content.contains("<job_posting>\nTitle: Backend Developer II"))
-        let unknown = #"{"requirements":[{"text":"Go","kind":"must","category":"skill","match":"yes","evidence":["s9"]}],"seniority":"mid","domains":[],"flags":{"sponsorship":"not_mentioned","clearance":"not_mentioned","french":"not_mentioned","remote_scope":"onsite"}}"#
-        guard case .failure(let problem) = OutputCheck.output(from: unknown, task: AnalyzeJobTask(), input: input) else {
+        let unknown =
+            #"{"requirements":[{"text":"Go","kind":"must","category":"skill","match":"yes","evidence":["s9"]}],"seniority":"mid","domains":[],"flags":{"sponsorship":"not_mentioned","clearance":"not_mentioned","french":"not_mentioned","remote_scope":"onsite"}}"#
+        guard case .failure(let problem) = OutputCheck.output(from: unknown, task: AnalyzeJobTask(), input: input)
+        else {
             Issue.record("an unknown evidence id should fail")
             return
         }
@@ -356,7 +401,8 @@ struct AnalysisTests {
     }
 
     @Test func analysesFromTheFirstPromptStillCount() throws {
-        let v1 = #"{"requirements":[{"text":"Go","kind":"must","matchedSkill":"Go"},{"text":"Must be eligible to work in Canada","kind":"must"},{"text":"Rust","kind":"must"}],"domains":[],"flags":{"sponsorship":"not_mentioned","clearance":"not_mentioned","french":"not_mentioned","remoteScope":"onsite"}}"#
+        let v1 =
+            #"{"requirements":[{"text":"Go","kind":"must","matchedSkill":"Go"},{"text":"Must be eligible to work in Canada","kind":"must"},{"text":"Rust","kind":"must"}],"domains":[],"flags":{"sponsorship":"not_mentioned","clearance":"not_mentioned","french":"not_mentioned","remoteScope":"onsite"}}"#
         let analysis = try JobAnalysis.fromJSON(v1)
         let coverage = Coverage(analysis)
         #expect(coverage.mustTotal == 2 && coverage.mustCovered == 1)  // the condition doesn't count
@@ -376,11 +422,16 @@ struct AnalysisTests {
     @Test func suggestionsCiteYourResumeAndAskQuestions() async throws {
         let chat = ScriptedChat([
             .suggestEvidence: [
-                .json(#"{"suggestions":[{"evidence":["s1"],"question":"Did the Go services have dashboards.","angle":"A tool"}],"otherwise":""}"#),
-                .json(#"{"suggestions":[{"evidence":["s1"],"question":"Did the Go services have dashboards?","angle":"A tool"}],"otherwise":""}"#),
+                .json(
+                    #"{"suggestions":[{"evidence":["s1"],"question":"Did the Go services have dashboards.","angle":"A tool"}],"otherwise":""}"#
+                ),
+                .json(
+                    #"{"suggestions":[{"evidence":["s1"],"question":"Did the Go services have dashboards?","angle":"A tool"}],"otherwise":""}"#
+                ),
             ]
         ])
-        let input = SuggestEvidenceTask.Input(fix: "Observability", asks: ["Prometheus", "prometheus ", "Grafana"], profile: sampleInput().profile)
+        let input = SuggestEvidenceTask.Input(
+            fix: "Observability", asks: ["Prometheus", "prometheus ", "Grafana"], profile: sampleInput().profile)
         #expect(input.asks == ["Prometheus", "Grafana"])
         let result = try await scriptedRouter(chat).run(SuggestEvidenceTask(), input: input)
         #expect(result.repaired && result.output.suggestions.count == 1)

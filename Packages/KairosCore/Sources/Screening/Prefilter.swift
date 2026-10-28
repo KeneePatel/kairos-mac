@@ -85,7 +85,8 @@ public struct Prefilter: Sendable {
 
     static func speaksFrench(_ languages: [EntryFields.Language]) -> Bool {
         languages.contains { language in
-            TextScan.containsAny(TextScan.fold(language.language), ["french", "francais"]) && language.proficiency != .basic
+            TextScan.containsAny(TextScan.fold(language.language), ["french", "francais"])
+                && language.proficiency != .basic
         }
     }
 
@@ -106,7 +107,8 @@ public struct Prefilter: Sendable {
         let phrases = preferences.titleInclude.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
         guard !preferences.roles.isEmpty else {
             guard !phrases.isEmpty, !TextScan.containsAny(posting.title, phrases) else { return nil }
-            return Rejection(rule: .titleInclude, reason: "The title has none of your phrases (\(phrases.joined(separator: ", "))).")
+            return Rejection(
+                rule: .titleInclude, reason: "The title has none of your phrases (\(phrases.joined(separator: ", "))).")
         }
         guard !preferences.roleMatcher.matches(posting.job.title) else { return nil }
         let roles = RoleFamily.allCases.filter(preferences.roles.contains).map(\.title)
@@ -125,12 +127,15 @@ public struct Prefilter: Sendable {
     }
 
     private func seniority(_ posting: Reading) -> Rejection? {
-        guard let level = Seniority.of(title: posting.job.title), !preferences.seniority.contains(level) else { return nil }
+        guard let level = Seniority.of(title: posting.job.title), !preferences.seniority.contains(level) else {
+            return nil
+        }
         return Rejection(rule: .seniority, reason: "\(level.title) level, which you've turned off.")
     }
 
     private func yearsRequired(_ posting: Reading) -> Rejection? {
-        guard let limit = preferences.maxYearsRequired, let years = YearsParser.requiredYears(inSentences: posting.sentences),
+        guard let limit = preferences.maxYearsRequired,
+            let years = YearsParser.requiredYears(inSentences: posting.sentences),
             years > limit
         else { return nil }
         return Rejection(rule: .yearsRequired, reason: "Asks for \(years)+ years; your limit is \(limit).")
@@ -147,7 +152,8 @@ public struct Prefilter: Sendable {
         if !job.remoteScope.isRemote, let country = job.country, let region = job.region,
             let allowed = preferences.regions[country.rawValue], !allowed.isEmpty, !allowed.contains(region)
         {
-            return Rejection(rule: .location, reason: "In \(region); you're looking in \(allowed.joined(separator: ", ")).")
+            return Rejection(
+                rule: .location, reason: "In \(region); you're looking in \(allowed.joined(separator: ", ")).")
         }
         return nil
     }
@@ -162,7 +168,8 @@ public struct Prefilter: Sendable {
             case .onsite, .hybrid: nil
             }
         guard let country, profile.authorization[country] == .needsSponsorship else { return nil }
-        return Rejection(rule: .remoteScope, reason: "Remote in \(country.inSentence) only, where you'd need visa sponsorship.")
+        return Rejection(
+            rule: .remoteScope, reason: "Remote in \(country.inSentence) only, where you'd need visa sponsorship.")
     }
 
     private func workAuthorization(_ posting: Reading) -> Rejection? {
@@ -172,9 +179,13 @@ public struct Prefilter: Sendable {
             }
             switch need.kind {
             case .noSponsorship where status == .needsSponsorship:
-                return Rejection(rule: .workAuthorization, reason: "Won't sponsor a visa, and you'd need one in \(country.inSentence).")
+                return Rejection(
+                    rule: .workAuthorization,
+                    reason: "Won't sponsor a visa, and you'd need one in \(country.inSentence).")
             case .authorization where status == .needsSponsorship:
-                return Rejection(rule: .workAuthorization, reason: "Needs you to be authorized to work in \(country.inSentence) already.")
+                return Rejection(
+                    rule: .workAuthorization,
+                    reason: "Needs you to be authorized to work in \(country.inSentence) already.")
             case .citizenship where status != .citizen:
                 return Rejection(rule: .workAuthorization, reason: "Needs \(country.adjective) citizenship.")
             default:
@@ -195,7 +206,9 @@ public struct Prefilter: Sendable {
                 guard let country = named ?? posting.job.country, let status = profile.authorization[country],
                     status != .citizen, !(country == .canada && status == .permanentResident)
                 else { continue }
-                return Rejection(rule: .clearance, reason: "Needs a \(country.adjective) security clearance, which needs citizenship.")
+                return Rejection(
+                    rule: .clearance,
+                    reason: "Needs a \(country.adjective) security clearance, which needs citizenship.")
             }
         }
         return nil

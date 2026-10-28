@@ -141,7 +141,9 @@ struct MarkdownWriter {
         "p", "div", "section", "article", "header", "footer", "main", "aside", "blockquote", "table", "form",
         "fieldset", "figure", "pre", "address", "dl", "dd", "dt",
     ]
-    private static let skipped: Set<String> = ["script", "style", "head", "title", "noscript", "svg", "template", "iframe"]
+    private static let skipped: Set<String> = [
+        "script", "style", "head", "title", "noscript", "svg", "template", "iframe",
+    ]
 
     mutating func text(_ raw: Substring) {
         guard skipping == 0, !raw.isEmpty else { return }

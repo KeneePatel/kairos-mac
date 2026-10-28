@@ -74,7 +74,8 @@ public struct Coverage: Codable, Sendable, Equatable {
 
     private static let conditionWords = [
         "authoriz", "authoris", "entitled to work", "eligible to work", "right to work", "sponsor", "citizen",
-        "permanent resident", "work permit", "visa", "clearance", "reliability status", "french", "english", "bilingual",
+        "permanent resident", "work permit", "visa", "clearance", "reliability status", "french", "english",
+        "bilingual",
         "francais", "anglais", "language", "degree", "bachelor", "master's", "masters", "phd", "diploma", "travel",
         "driver", "licence", "license",
     ]
@@ -98,7 +99,9 @@ public struct VerdictEngine: Sendable {
     /// From your master resume; nil skips the years-above-yours check.
     public let totalYears: Double?
 
-    public init(preferences: SearchPreferences, profile: WorkProfile, languages: [EntryFields.Language], totalYears: Double?) {
+    public init(
+        preferences: SearchPreferences, profile: WorkProfile, languages: [EntryFields.Language], totalYears: Double?
+    ) {
         self.preferences = preferences
         self.profile = profile
         self.languages = languages
@@ -121,15 +124,18 @@ public struct VerdictEngine: Sendable {
             notes.append("Possible TN route: as a Canadian citizen you may qualify for TN status for some professions.")
         }
         func decision(_ verdict: Verdict, _ rule: VerdictRule, _ reason: String? = nil) -> VerdictDecision {
-            VerdictDecision(verdict: verdict, rule: rule, coverage: coverage, reasons: [reason].compactMap { $0 } + notes)
+            VerdictDecision(
+                verdict: verdict, rule: rule, coverage: coverage, reasons: [reason].compactMap { $0 } + notes)
         }
 
         if let country, status == .needsSponsorship {
             if flags.sponsorship == .notOffered {
-                return decision(.no, .workAuthorization, "Won't sponsor a visa, and you'd need one in \(country.inSentence).")
+                return decision(
+                    .no, .workAuthorization, "Won't sponsor a visa, and you'd need one in \(country.inSentence).")
             }
             if flags.remoteScope == .remoteCountry {
-                return decision(.no, .remoteScope, "Remote in \(country.inSentence) only, where you'd need visa sponsorship.")
+                return decision(
+                    .no, .remoteScope, "Remote in \(country.inSentence) only, where you'd need visa sponsorship.")
             }
         }
         if !profile.hasClearance {
@@ -139,7 +145,8 @@ public struct VerdictEngine: Sendable {
             if flags.clearance == .obtainable, let country, let status, status != .citizen,
                 !(country == .canada && status == .permanentResident)
             {
-                return decision(.no, .clearance, "Needs a \(country.adjective) security clearance, which needs citizenship.")
+                return decision(
+                    .no, .clearance, "Needs a \(country.adjective) security clearance, which needs citizenship.")
             }
         }
         if flags.french == .required && !speaksFrench {
@@ -147,7 +154,8 @@ public struct VerdictEngine: Sendable {
         }
         if analysis.requirements.contains(where: { $0.kind == .must && $0.category == .enrolment }) {
             switch profile.enrolment {
-            case .graduated?: return decision(.no, .enrolment, "Asks for a current student, and you've said you've graduated.")
+            case .graduated?:
+                return decision(.no, .enrolment, "Asks for a current student, and you've said you've graduated.")
             case .student?: break
             case nil: notes.append("Asks for a current student; set whether you are in Settings, Search.")
             }
@@ -161,7 +169,8 @@ public struct VerdictEngine: Sendable {
                 return decision(.no, .yearsRequired, "Asks for \(required)+ years; your limit is \(limit).")
             }
             if let yours = totalYears, Double(required) > yours {
-                let note = "Asks for \(required)+ years; you have \(yours.formatted(.number.precision(.fractionLength(0...1))))."
+                let note =
+                    "Asks for \(required)+ years; you have \(yours.formatted(.number.precision(.fractionLength(0...1))))."
                 if Double(required) > yours + Double(preferences.thresholds.yearsGrace) {
                     return decision(.no, .yearsAboveYours, note)
                 }
@@ -183,7 +192,8 @@ public struct VerdictEngine: Sendable {
 
     /// "Missing Rust", "Missing Rust and Scala", "Missing Rust, Scala and 2 more".
     private static func missing(_ analysis: JobAnalysis) -> String? {
-        let names = analysis.requirements.filter { $0.kind == .must && $0.counts && $0.effectiveMatch == .no }.map(\.text)
+        let names = analysis.requirements.filter { $0.kind == .must && $0.counts && $0.effectiveMatch == .no }.map(
+            \.text)
         switch names.count {
         case 0: return nil
         case 1: return "Missing \(names[0])"
@@ -233,7 +243,9 @@ public struct ScreeningContext: Sendable {
     }
 
     public var verdicts: VerdictEngine {
-        VerdictEngine(preferences: preferences, profile: profile, languages: resume.languages, totalYears: resume.header.totalYears)
+        VerdictEngine(
+            preferences: preferences, profile: profile, languages: resume.languages,
+            totalYears: resume.header.totalYears)
     }
 
     public func analysisInput(for job: Job) -> AnalyzeJobTask.Input {

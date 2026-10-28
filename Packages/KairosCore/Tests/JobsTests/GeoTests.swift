@@ -138,7 +138,8 @@ struct GeoTests {
         #expect(Place.parse("Austin, Texas")?.country == .unitedStates)
         #expect(Place.parse("Somewhere") == nil && Place.parse("Paris, Île-de-France") == nil)
         #expect(Place.defaults(for: .canada).count == 7)
-        #expect(Place(city: "Toronto", region: "Ontario", country: .canada).googleLocation == "Toronto, Ontario, Canada")
+        #expect(
+            Place(city: "Toronto", region: "Ontario", country: .canada).googleLocation == "Toronto, Ontario, Canada")
     }
 }
 

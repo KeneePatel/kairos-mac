@@ -2,7 +2,10 @@ import Foundation
 
 /// One HTTP request, as a value: what job boards and AI providers send.
 public struct HTTPRequest: Sendable, Equatable {
-    public enum Method: String, Sendable { case get = "GET", post = "POST" }
+    public enum Method: String, Sendable {
+        case get = "GET"
+        case post = "POST"
+    }
 
     public var url: URL
     public var method: Method
@@ -48,7 +51,9 @@ public struct HTTPResponse: Sendable, Equatable {
     public var isSuccess: Bool { (200..<300).contains(status) }
 
     /// `Retry-After` in seconds, when the server sent a number.
-    public var retryAfterSeconds: Int? { header("Retry-After").flatMap { Int($0.trimmingCharacters(in: .whitespaces)) } }
+    public var retryAfterSeconds: Int? {
+        header("Retry-After").flatMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+    }
 }
 
 /// The request never got an answer. A status code isn't an error at this level: callers decide what

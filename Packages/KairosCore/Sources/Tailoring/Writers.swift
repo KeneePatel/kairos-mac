@@ -1,5 +1,5 @@
-import Foundation
 import AI
+import Foundation
 import Resume
 
 /// What every writer knows about the job.

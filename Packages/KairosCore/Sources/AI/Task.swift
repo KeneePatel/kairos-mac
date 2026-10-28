@@ -70,13 +70,17 @@ public struct TaskProfile: Sendable, Equatable {
     static let catalog: [TaskID: TaskProfile] = [
         .importResume: TaskProfile(
             budget: TokenBudget(input: 10_000, output: 6_000), temperature: 0, modelClass: .flash, timeoutSeconds: 120),
-        .importGitHubRepo: TaskProfile(budget: TokenBudget(input: 3_000, output: 600), temperature: 0.2, modelClass: .flashLite),
+        .importGitHubRepo: TaskProfile(
+            budget: TokenBudget(input: 3_000, output: 600), temperature: 0.2, modelClass: .flashLite),
         // 6,000 out (1,500 until 2026-10-26): a long posting's 25 requirements took 3,954 tokens, so
         // every model's reply was cut off and the job never got a verdict.
-        .analyzeJob: TaskProfile(budget: TokenBudget(input: 7_000, output: 6_000), temperature: 0, modelClass: .flashLite),
-        .suggestEvidence: TaskProfile(budget: TokenBudget(input: 4_000, output: 800), temperature: 0.3, modelClass: .flashLite),
+        .analyzeJob: TaskProfile(
+            budget: TokenBudget(input: 7_000, output: 6_000), temperature: 0, modelClass: .flashLite),
+        .suggestEvidence: TaskProfile(
+            budget: TokenBudget(input: 4_000, output: 800), temperature: 0.3, modelClass: .flashLite),
         .writeSummary: writer, .writeSkills: writer, .writeExperience: writer, .writeProjects: writer,
-        .shortenBullets: TaskProfile(budget: TokenBudget(input: 3_000, output: 2_000), temperature: 0.2, modelClass: .flashLite),
+        .shortenBullets: TaskProfile(
+            budget: TokenBudget(input: 3_000, output: 2_000), temperature: 0.2, modelClass: .flashLite),
         .gapBullets: TaskProfile(
             budget: TokenBudget(input: 3_000, output: 800), temperature: 0.5, modelClass: .flash, timeoutSeconds: 120),
         .coverLetter: TaskProfile(
@@ -88,7 +92,8 @@ public struct TaskProfile: Sendable, Equatable {
     static let writer = TaskProfile(
         budget: TokenBudget(input: 6_000, output: 3_000), temperature: 0.4, modelClass: .flash, timeoutSeconds: 120)
 
-    static let fallback = TaskProfile(budget: TokenBudget(input: 4_000, output: 1_000), temperature: 0, modelClass: .flash)
+    static let fallback = TaskProfile(
+        budget: TokenBudget(input: 4_000, output: 1_000), temperature: 0, modelClass: .flash)
 }
 
 public struct ChatMessage: Equatable, Sendable {

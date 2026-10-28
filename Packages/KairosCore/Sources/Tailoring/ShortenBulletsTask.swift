@@ -1,5 +1,5 @@
-import Foundation
 import AI
+import Foundation
 import Resume
 
 /// Bullets that run a few words onto another line, each with the most characters it may keep

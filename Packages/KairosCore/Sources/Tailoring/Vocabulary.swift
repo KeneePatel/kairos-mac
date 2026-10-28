@@ -23,7 +23,8 @@ enum Keywords {
 
     private static let vocabulary: Vocabulary = {
         guard let url = Bundle.module.url(forResource: "synonyms", withExtension: "json", subdirectory: "Resources"),
-            let data = try? Data(contentsOf: url), let vocabulary = try? JSONDecoder().decode(Vocabulary.self, from: data)
+            let data = try? Data(contentsOf: url),
+            let vocabulary = try? JSONDecoder().decode(Vocabulary.self, from: data)
         else { return Vocabulary(technologies: [:], caseSensitive: [], concepts: [:]) }
         return vocabulary
     }()
@@ -42,7 +43,9 @@ enum Keywords {
         var found: [(String.Index, Mention)] = []
         for alias in aliases {
             var from = text.startIndex
-            while from < text.endIndex, let range = text.range(of: alias.text, options: .caseInsensitive, range: from..<text.endIndex) {
+            while from < text.endIndex,
+                let range = text.range(of: alias.text, options: .caseInsensitive, range: from..<text.endIndex)
+            {
                 from = range.upperBound
                 let written = String(text[range])
                 guard isWholeWord(range, in: text), alias.exact.map({ $0 == written }) ?? true else { continue }
@@ -82,7 +85,9 @@ enum Keywords {
 
     static func contains(_ phrase: String, in text: String) -> Bool {
         var from = text.startIndex
-        while from < text.endIndex, let range = text.range(of: phrase, options: .caseInsensitive, range: from..<text.endIndex) {
+        while from < text.endIndex,
+            let range = text.range(of: phrase, options: .caseInsensitive, range: from..<text.endIndex)
+        {
             if isWholeWord(range, in: text) { return true }
             from = range.upperBound
         }
@@ -100,8 +105,10 @@ enum Keywords {
     }
 
     private static let stopwords: Set = [
-        "with", "that", "this", "from", "have", "years", "year", "experience", "strong", "ability", "knowledge", "working",
-        "work", "using", "including", "such", "team", "teams", "skills", "skill", "understanding", "familiarity", "plus",
+        "with", "that", "this", "from", "have", "years", "year", "experience", "strong", "ability", "knowledge",
+        "working",
+        "work", "using", "including", "such", "team", "teams", "skills", "skill", "understanding", "familiarity",
+        "plus",
         "required", "preferred", "least", "more", "their", "they", "will", "your", "into", "about", "across", "other",
         "within", "excellent", "good", "great", "proven", "solid", "hands-on", "built", "build", "building",
     ]
@@ -134,7 +141,8 @@ enum Numbers {
     }
 
     static func mentions(in text: String) -> [Mention] {
-        let pattern = /(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(\s*(?:million|billion|thousand|[kmbx])(?![A-Za-z]))?(?![A-Za-z0-9])/
+        let pattern =
+            /(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(\s*(?:million|billion|thousand|[kmbx])(?![A-Za-z]))?(?![A-Za-z0-9])/
             .ignoresCase()
         return text.matches(of: pattern).compactMap { match in
             let range = match.range
@@ -142,7 +150,9 @@ enum Numbers {
                 let before = text[text.index(before: range.lowerBound)]
                 if before.isLetter || before.isNumber || before == "." { return nil }
             }
-            guard let whole = Double(match.output.1.replacing(",", with: "") + (match.output.2 ?? "")) else { return nil }
+            guard let whole = Double(match.output.1.replacing(",", with: "") + (match.output.2 ?? "")) else {
+                return nil
+            }
             let suffix = match.output.3.map { $0.trimmingCharacters(in: .whitespaces).lowercased() } ?? ""
             if suffix.isEmpty, match.output.2 == nil, (1950...2100).contains(whole) { return nil }  // a year
             let scale: Double =

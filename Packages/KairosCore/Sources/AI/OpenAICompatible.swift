@@ -38,8 +38,9 @@ public struct ChatResponse: Equatable, Sendable {
     /// "length" when the reply hit the output limit and is probably cut off.
     public let finishReason: String?
 
-    public init(text: String, model: String, inputTokens: Int? = nil, outputTokens: Int? = nil, finishReason: String? = nil)
-    {
+    public init(
+        text: String, model: String, inputTokens: Int? = nil, outputTokens: Int? = nil, finishReason: String? = nil
+    ) {
         self.text = text
         self.model = model
         self.inputTokens = inputTokens
@@ -102,7 +103,8 @@ public struct OpenAICompatible: Sendable {
                 .utf8)
         let response = try await send("chat/completions", key: key, body: body, timeout: 30)
         guard response.status != 200 else { return }
-        let error = Self.error(response, message: Self.errorMessage(in: response.body) ?? "", model: model, provider: preset.name)
+        let error = Self.error(
+            response, message: Self.errorMessage(in: response.body) ?? "", model: model, provider: preset.name)
         if case .modelUnavailable = error { return }
         throw error
     }
@@ -114,12 +116,14 @@ public struct OpenAICompatible: Sendable {
         }
         let response: HTTPResponse
         do {
-            response = try await http.send(HTTPRequest(url: url, headers: ["Authorization": "Bearer \(key)"], timeout: 20))
+            response = try await http.send(
+                HTTPRequest(url: url, headers: ["Authorization": "Bearer \(key)"], timeout: 20))
         } catch {
             throw Self.map(error)
         }
         guard response.status == 200 else {
-            throw Self.error(response, message: Self.errorMessage(in: response.body) ?? "", model: "", provider: preset.name)
+            throw Self.error(
+                response, message: Self.errorMessage(in: response.body) ?? "", model: "", provider: preset.name)
         }
         return try CreditBalance.parse(response.body)
     }
@@ -136,7 +140,8 @@ public struct OpenAICompatible: Sendable {
         if let key, !key.isEmpty { headers["Authorization"] = "Bearer \(key)" }
         do {
             return try await http.send(
-                HTTPRequest(url: url, method: body == nil ? .get : .post, headers: headers, body: body, timeout: timeout))
+                HTTPRequest(
+                    url: url, method: body == nil ? .get : .post, headers: headers, body: body, timeout: timeout))
         } catch {
             throw Self.map(error)
         }
@@ -223,14 +228,16 @@ public struct OpenAICompatible: Sendable {
         let lower = message.lowercased()
         return (status == 501 && lower.contains("structured output"))
             || (status == 400
-                && (lower.contains("response_format") || lower.contains("json_schema") || lower.contains("structured output")))
+                && (lower.contains("response_format") || lower.contains("json_schema")
+                    || lower.contains("structured output")))
     }
 
     static func error(_ response: HTTPResponse, message: String, model: String, provider: String) -> AIError {
         switch response.status {
         case 400: return .badRequest(message.isEmpty ? "the provider refused the request" : String(message.prefix(300)))
         case 402:
-            return .modelUnavailable(model: model, reason: message.isEmpty ? "wants payment for this model" : providerWords(message))
+            return .modelUnavailable(
+                model: model, reason: message.isEmpty ? "wants payment for this model" : providerWords(message))
         // Ollama answers 403 for a model still rolling out; a 403 about anything else is the key.
         case 403 where message.lowercased().contains("model"):
             return .modelUnavailable(model: model, reason: providerWords(message))
@@ -266,7 +273,8 @@ public struct OpenAICompatible: Sendable {
         if let first = value.arrayValue?.first { value = first }
         guard let details = value["error"]?["details"]?.arrayValue else { return nil }
         let violations = details.flatMap { $0["violations"]?.arrayValue ?? [] }
-        guard let index = violations.firstIndex(where: { $0["quotaId"]?.stringValue?.contains("RequestsPerDay") == true })
+        guard
+            let index = violations.firstIndex(where: { $0["quotaId"]?.stringValue?.contains("RequestsPerDay") == true })
         else { return nil }
         if let text = violations[index]["quotaValue"]?.stringValue, let limit = Int(text) { return limit }
         if let number = violations[index]["quotaValue"]?.numberValue { return Int(number) }

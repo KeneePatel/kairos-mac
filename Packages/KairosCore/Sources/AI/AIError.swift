@@ -77,7 +77,9 @@ public enum AIError: Error, Equatable, Sendable {
 
     /// The reason for a logged code: the log keeps codes, never text.
     public static func reason(code: String) -> String {
-        if code.hasPrefix("server_"), let status = Int(code.dropFirst(7)) { return AIError.server(status: status).reason }
+        if code.hasPrefix("server_"), let status = Int(code.dropFirst(7)) {
+            return AIError.server(status: status).reason
+        }
         if code == "model_unavailable" { return "isn't available to this account" }
         let known: [AIError] = [
             .keyRejected(provider: ""), .modelNotFound(""), .badRequest(""), .rateLimited(retryAfterSeconds: nil),
