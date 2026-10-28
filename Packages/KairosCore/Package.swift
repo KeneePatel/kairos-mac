@@ -1,66 +1,96 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// One target per module id in SPEC.md §4. Targets only depend in the
-// direction the capability map allows, so the compiler enforces it.
+// Kairos's core: everything except the SwiftUI screens. Each module is its own target, so the
+// compiler enforces the dependency direction in docs/architecture.md:
+//
+//   KairosKit, SQL, Secrets            foundations, no domain
+//   AI                                 language models: providers, tasks, routing
+//   Jobs, Resume                       the two domains: postings and the master resume
+//   Screening, Tailoring, Render       judging a job, writing for it, printing it
+//   Store                              the only module that knows the schema
+//   Engine                             runs fetches, screening and builds over the store
+//   kairos                             the command-line tool
 let strict: [SwiftSetting] = [.treatAllWarnings(as: .error)]
 
 let package = Package(
     name: "KairosCore",
     platforms: [.macOS(.v26)],
     products: [
-        .library(name: "Store", targets: ["Store"]),
-        .library(name: "Render", targets: ["Render"]),
+        .library(name: "KairosKit", targets: ["KairosKit"]),
+        .library(name: "SQL", targets: ["SQL"]),
         .library(name: "Secrets", targets: ["Secrets"]),
-        .library(name: "JobSources", targets: ["JobSources"]),
-        .library(name: "Pipeline", targets: ["Pipeline"]),
-        .library(name: "MasterResume", targets: ["MasterResume"]),
-        .library(name: "LLM", targets: ["LLM"]),
+        .library(name: "AI", targets: ["AI"]),
+        .library(name: "Jobs", targets: ["Jobs"]),
+        .library(name: "Resume", targets: ["Resume"]),
         .library(name: "Screening", targets: ["Screening"]),
         .library(name: "Tailoring", targets: ["Tailoring"]),
+        .library(name: "Render", targets: ["Render"]),
+        .library(name: "Store", targets: ["Store"]),
+        .library(name: "Engine", targets: ["Engine"]),
+        .executable(name: "kairos", targets: ["KairosCLI"]),
     ],
     targets: [
-        .target(name: "Store", resources: [.copy("Schema")], swiftSettings: strict),
-        .testTarget(name: "StoreTests", dependencies: ["Store"], swiftSettings: strict),
+        .target(name: "KairosKit", swiftSettings: strict),
+        .target(name: "SQL", swiftSettings: strict),
+        .target(name: "Secrets", swiftSettings: strict),
+        .target(name: "AI", dependencies: ["KairosKit", "Secrets"], resources: [.copy("Prompts")], swiftSettings: strict),
+        .target(name: "Jobs", dependencies: ["KairosKit"], resources: [.copy("Resources")], swiftSettings: strict),
+        .target(name: "Resume", dependencies: ["KairosKit", "AI"], swiftSettings: strict),
         .target(
-            name: "JobSources", dependencies: ["Store"], resources: [.copy("Geo/places.json"), .copy("Catalog")],
+            name: "Screening", dependencies: ["KairosKit", "Jobs", "Resume", "AI"], resources: [.copy("Resources")],
             swiftSettings: strict),
-        .testTarget(name: "JobSourcesTests", dependencies: ["JobSources", "TestSupport"], swiftSettings: strict),
-        .target(name: "LLM", dependencies: ["Secrets", "Store"], resources: [.copy("Prompts")], swiftSettings: strict),
-        // LLMTests also reach every module with a task, so PromptPrivacyTests and PromptEvals can
-        // render all of their prompts.
-        .testTarget(
-            name: "LLMTests", dependencies: ["LLM", "TestSupport", "Store", "MasterResume", "Screening", "Tailoring"],
-            swiftSettings: strict),
-        // Test helpers shared by test targets (the scripted URLProtocol, fixtures). Never shipped.
-        .target(name: "TestSupport", path: "Tests/TestSupport", swiftSettings: strict),
-        .target(name: "MasterResume", dependencies: ["Store", "LLM"], swiftSettings: strict),
-        .testTarget(name: "MasterResumeTests", dependencies: ["MasterResume", "LLM"], swiftSettings: strict),
-        .target(name: "Screening", dependencies: ["Store", "LLM", "MasterResume"], swiftSettings: strict),
-        .testTarget(
-            name: "ScreeningTests", dependencies: ["Screening", "Store", "MasterResume", "LLM"], swiftSettings: strict),
         .target(
-            name: "Tailoring", dependencies: ["Store", "LLM", "MasterResume"],
-            resources: [.copy("Synonyms.json"), .copy("Spelling")],
-            swiftSettings: strict),
-        .testTarget(name: "TailoringTests", dependencies: ["Tailoring", "MasterResume", "LLM"], swiftSettings: strict),
+            name: "Tailoring", dependencies: ["KairosKit", "Resume", "Screening", "AI"],
+            resources: [.copy("Resources")], swiftSettings: strict),
         .target(
-            name: "Pipeline",
-            dependencies: ["Store", "JobSources", "Screening", "LLM", "Tailoring", "Render", "MasterResume"],
-            swiftSettings: strict),
-        .testTarget(
-            name: "PipelineTests",
+            name: "Render", dependencies: ["KairosKit", "Resume", "Tailoring"],
+            resources: [.copy("Templates"), .copy("Fonts")], swiftSettings: strict),
+        .target(
+            name: "Store",
+            dependencies: ["KairosKit", "SQL", "AI", "Jobs", "Resume", "Screening", "Tailoring"],
+            resources: [.copy("Schema")], swiftSettings: strict),
+        .target(
+            name: "Engine",
             dependencies: [
-                "Pipeline", "Store", "JobSources", "Screening", "LLM", "MasterResume", "Tailoring", "Render",
-                "TestSupport",
+                "KairosKit", "SQL", "Secrets", "AI", "Jobs", "Resume", "Screening", "Tailoring", "Render", "Store",
             ],
             swiftSettings: strict),
-        // Render knows Tailoring's types only (SPEC §4), to lay out a build.
-        .target(
-            name: "Render", dependencies: ["Tailoring"], resources: [.copy("Templates"), .copy("Fonts")],
+        .executableTarget(
+            name: "KairosCLI",
+            dependencies: [
+                "KairosKit", "SQL", "Secrets", "AI", "Jobs", "Resume", "Screening", "Tailoring", "Render", "Store",
+                "Engine",
+            ],
             swiftSettings: strict),
-        .testTarget(name: "RenderTests", dependencies: ["Render", "Tailoring"], swiftSettings: strict),
-        .target(name: "Secrets", swiftSettings: strict),
+
+        // Shared by the test targets: a scripted HTTP client, fixtures, sample data. Never shipped.
+        .target(name: "TestKit", dependencies: ["KairosKit", "Resume"], path: "Tests/TestKit", swiftSettings: strict),
+        .testTarget(name: "KairosKitTests", dependencies: ["KairosKit", "TestKit"], swiftSettings: strict),
+        .testTarget(name: "SQLTests", dependencies: ["SQL"], swiftSettings: strict),
         .testTarget(name: "SecretsTests", dependencies: ["Secrets"], swiftSettings: strict),
+        .testTarget(name: "AITests", dependencies: ["AI", "KairosKit", "Secrets", "TestKit"], swiftSettings: strict),
+        .testTarget(name: "JobsTests", dependencies: ["Jobs", "KairosKit", "TestKit"], swiftSettings: strict),
+        .testTarget(name: "ResumeTests", dependencies: ["Resume", "AI", "KairosKit", "TestKit"], swiftSettings: strict),
+        .testTarget(
+            name: "ScreeningTests", dependencies: ["Screening", "Jobs", "Resume", "AI", "KairosKit", "TestKit"],
+            swiftSettings: strict),
+        .testTarget(
+            name: "TailoringTests", dependencies: ["Tailoring", "Screening", "Resume", "AI", "KairosKit", "TestKit"],
+            swiftSettings: strict),
+        .testTarget(
+            name: "RenderTests", dependencies: ["Render", "Tailoring", "Resume", "KairosKit", "TestKit"],
+            swiftSettings: strict),
+        .testTarget(
+            name: "StoreTests",
+            dependencies: ["Store", "SQL", "Jobs", "Resume", "Screening", "Tailoring", "AI", "KairosKit", "TestKit"],
+            swiftSettings: strict),
+        .testTarget(
+            name: "EngineTests",
+            dependencies: [
+                "Engine", "Store", "SQL", "Secrets", "AI", "Jobs", "Resume", "Screening", "Tailoring", "Render",
+                "KairosKit", "TestKit",
+            ],
+            swiftSettings: strict),
     ]
 )
