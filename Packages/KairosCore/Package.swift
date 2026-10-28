@@ -85,6 +85,11 @@ let package = Package(
         .testTarget(
             name: "RenderTests", dependencies: ["Render", "Tailoring", "Resume", "KairosKit", "TestKit"],
             swiftSettings: strict),
+        // The recorded model replies scored again, and the live evals (KAIROS_LIVE_LLM=1).
+        .testTarget(
+            name: "EvalTests",
+            dependencies: ["AI", "Jobs", "Resume", "Screening", "Tailoring", "KairosKit", "Secrets", "TestKit"],
+            swiftSettings: strict),
         .testTarget(
             name: "StoreTests",
             dependencies: ["Store", "SQL", "Jobs", "Resume", "Screening", "Tailoring", "AI", "KairosKit", "TestKit"],

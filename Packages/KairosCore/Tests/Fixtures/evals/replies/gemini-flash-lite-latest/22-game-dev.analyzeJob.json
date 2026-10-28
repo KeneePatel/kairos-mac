@@ -1,0 +1,45 @@
+{
+  "requirements": [
+    {
+      "text": "3+ years of C# in Unity",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Shipped at least one mobile game",
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Strong math for gameplay (vectors, physics)",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "French is required for this Montreal role",
+      "kind": "must",
+      "category": "language",
+      "match": "not_judged"
+    },
+    {
+      "text": "Shader programming",
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "gaming"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "required",
+    "remote_scope": "unknown"
+  }
+}

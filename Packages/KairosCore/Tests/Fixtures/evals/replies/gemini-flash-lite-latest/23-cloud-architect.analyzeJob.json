@@ -1,0 +1,71 @@
+{
+  "requirements": [
+    {
+      "text": "7+ years in infrastructure",
+      "kind": "must",
+      "category": "experience",
+      "match": "partial",
+      "evidence": [
+        "y1",
+        "x1",
+        "x2"
+      ]
+    },
+    {
+      "text": "3+ years as an architect",
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "AWS Solutions Architect – Professional certification",
+      "kind": "must",
+      "category": "education",
+      "match": "no"
+    },
+    {
+      "text": "Terraform",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s7",
+        "x1b2"
+      ]
+    },
+    {
+      "text": "Networking (VPCs, VPNs, DNS)",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Kubernetes",
+      "kind": "nice",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s5",
+        "x1b2"
+      ]
+    },
+    {
+      "text": "Energy-sector experience",
+      "kind": "nice",
+      "category": "experience",
+      "match": "no"
+    }
+  ],
+  "years_required": 7,
+  "seniority": "unspecified",
+  "domains": [
+    "infrastructure",
+    "energy"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "remote_country"
+  }
+}

@@ -11,7 +11,7 @@ cd "$(git rev-parse --show-toplevel)"
 
 pkg=Packages/KairosCore
 threshold=80
-modules="Store MasterResume LLM Screening Tailoring Account Sync"
+modules="Store Resume AI Screening Tailoring Engine"
 base="${1:-}"
 if [ -z "$base" ]; then
     if git rev-parse -q --verify origin/main >/dev/null; then base=origin/main; else base=HEAD; fi

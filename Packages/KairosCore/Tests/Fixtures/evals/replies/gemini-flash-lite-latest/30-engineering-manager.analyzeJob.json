@@ -1,0 +1,56 @@
+{
+  "requirements": [
+    {
+      "text": "2+ years managing software engineers",
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "5+ years as a software engineer before that",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": [
+        "y1",
+        "x1",
+        "x2"
+      ]
+    },
+    {
+      "text": "Experience running agile delivery",
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Hiring experience",
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Transit experience",
+      "kind": "nice",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Java",
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
+    }
+  ],
+  "years_required": 5,
+  "seniority": "manager",
+  "domains": [
+    "transit"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

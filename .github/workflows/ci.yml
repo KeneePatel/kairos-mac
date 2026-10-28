@@ -59,7 +59,7 @@ jobs:
         if: hashFiles('App/project.yml') != ''
         run: |
           swift scripts/gen-tokens.swift
-          git diff --exit-code -- App/Kairos/Assets.xcassets App/Kairos/DesignTokens.swift \
+          git diff --exit-code -- App/Kairos/Assets.xcassets App/Kairos/Design/DesignTokens.swift \
             || { echo "Run swift scripts/gen-tokens.swift and commit the result"; exit 1; }
           scripts/check-design.sh
 

@@ -1,0 +1,51 @@
+{
+  "requirements": [
+    {
+      "text": "Up to 2 years of Python experience, including internships or co-ops",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": [
+        "y1",
+        "x2"
+      ]
+    },
+    {
+      "text": "Git",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Basic SQL",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": [
+        "s4",
+        "x2b3"
+      ]
+    },
+    {
+      "text": "Clear written communication",
+      "kind": "must",
+      "category": "soft",
+      "match": "not_judged"
+    },
+    {
+      "text": "FastAPI or Flask",
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
+    }
+  ],
+  "years_required": 2,
+  "seniority": "junior",
+  "domains": [],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "remote_country"
+  }
+}

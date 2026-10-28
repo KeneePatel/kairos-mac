@@ -1,0 +1,60 @@
+{
+  "requirements": [
+    {
+      "text": "MS or PhD in computer science, statistics or a related field, or equivalent experience",
+      "kind": "must",
+      "category": "education",
+      "match": "yes",
+      "evidence": ["y1"]
+    },
+    {
+      "text": "3+ years of Python",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": ["y1", "s2", "x2b1"]
+    },
+    {
+      "text": "PyTorch or TensorFlow",
+      "kind": "must",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Experience deploying models to production",
+      "kind": "must",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Must be authorized to work in the United States",
+      "kind": "must",
+      "category": "authorization",
+      "match": "not_judged"
+    },
+    {
+      "text": "MLflow",
+      "kind": "nice",
+      "category": "skill",
+      "match": "no"
+    },
+    {
+      "text": "Kubernetes",
+      "kind": "nice",
+      "category": "skill",
+      "match": "yes",
+      "evidence": ["s5", "x1b2"]
+    }
+  ],
+  "years_required": 3,
+  "seniority": "unspecified",
+  "domains": [
+    "education"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "remote_country"
+  }
+}

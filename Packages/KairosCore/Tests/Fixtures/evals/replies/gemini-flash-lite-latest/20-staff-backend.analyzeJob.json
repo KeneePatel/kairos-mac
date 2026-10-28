@@ -1,0 +1,64 @@
+{
+  "requirements": [
+    {
+      "text": "8+ years of backend development",
+      "kind": "must",
+      "category": "experience",
+      "match": "partial",
+      "evidence": ["y1", "x1", "x2"]
+    },
+    {
+      "text": "Distributed systems design at scale",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": ["x1b1", "x1b3"]
+    },
+    {
+      "text": "Go, Java or Kotlin",
+      "kind": "must",
+      "category": "skill",
+      "match": "yes",
+      "evidence": ["s1", "x1b1"]
+    },
+    {
+      "text": "Mentoring other engineers",
+      "kind": "must",
+      "category": "experience",
+      "match": "yes",
+      "evidence": ["x1b4"]
+    },
+    {
+      "text": "Legally entitled to work in Canada",
+      "kind": "must",
+      "category": "authorization",
+      "match": "not_judged"
+    },
+    {
+      "text": "Logistics experience",
+      "kind": "nice",
+      "category": "experience",
+      "match": "no"
+    },
+    {
+      "text": "Event sourcing",
+      "kind": "nice",
+      "category": "skill",
+      "match": "partial",
+      "evidence": ["s8", "x1b3"]
+    }
+  ],
+  "years_required": 8,
+  "seniority": "staff",
+  "domains": [
+    "freight",
+    "logistics",
+    "routing"
+  ],
+  "flags": {
+    "sponsorship": "not_mentioned",
+    "clearance": "not_mentioned",
+    "french": "not_mentioned",
+    "remote_scope": "unknown"
+  }
+}

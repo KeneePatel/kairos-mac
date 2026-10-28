@@ -81,6 +81,53 @@ struct SecretStoreTests {
         #expect(try cache.read(.serpAPI) == nil)
     }
 
+    /// A counting store, to see when the cache reaches the store beneath it.
+    final class CountingStore: SecretStore, @unchecked Sendable {
+        var reads = 0
+        let base = MemorySecretStore()
+        func read(_ key: SecretKey) throws(SecretsError) -> String? {
+            reads += 1
+            return try base.read(key)
+        }
+        func write(_ value: String, for key: SecretKey, hint: String?) throws(SecretsError) {
+            try base.write(value, for: key, hint: hint)
+        }
+        func delete(_ key: SecretKey) throws(SecretsError) { try base.delete(key) }
+        func summary(_ key: SecretKey) throws(SecretsError) -> SecretSummary? { try base.summary(key) }
+    }
+
+    @Test func theMemoryStoreRoundTripsWithHints() throws {
+        let store = MemorySecretStore()
+        try store.write("value-1", for: .himalayas)
+        #expect(try store.read(.himalayas) == "value-1")
+        #expect(try store.summary(.himalayas)?.hint == MemorySecretStore.mask("value-1"))
+        try store.write("value-2", for: .himalayas)
+        #expect(try store.read(.himalayas) == "value-2")
+        try store.delete(.himalayas)
+        #expect(try store.read(.himalayas) == nil)
+        #expect(try store.summary(.himalayas) == nil)
+    }
+
+    /// A key that wasn't there isn't remembered as missing: one added elsewhere (Settings in
+    /// another window) is read on the next try.
+    @Test func theCacheDoesNotRememberAMissingKey() throws {
+        let counting = CountingStore()
+        let cache = CachingSecretStore(counting)
+        #expect(try cache.read(.serpAPI) == nil)
+        try counting.base.write("added-elsewhere", for: .serpAPI)
+        #expect(try cache.read(.serpAPI) == "added-elsewhere")
+        #expect(counting.reads == 2)
+    }
+
+    /// Settings shows each key's hint without reading the key: in the keychain a read can prompt.
+    @Test func hintsAreReadWithoutTheSecret() throws {
+        let counting = CountingStore()
+        try counting.write("AIza-secret", for: .serpAPI)
+        let cache = CachingSecretStore(counting)
+        #expect(try cache.summary(.serpAPI) == SecretSummary(hint: MemorySecretStore.mask("AIza-secret")))
+        #expect(counting.reads == 0)
+    }
+
     @Test func masksShortAndLongValues() {
         #expect(MemorySecretStore.mask("abc") == "••••")
         #expect(MemorySecretStore.mask("sk-1234567890abcd") == "sk-1••••••••••••abcd")
